@@ -11,6 +11,12 @@ Compañero educativo local en español, con una mascota original SVG y sin cuent
 
 Sin modelo puedes usar quizzes, ejercicios, biblioteca, perfiles, tarjetas manuales y progreso. Las respuestas abiertas muestran **MODO DEMO** y nunca fingen ser una IA conectada.
 
+## Instalar en otro equipo
+
+Descarga el repositorio como ZIP, extrae la carpeta y ejecuta `install_allen.bat`. El instalador comprueba Python 3.11+, copia la aplicación a `%LOCALAPPDATA%\ALLEN\app`, crea un entorno aislado e instala las dependencias. Luego usa el archivo `Iniciar ALLEN.bat` creado en esa carpeta.
+
+El instalador no descarga modelos ni ejecutables de IA. Para activar respuestas abiertas, instala una versión confiable de llama.cpp, coloca un modelo GGUF con licencia adecuada y crea `%LOCALAPPDATA%\ALLEN\local_model.json` siguiendo `config/local_model.example.json`. Sin ese paso, ALLEN funciona en modo demo con sus actividades locales.
+
 ## Publicación segura
 
 El repositorio puede alojarse en GitHub. Mantén fuera del repositorio `.venv/`, bases SQLite, modelos GGUF, `.env` y cualquier token; las reglas de `.gitignore` ya los excluyen. Consulta [SECURITY.md](SECURITY.md) antes de hacer público el proyecto.
