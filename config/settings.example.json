@@ -1,0 +1,13 @@
+{
+  "ai_server": "http://127.0.0.1:8080",
+  "model": "",
+  "temperature": 0.6,
+  "context_size": 4096,
+  "max_tokens": 700,
+  "language": "es",
+  "save_history": true,
+  "retention_days": 30,
+  "demo": false,
+  "font_size": "normal",
+  "high_contrast": false
+}

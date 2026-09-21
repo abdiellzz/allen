@@ -1,0 +1,4 @@
+{
+  "executable": "C:\\allen-tools\\llama\\llama-server.exe",
+  "model": "C:\\allen-models\\modelo.gguf"
+}

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Allen, tu compañero naranja">
+<ellipse cx="100" cy="187" rx="55" ry="9" fill="#e6c6a2" opacity=".45"/>
+<path d="M64 172q-10-62 35-63t40 63" fill="#e77928"/><ellipse cx="100" cy="157" rx="24" ry="30" fill="#ffd59f"/>
+<circle cx="39" cy="83" r="27" fill="#e87929"/><circle cx="161" cy="83" r="27" fill="#e87929"/><circle cx="39" cy="83" r="17" fill="#ffce97"/><circle cx="161" cy="83" r="17" fill="#ffce97"/>
+<path d="M42 75Q42 17 103 19q58 0 57 60v22q-4 48-59 48-56 0-60-49Z" fill="#ec852d"/>
+<path d="M87 23q-5-15 10-17l-2 13q19-16 29-6l-16 13" fill="#ec852d"/>
+<path d="M100 65q-27-38-45-5-10 18 2 39-10 37 43 38 53-1 43-38 12-21 2-39-18-33-45 5" fill="#ffdcaf"/>
+<ellipse cx="77" cy="78" rx="7" ry="10" fill="#4c352a"/><ellipse cx="124" cy="78" rx="7" ry="10" fill="#4c352a"/><circle cx="79" cy="75" r="2" fill="white"/><circle cx="126" cy="75" r="2" fill="white"/>
+<ellipse cx="100" cy="96" rx="9" ry="6" fill="#b06b3b"/><path d="M81 110q19 19 38 0" fill="none" stroke="#714527" stroke-width="5" stroke-linecap="round"/>
+<ellipse cx="63" cy="100" rx="9" ry="5" fill="#f4ae7d"/><ellipse cx="138" cy="100" rx="9" ry="5" fill="#f4ae7d"/>
+<path d="M66 147q-16 1-19 23M137 144q18-4 19-28" fill="none" stroke="#e77928" stroke-width="17" stroke-linecap="round"/>
+<circle cx="156" cy="111" r="10" fill="#ffce97"/><ellipse cx="78" cy="180" rx="19" ry="10" fill="#e77928"/><ellipse cx="124" cy="180" rx="19" ry="10" fill="#e77928"/>
+</svg>

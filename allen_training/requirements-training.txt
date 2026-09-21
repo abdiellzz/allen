@@ -1,0 +1,7 @@
+# Optional. Install a PyTorch build suitable for your hardware first.
+# This environment is separate from the lightweight ALLEN application.
+trl==0.29.0
+peft>=0.18,<1
+datasets>=4,<5
+transformers>=4.56,<5
+accelerate>=1.4,<2
