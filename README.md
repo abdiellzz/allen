@@ -17,6 +17,10 @@ Descarga el repositorio como ZIP, extrae la carpeta y ejecuta `install_allen.bat
 
 El instalador no descarga modelos ni ejecutables de IA. Para activar respuestas abiertas, instala una versión confiable de llama.cpp, coloca un modelo GGUF con licencia adecuada y crea `%LOCALAPPDATA%\ALLEN\local_model.json` siguiendo `config/local_model.example.json`. Sin ese paso, ALLEN funciona en modo demo con sus actividades locales.
 
+## Android
+
+La versión Android offline se prepara por separado en `android/`. Reutilizará la interfaz, tendrá SQLite/Room privado y ejecutará `llama.cpp` para ARM64 mediante un puente nativo. No se debe intentar convertir directamente el servidor FastAPI de Windows en un APK ni incluir modelos GGUF en GitHub. Consulta `android/README.md` para la arquitectura y los requisitos de compilación.
+
 ## Publicación segura
 
 El repositorio puede alojarse en GitHub. Mantén fuera del repositorio `.venv/`, bases SQLite, modelos GGUF, `.env` y cualquier token; las reglas de `.gitignore` ya los excluyen. Consulta [SECURITY.md](SECURITY.md) antes de hacer público el proyecto.
