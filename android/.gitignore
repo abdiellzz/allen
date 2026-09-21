@@ -1,8 +1,0 @@
-build/
-.gradle/
-local.properties
-*.iml
-captures/
-*.keystore
-*.jks
-app/src/main/assets/models/
