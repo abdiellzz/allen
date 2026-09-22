@@ -101,6 +101,10 @@ def create_app(db_path=None, ai=None):
         db.prune()
         return dict(token=token,profiles=[user(p['id']) for p in db.all('SELECT id FROM users')],settings=db.settings().model_dump(),catalog=catalog())
 
+    @app.get('/api/fair/token')
+    def fair_token():
+        return {'token':token}
+
     @app.get('/api/health')
     def health():
         db.one('SELECT 1')
@@ -437,7 +441,13 @@ def create_app(db_path=None, ai=None):
         return {'ok':True}
 
     @app.get('/')
-    def index():return FileResponse(ROOT/'frontend/index.html')
+    def index(mode:str=''):return FileResponse(ROOT/('frontend/fair.html' if mode=='fair' else 'frontend/index.html'))
+
+    from .fair import install_fair
+    install_fair(app,db,engine)
+
+    @app.get('/fair')
+    def fair_index():return FileResponse(ROOT/'frontend/fair.html')
 
     app.mount('/static',StaticFiles(directory=ROOT/'frontend'),name='static')
     return app

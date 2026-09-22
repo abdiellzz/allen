@@ -18,7 +18,7 @@ if exist ".venv\Scripts\python.exe" goto environment_ready
 %ALLEN_PY% -m venv .venv
 if errorlevel 1 goto install_error
 :environment_ready
-".venv\Scripts\python.exe" -c "from importlib.metadata import version; assert version('fastapi')=='0.136.3'; assert version('uvicorn')=='0.49.0'; assert version('httpx')=='0.28.1'" >nul 2>&1
+".venv\Scripts\python.exe" -c "from importlib.metadata import version; assert version('fastapi')=='0.136.3'; assert version('uvicorn')=='0.49.0'; assert version('httpx')=='0.28.1'; assert version('qrcode')=='8.2'" >nul 2>&1
 if not errorlevel 1 goto start_app
 echo Instalando dependencias. Esta primera vez necesitas Internet.
 ".venv\Scripts\python.exe" -m pip install -r requirements.txt
