@@ -1,0 +1,5 @@
+/* Local-only branding override for the ALLEN header. */
+:root{font-family:ui-rounded,'Arial Rounded MT Bold','Trebuchet MS','Segoe UI',sans-serif}
+.brand{letter-spacing:.01em;line-height:1.05;align-items:center}
+.brand>span{display:flex;align-items:baseline;gap:7px}
+.brand small{font-size:clamp(10px,1.2vw,13px);font-weight:700;letter-spacing:.035em;color:#896442;white-space:nowrap}
