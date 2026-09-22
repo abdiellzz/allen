@@ -94,7 +94,7 @@ function bind(){
  main.querySelector('[data-resume]')?.addEventListener('click',()=>tts.resume());
  main.querySelector('[data-stop]')?.addEventListener('click',()=>{tts.stop();audioState='';render();});
  main.querySelector('[data-reconnect]')?.addEventListener('click',async()=>{await refreshModel();toast(model?.connected?'IA local activa. Puedes repetir tu pregunta.':'Allen sigue despertando. Los retos y las microlecciones están disponibles.');});
- main.querySelector('[data-photo]')?.addEventListener('click',()=>{photo=!photo;document.body.classList.toggle('photo',photo);render();});
+ main.querySelectorAll('[data-photo]').forEach(button=>button.addEventListener('click',()=>{photo=!photo;document.body.classList.toggle('photo',photo);render();}));
  main.querySelector('[data-stats]')?.addEventListener('click',loadStats);
  main.querySelector('[data-lock]')?.addEventListener('click',()=>{if(locked&&!confirm('¿Desbloquear la salida del Modo Feria?'))return;locked=!locked;localStorage.setItem('allen-fair-lock',String(locked));render();});
  main.querySelector('[data-exit]')?.addEventListener('click',async()=>{if(!locked){await reset();location.href='/';}});
