@@ -32,7 +32,7 @@ export class TextToSpeechService {
  resume(){window.speechSynthesis?.resume();}
  stop(){window.speechSynthesis?.cancel();}
 }
-export function sound(enabled,celebrate=false){
+export function sound(enabled,celebrate=false,tone='normal'){
  if(!enabled)return;
- try{const Audio=window.AudioContext||window.webkitAudioContext;const ctx=new Audio();const gain=ctx.createGain();gain.gain.value=.025;gain.connect(ctx.destination);[0,...(celebrate?[.15,.3]:[])].forEach((t,i)=>{const osc=ctx.createOscillator();osc.frequency.value=[523,659,784][i];osc.connect(gain);osc.start(ctx.currentTime+t);osc.stop(ctx.currentTime+t+.12);});setTimeout(()=>ctx.close(),650);}catch{/* Sound is optional. */}
+ try{const Audio=window.AudioContext||window.webkitAudioContext;const ctx=new Audio();const gain=ctx.createGain();gain.gain.value=tone==='soft'?.012:.025;gain.connect(ctx.destination);const notes=tone==='soft'?[392]:tone==='unlock'?[392,523,659]:celebrate?[523,659,784]:[523];notes.forEach((frequency,i)=>{const osc=ctx.createOscillator();osc.frequency.value=frequency;osc.connect(gain);osc.start(ctx.currentTime+i*.15);osc.stop(ctx.currentTime+i*.15+.12);});setTimeout(()=>ctx.close(),800);}catch{/* Sound is optional. */}
 }
