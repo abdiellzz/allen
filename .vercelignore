@@ -1,0 +1,23 @@
+# Only the explicitly configured static Vercel output is deployed.
+# This directory contains the public landing page and its local assets.
+.venv/
+backend/
+config/
+data/
+dist/
+installer/
+licenses/
+licensing/
+models/
+scripts/
+tests/
+tools/
+allen_training/
+android/
+legacy/
+output/
+build/
+*.sqlite3
+*.sqlite3-*
+*.gguf
+*.env
