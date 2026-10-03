@@ -8,9 +8,9 @@ Este repositorio conserva la aplicación educativa funcional de ALLEN: su fronte
 
 El sitio comercial independiente vive en [abdiellzz/allen-website](https://github.com/abdiellzz/allen-website). Contiene la portada de ALLEN, las presentaciones comerciales de Education y Agents, recursos web locales y configuración de Vercel. No necesita que esta aplicación, Python, llama.cpp o SQLite estén ejecutándose.
 
-## Modo Feria
+## La experiencia de ALLEN
 
-Abre **http://127.0.0.1:8787/fair** para una experiencia con retos, microlecciones, chat temporal, tarjeta de logro, Modo Jurado, estadísticas anónimas y QR local. **Nueva persona** limpia la sesión del visitante; la inactividad también la reinicia. Consulta [FAIR_MODE.md](FAIR_MODE.md) para preparar el stand, configurar voz opcional y conocer las pruebas y límites.
+Al iniciar ALLEN, esta es la experiencia principal: aprender con microlecciones, retos, rutas, simulaciones y proyectos STEAM, y conversar en un chat temporal. También incluye tarjetas de logro, Modo Jurado y un QR local para compartir actividades. **Nueva persona** reinicia la sesión del visitante; la inactividad también la limpia. La guía [FAIR_MODE.md](FAIR_MODE.md) reúne detalles operativos para organizar actividades y configurar voz opcional.
 
 Compañero educativo local en español, con una mascota SVG original y sin cuentas ni APIs de pago. La interfaz se sirve con HTML, CSS y JavaScript nativo; no requiere Node, compilación, fuentes externas ni CDN.
 
@@ -89,7 +89,7 @@ La conexión usa `/health`, `/v1/models` y `/v1/chat/completions` con streaming 
 ## Qué puedes hacer
 
 | Área | Implementación de esta versión |
-| Feria educativa | Microlecciones offline, retos graduados, rutas, simulaciones, proyectos STEAM, sesión de visitante y evaluación local con feedback IA opcional |
+| Experiencia de aprendizaje | Microlecciones offline, retos graduados, rutas, simulaciones, proyectos STEAM, sesión de visitante y evaluación local con feedback IA opcional |
 | --- | --- |
 | Inicio | Mascota naranja original, tarjetas, navegación responsive y métricas locales |
 | Chat | Contexto de conversación, historial, nueva/limpiar, copiar, regenerar, detener y Markdown seguro básico |
