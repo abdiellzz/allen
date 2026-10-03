@@ -2,7 +2,7 @@
 
 ## Modo Feria
 
-Abre **http://127.0.0.1:8787/fair** para una experiencia con retos, microlecciones, chat temporal, tarjeta de logro, Modo Jurado, estadísticas anónimas y QR local. **Nueva persona** limpia la sesión del visitante; la inactividad también la reinicia. Consulta [FAIR_MODE.md](FAIR_MODE.md) para preparar el stand, configurar voz opcional y conocer las pruebas y límites.
+Abre **http://127.0.0.1:8787/fair** para una experiencia con retos, microlecciones, chat temporal y tarjeta de logro,. **Nueva persona** limpia la sesión del visitante; la inactividad también la reinicia. Consulta [FAIR_MODE.md](FAIR_MODE.md) para preparar el stand, configurar voz opcional y conocer las pruebas y límites.
 
 Compañero educativo local en español, con una mascota original SVG y sin cuentas ni APIs de pago. Trabaja sobre el MVP original, conservado como referencia en `legacy/`. La interfaz nueva no requiere Node, compilación, fuentes externas ni CDN.
 
