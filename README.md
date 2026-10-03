@@ -1,29 +1,56 @@
 # ALLEN — aprende, incluso sin Internet
 
+> **Estado: beta funcional, con distribución empaquetada aún no validada.** El código fuente permite ejecutar la aplicación en Windows con Python. La IA requiere `llama-server` y un modelo GGUF locales. No hay un `ALLEN_Setup.exe` de lanzamiento verificado en este repositorio.
+
+## Repositorios del proyecto
+
+Este repositorio conserva la aplicación educativa funcional de ALLEN: su frontend local, backend, IA local, datos, instalador, pruebas y documentación técnica. La carpeta `frontend/` es parte de esa aplicación y no pertenece al sitio comercial.
+
+El sitio comercial independiente vive en [abdiellzz/allen-website](https://github.com/abdiellzz/allen-website). Contiene la portada de ALLEN, las presentaciones comerciales de Education y Agents, recursos web locales y configuración de Vercel. No necesita que esta aplicación, Python, llama.cpp o SQLite estén ejecutándose.
+
 ## Modo Feria
 
 Abre **http://127.0.0.1:8787/fair** para una experiencia con retos, microlecciones, chat temporal, tarjeta de logro, Modo Jurado, estadísticas anónimas y QR local. **Nueva persona** limpia la sesión del visitante; la inactividad también la reinicia. Consulta [FAIR_MODE.md](FAIR_MODE.md) para preparar el stand, configurar voz opcional y conocer las pruebas y límites.
 
-Compañero educativo local en español, con una mascota original SVG y sin cuentas ni APIs de pago. Trabaja sobre el MVP original, conservado como referencia en `legacy/`. La interfaz nueva no requiere Node, compilación, fuentes externas ni CDN.
+Compañero educativo local en español, con una mascota SVG original y sin cuentas ni APIs de pago. La interfaz se sirve con HTML, CSS y JavaScript nativo; no requiere Node, compilación, fuentes externas ni CDN.
 
-## Empezar en Windows
+## Instalación para usuarios
 
-1. Instala **Python 3.11 o superior** desde https://www.python.org/downloads/windows/ y marca **Add Python to PATH**. Se verificó con Python 3.13.
-2. Abre esta carpeta y haz doble clic en **start_allen.bat**.
-3. La primera vez se crea `.venv` y se instalan las dependencias de `requirements.txt`; esta instalación necesita Internet. Los siguientes arranques omiten la instalación si las versiones ya están presentes.
-4. El lanzador inicia el servidor y abre **http://127.0.0.1:8787** cuando responde. Conserva la ventana abierta; para cerrar Allen usa Ctrl+C.
+No hay todavía un instalador final validado para distribución general. `install_allen.bat` y `install_allen.ps1` son instaladores desde el código fuente para Windows: requieren Python 3.11 o posterior y acceso a pip; además, el flujo normal exige encontrar llama.cpp. Si encuentra llama.cpp pero no el GGUF configurado, puede ofrecer descargar el modelo Qwen indicado en el script. Revisa el origen y licencia del modelo antes de aceptarlo.
 
-Sin modelo puedes usar quizzes, ejercicios, biblioteca, perfiles, tarjetas manuales y progreso. Las respuestas abiertas muestran **MODO DEMO** y nunca fingen ser una IA conectada.
+La compilación Nuitka/Inno Setup está implementada en `packaging/` e `installer/`, pero la compilación previa quedó incompleta y no existe `dist/installer/ALLEN_Setup.exe` validado. Consulta [REPO_AUDIT.md](REPO_AUDIT.md) y [DOCUMENTACION_DISTRIBUCION_AUDITORIA.md](DOCUMENTACION_DISTRIBUCION_AUDITORIA.md) antes de distribuir builds.
 
-## Instalar en otro equipo
+## Instalación para desarrollo
 
-Descarga el repositorio como ZIP, extrae la carpeta y ejecuta `install_allen.bat`. El instalador comprueba Python 3.11+, copia la aplicación a `%LOCALAPPDATA%\ALLEN\app`, crea un entorno aislado e instala las dependencias. Luego usa el archivo `Iniciar ALLEN.bat` creado en esa carpeta.
+Requisitos: Windows, Python 3.11 o posterior, pip y conexión a un índice de paquetes para la primera instalación. El instalador comprueba al menos 1 GB libre antes de copiar la aplicación; instalar además dependencias, llama.cpp y un modelo requiere espacio adicional (el Qwen indicado ocupa alrededor de 0,78 GiB). Node.js solo es necesario para ejecutar las pruebas JavaScript. llama.cpp y un modelo GGUF local son necesarios para respuestas generativas; las actividades deterministas se pueden ejecutar sin IA desde el arranque de desarrollo. El proyecto no fija mínimos de CPU, RAM o GPU: el consumo y la velocidad dependen del modelo, cuantización, contexto y backend disponibles.
 
-El instalador no descarga modelos ni ejecutables de IA. Para activar respuestas abiertas, instala una versión confiable de llama.cpp, coloca un modelo GGUF con licencia adecuada y crea `%LOCALAPPDATA%\ALLEN\local_model.json` siguiendo `config/local_model.example.json`. Sin ese paso, ALLEN funciona en modo demo con sus actividades locales.
+```powershell
+python -m venv .venv
+\.venv\Scripts\python.exe -m pip install -r requirements.txt
+\.venv\Scripts\python.exe server.py --open
+```
+
+Abre `http://127.0.0.1:8787`. Configura el modelo fuera del repositorio en `%LOCALAPPDATA%\ALLEN\local_model.json` usando como referencia `config/local_model.example.json`. Para iniciar también la IA y comprobar su disponibilidad, configura llama.cpp y usa `start_allen.bat`; `Iniciar_ALLEN.bat` es el alias de inicio para usuarios que genera el instalador. Para cerrar los procesos lanzados por el launcher, ejecuta `Detener_ALLEN.bat`.
+
+Las dependencias Python están fijadas en `requirements.txt`; para pruebas instala `requirements-dev.txt`. Las herramientas Nuitka/Zig están separadas en `requirements-build.txt` y no forman parte del entorno normal. Consulta [GUIA_INSTALACION_ALLEN.md](GUIA_INSTALACION_ALLEN.md) y [DOCUMENTACION_TECNICA_ALLEN.md](DOCUMENTACION_TECNICA_ALLEN.md).
+
+## IA local
+
+ALLEN integra un servidor compatible con la API local de llama.cpp y modelos GGUF. El nombre usado actualmente por el pipeline de distribución es `Qwen3.5-0.8B-Q8_0.gguf`, pero el repositorio no incluye los pesos y la configuración privada del equipo no se versiona. `start_local_ai.py` lee la configuración y preferencias, inicia o comprueba el servidor en loopback y valida inferencia. La configuración de ejemplo y el código usan como puertos habituales 8080 para llama.cpp y 8787 para ALLEN; ambos deben estar disponibles. No hay integración de IA en la nube implementada.
+
+Sin motor/modelo, el modo de demostración depende de la configuración explícita y ofrece las actividades deterministas. No atribuyas respuestas generativas a la IA cuando el modelo no está activo. Revisa [SECURITY.md](SECURITY.md) antes de usar datos reales.
+
+## Datos, privacidad y registros
+
+La base SQLite de desarrollo usa `%LOCALAPPDATA%\ALLEN\allen.sqlite3` en Windows (o `~/.local/share/ALLEN` en otros sistemas), salvo que `ALLEN_DB_PATH` o `ALLEN_DATA_HOME` definan otra ruta. La configuración privada del modelo se ubica en `%LOCALAPPDATA%\ALLEN\local_model.json`. No guardes GGUF, bases de datos, tokens ni claves privadas en el repositorio. No se implementa sincronización de cuentas ni telemetría de producto. Los logs técnicos dependen del modo de ejecución y pueden estar bajo `logs/` durante desarrollo o bajo el directorio de datos en ejecución; revisa y redacta cualquier log antes de compartirlo.
+
+## Desinstalación y actualización
+
+El instalador de desarrollo copia ALLEN a `%LOCALAPPDATA%\ALLEN\app`; la desinstalación normal consiste en detener ALLEN y retirar esa carpeta. La base de datos/configuración puede quedar en `%LOCALAPPDATA%\ALLEN`; respáldala antes de eliminarla si quieres conservar progreso. El script Inno Setup, aún no validado como release, ofrece eliminar también los datos bajo `%ProgramData%\ALLEN` al desinstalar. No hay actualizador automático verificado: instala una copia nueva después de respaldar los datos y revisa las notas técnicas para cambios de esquema.
 
 ## Android
 
-La versión Android offline se prepara por separado en `android/`. Reutilizará la interfaz, tendrá SQLite/Room privado y ejecutará `llama.cpp` para ARM64 mediante un puente nativo. No se debe intentar convertir directamente el servidor FastAPI de Windows en un APK ni incluir modelos GGUF en GitHub. Consulta `android/README.md` para la arquitectura y los requisitos de compilación.
+La aplicación Android está planeada, pero `android/` está vacío en este checkout: no hay todavía proyecto compilable, APK, puente ARM64 ni guía de compilación.
 
 ## Publicación segura
 
@@ -44,7 +71,7 @@ No es necesario activar el entorno ni cambiar la política de ejecución de Powe
 ## Conectar llama.cpp y un modelo GGUF
 
 1. Descarga una versión de **llama.cpp** apropiada para Windows desde sus [versiones oficiales](https://github.com/ggml-org/llama.cpp/releases). Extrae los archivos completos en una carpeta, por ejemplo `C:\allen-tools\llama`.
-2. Obtén un modelo **instruct/chat en formato GGUF** de una fuente de confianza, con licencia que permita tu uso y soporte de español. Descarga el archivo completo antes de desconectarte. Para empezar en hardware modesto, prueba un modelo cuantizado pequeño; velocidad y memoria dependen del equipo y del modelo. Allen no incluye ni descarga un modelo automáticamente.
+2. Obtén un modelo **instruct/chat en formato GGUF** de una fuente de confianza, con licencia que permita tu uso y soporte de español. Descarga el archivo completo antes de desconectarte. Para empezar en hardware modesto, prueba un modelo cuantizado pequeño; velocidad y memoria dependen del equipo y del modelo. El repositorio no incluye los pesos. `install_allen.ps1` puede iniciar una descarga de Qwen si se detecta llama.cpp y la persona acepta expresamente el prompt; fuera de ese flujo, configura manualmente un GGUF.
 3. Guarda el GGUF, por ejemplo en `C:\allen-models\modelo.gguf`. No necesitas ponerlo en OneDrive.
 4. En PowerShell inicia el servidor local:
 
@@ -62,6 +89,7 @@ La conexión usa `/health`, `/v1/models` y `/v1/chat/completions` con streaming 
 ## Qué puedes hacer
 
 | Área | Implementación de esta versión |
+| Feria educativa | Microlecciones offline, retos graduados, rutas, simulaciones, proyectos STEAM, sesión de visitante y evaluación local con feedback IA opcional |
 | --- | --- |
 | Inicio | Mascota naranja original, tarjetas, navegación responsive y métricas locales |
 | Chat | Contexto de conversación, historial, nueva/limpiar, copiar, regenerar, detener y Markdown seguro básico |
@@ -97,7 +125,7 @@ El tutor no tiene una secuencia curricular certificada ni calificación automát
 - Solo el frontend se sirve como archivos estáticos. La base, el código Python y la biblioteca no se exponen como directorio web.
 - SQL parametrizado, entradas acotadas, comprobación de Host y Origin, token contra peticiones cruzadas, sin CORS abierto, CSP, sin ejecución de código, Markdown sin HTML activo ni imágenes remotas.
 - El prompt y filtros básicos intentan mantener conversaciones educativas y seguras. **No garantizan detectar todo contenido dañino**; se requiere supervisión y evaluación del modelo antes de usarlo con menores. No son un servicio de emergencias.
-- Los logs rotan y contienen clases de error, sin conversaciones ni respuestas. La aplicación no envía telemetría.
+- El log principal rotativo registra clases de error. El diagnóstico opcional de Feria escribe métricas de evaluación y hasta 2.000 caracteres de respuesta del modelo en `logs/steam-evaluation.log` bajo el directorio de datos; filtra correos y teléfonos reconocibles, pero no debe asumirse que elimina todo dato personal. Los logs rotan. La aplicación no implementa telemetría de producto.
 - La indicación de red proviene del navegador; no prueba conectividad a Internet. No se realizan llamadas externas para comprobarla.
 
 ## Ampliar la biblioteca
@@ -117,13 +145,13 @@ Archivos máximos de 300 KB, contenido visible limitado a 20 000 caracteres por 
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Si tienes Node, también puedes comprobar el renderizador de Markdown (Node no es necesario para usar Allen):
+Si tienes Node, ejecuta las pruebas de frontend (Node no es necesario para usar ALLEN):
 
 ```powershell
-node --test tests/test_markdown.mjs
+node --test tests/*.mjs
 ```
 
-Consulta `VALIDATION.md` para resultados y límites de la verificación, `ARCHITECTURE.md` para el diseño, y `CHANGES.md` para la lista de archivos.
+Consulta [VALIDATION.md](VALIDATION.md) para resultados y límites de la verificación, [ARCHITECTURE.md](ARCHITECTURE.md) para el diseño, y [REPO_AUDIT.md](REPO_AUDIT.md) para la clasificación y limpieza del repositorio.
 
 ## Solución de problemas
 
@@ -133,9 +161,34 @@ Consulta `VALIDATION.md` para resultados y límites de la verificación, `ARCHIT
 - **Texto demasiado largo:** envía secciones menores o amplía el contexto tanto en Allen como en el servidor, teniendo en cuenta la memoria disponible.
 - **Respuesta interrumpida:** puedes regenerarla; las respuestas incompletas no se guardan como conversación final.
 
-## Próximas fases
+## Beta y limitaciones
 
-Embeddings y RAG semántico local; bancos curriculares más amplios y revisados por docentes; evaluación de calidad y seguridad de modelos concretos; empaquetado instalable; sincronización manual/exportación de paquetes; roles docentes autenticados si se requieren varios usuarios con aislamiento real. Las expresiones animadas de la mascota, más allá del saludo actual, también quedan para una fase posterior.
+La experiencia de Feria, las rutas, microlecciones y evaluación local tienen pruebas automatizadas. El tutor clásico y la IA local dependen de la configuración del equipo y el modelo; su calidad educativa requiere evaluación con GGUF reales. No existe certificación curricular, multiusuario con aislamiento, autenticación docente ni validación de seguridad para uso institucional con menores. El empaquetado Windows no se encuentra validado y Android contiene únicamente preparación/documentación.
+
+## Roadmap
+
+**Hecho en el código:** actividades de Feria offline, rutas y microlecciones locales, evaluación rubricada determinista y feedback IA opcional; interfaz web local y tutor clásico.
+
+**En desarrollo / pendiente de validar:** build firmado Windows, instalador Inno Setup, instalación/desinstalación en máquinas limpias y evaluación pedagógica con modelos concretos.
+
+**Planeado:** embeddings y RAG semántico local, contenidos curriculares revisados por docentes, exportación/sincronización manual, roles docentes con aislamiento real, y aplicación Android funcional.
+
+## Licencia y contacto
+
+No se encontró un archivo `LICENSE` que defina la licencia del código de ALLEN; el estado de la licencia del proyecto está **pendiente de definición**. Los avisos dentro de `licenses/` se refieren a componentes de terceros y no otorgan por sí solos una licencia al repositorio completo. Para asuntos de seguridad, sigue el canal privado descrito en [SECURITY.md](SECURITY.md). Para consultas generales, contacta al propietario del repositorio desde su plataforma de alojamiento.
+
+## Preguntas frecuentes
+
+- **¿ALLEN necesita Internet?** Para instalar dependencias Python y obtener llama.cpp/modelos puede hacer falta conexión. Ya instalado, la interfaz, los datos y el motor configurado trabajan en el equipo; no se requiere una API de IA en la nube.
+- **¿Puedo cambiar el modelo?** Sí. Configura otra ruta GGUF y un `llama-server` compatible en `%LOCALAPPDATA%\ALLEN\local_model.json`; consulta la licencia del modelo que elijas.
+- **¿Dónde queda mi progreso?** En la base SQLite local. En desarrollo Windows se guarda normalmente bajo `%LOCALAPPDATA%\ALLEN`.
+- **¿ALLEN envía conversaciones a Internet?** El código revisado apunta la IA a loopback y no implementa telemetría. El comportamiento de herramientas/servicios externos que el usuario instale queda fuera de ALLEN.
+- **¿Está terminado?** No. Es una beta funcional; el instalador final, validación institucional y app Android siguen pendientes.
+- **¿Cómo reporto un problema?** Incluye versión, pasos para reproducir y mensajes relevantes; elimina rutas personales, conversaciones, tokens y otros datos privados antes de compartir logs.
+
+## Contribuciones
+
+El estado público y la política de contribuciones de este repositorio no están documentados. Antes de preparar un cambio externo, confirma con el propietario si acepta contribuciones. Para trabajo local, crea una rama, conserva cambios ajenos, ejecuta las pruebas Python y JavaScript, y documenta límites reproducibles.
 
 ## Dataset y entrenamiento opcional
 
@@ -143,10 +196,6 @@ Se añadió `allen_training/` con reglas, un dataset conversacional sintético d
 
 Para validar sin entrenar: `python allen_training/train.py`.
 
-## Arranque automático del modelo en este equipo
+## Inicio con IA local
 
-Se encontró llama.cpp instalado mediante WinGet y el modelo `Qwen3.5-0.8B-Q8_0.gguf` ya descargado. Sus rutas se guardaron en `%LOCALAPPDATA%\ALLEN\local_model.json`, fuera del código. No se descargaron pesos nuevos.
-
-`start_allen.bat` ahora ejecuta `start_local_ai.py` antes de abrir la aplicación. Comprueba si el servidor ya responde y, si no, inicia el binario configurado en segundo plano, solo en loopback, con el contexto indicado en Configuración. No duplica un servidor activo y respeta el modo demo explícito. Si no hay configuración o falla el modelo, la aplicación sigue abriendo en modo demo.
-
-Para otro equipo, adapta `config/local_model.example.json` y guárdalo como `%LOCALAPPDATA%\ALLEN\local_model.json`. Requiere una versión de llama.cpp compatible con `--reasoning off`. El proceso del modelo permanece en segundo plano al cerrar la ventana de Allen; puedes finalizar `llama-server.exe` desde el Administrador de tareas cuando no lo necesites.
+`start_allen.bat` comprueba dependencias y ejecuta `start_local_ai.py` antes de iniciar el backend. Si la IA no está disponible, el inicio continúa solo cuando el modo demo se habilitó explícitamente en las preferencias. Configura el GGUF y `llama-server.exe` en `%LOCALAPPDATA%\ALLEN\local_model.json`, usando `config/local_model.example.json` como guía. El proceso de llama.cpp puede permanecer activo después de cerrar la interfaz; utiliza `Detener_ALLEN.bat` para detener los procesos del launcher y revisa el Administrador de tareas si el motor continúa activo.
