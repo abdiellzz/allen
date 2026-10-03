@@ -1,12 +1,12 @@
 let token='';
 export function setToken(value){token=value;}
 async function localFetch(path,options){
- try{return await fetch(path,options);}catch(error){if(error.name==='AbortError')throw error;throw new Error('No pudimos conectar con Allen. Revisa que la aplicación esté iniciada y vuelve a intentarlo.');}
+ try{return await fetch(path,options);}catch(error){if(error.name==='AbortError')throw error;const failure=new Error('No pudimos conectar con Allen. Revisa que la aplicación esté iniciada y vuelve a intentarlo.');failure.kind='connection';failure.cause=error;throw failure;}
 }
 async function readJSON(response){try{return await response.json();}catch{throw new Error('Allen no pudo leer esta respuesta. Recarga la aplicación e inténtalo de nuevo.');}}
 export async function api(path,method='GET',body){
  const response=await localFetch('/api'+path,{method,headers:{'Content-Type':'application/json','X-Allen-Token':token},body:body===undefined?undefined:JSON.stringify(body)});
- const data=await readJSON(response);if(!response.ok)throw new Error(data.error||'No pudimos completar esta acción.');return data;
+ const data=await readJSON(response);if(!response.ok){const error=new Error(data.error||data.detail||'No pudimos completar esta acción.');error.status=response.status;throw error;}return data;
 }
 export async function streamChat(body,signal,onEvent){
  const response=await localFetch('/api/chat?stream=true',{method:'POST',headers:{'Content-Type':'application/json','X-Allen-Token':token},body:JSON.stringify(body),signal});

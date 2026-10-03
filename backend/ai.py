@@ -12,7 +12,7 @@ class LocalAI:
         self.transport = transport
         self.lock = asyncio.Semaphore(1)
 
-    def client(self, timeout=90):
+    def client(self, timeout=120):
         return httpx.AsyncClient(timeout=timeout, trust_env=False, follow_redirects=False, transport=self.transport)
 
     async def status(self, settings):
@@ -55,10 +55,15 @@ class LocalAI:
             return
         status = await self.status(settings)
         if not status['connected']:
-            yield {'type':'meta','demo':True}
-            text = '**MODO DEMO · IA local sin conectar** · Allen todavía está despertando. Revisa que la IA esté iniciada en Configuración.\n\nMientras tanto, puedes practicar con los quizzes, crear tarjetas y explorar la biblioteca: todo funciona en este dispositivo.'
-            if sources:
-                text += '\n\n**Lectura local: '+sources[0]['title']+'**\n\n'+sources[0]['content'][:1500]
+            if settings.demo:
+                yield {'type':'meta','demo':True}
+                text = '**MODO DEMO · activado en Configuración** · Las respuestas abiertas del modelo local están desactivadas.\n\nPuedes practicar con los quizzes, crear tarjetas y explorar la biblioteca.'
+                if sources:
+                    text += '\n\n**Lectura local: '+sources[0]['title']+'**\n\n'+sources[0]['content'][:1500]
+                yield {'type':'delta','text':text}
+                return
+            yield {'type':'meta','demo':False,'unavailable':True}
+            text = '**IA local no disponible** · No puedo generar una respuesta ahora. Revisa que llama-server siga activo y vuelve a intentarlo.'
             yield {'type':'delta','text':text}
             return
         messages=self.messages(request,profile,settings,sources)

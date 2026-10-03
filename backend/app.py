@@ -25,10 +25,10 @@ from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
 
-ROOT=Path(__file__).resolve().parent.parent
+ROOT=Path(os.environ.get('ALLEN_APP_ROOT', Path(__file__).resolve().parent.parent)).resolve()
 
 def create_app(db_path=None, ai=None):
-    local_root=Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'
+    local_root=Path(os.environ.get('ALLEN_DATA_HOME',Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'))
     db=Database(db_path or os.environ.get('ALLEN_DB_PATH',local_root/'allen.sqlite3'))
     library=Library(ROOT/'data/library')
     engine=ai or LocalAI()
@@ -289,11 +289,12 @@ def create_app(db_path=None, ai=None):
                 async for event in events():
                     yield json.dumps(event,ensure_ascii=False)+'\n'
             return StreamingResponse(encoded(),media_type='application/x-ndjson')
-        result={'ok':True,'answer':'','offline':True}
+        result={'ok':True,'answer':'','offline':False}
         async for event in events():
             if event['type']=='delta':result['answer']+=event['text']
             elif event['type']=='error':return JSONResponse({'error':event['message']},503)
             else:result.update({k:v for k,v in event.items() if k!='type'})
+        result['offline']=bool(result.get('demo') or result.get('unavailable'))
         return result
 
     @app.post('/api/chat')
@@ -441,7 +442,10 @@ def create_app(db_path=None, ai=None):
         return {'ok':True}
 
     @app.get('/')
-    def index(mode:str=''):return FileResponse(ROOT/('frontend/fair.html' if mode=='fair' else 'frontend/index.html'))
+    def index(mode:str=''):return FileResponse(ROOT/('frontend/index.html' if mode=='study' else 'frontend/fair.html'))
+
+    @app.get('/study')
+    def study_index():return FileResponse(ROOT/'frontend/index.html')
 
     from .fair import install_fair
     install_fair(app,db,engine)

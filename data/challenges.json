@@ -1,0 +1,2072 @@
+{
+  "categories": [
+    "Matemáticas",
+    "Ciberseguridad",
+    "Programación",
+    "IA",
+    "Tecnología",
+    "Inglés",
+    "Ciencia",
+    "Lógica",
+    "Redes",
+    "STEAM",
+    "Mixto"
+  ],
+  "questions": [
+    {
+      "id": "m1",
+      "category": "Matemáticas",
+      "difficulty": "Fácil",
+      "question": "¿Cuánto es 15 × 4?",
+      "options": [
+        "45",
+        "60",
+        "55",
+        "70"
+      ],
+      "correct": 1,
+      "explanation": "15 × 4 = 60. Puedes calcularlo como 15 × 2 = 30, y 30 × 2 = 60.",
+      "hint": "Divide el cálculo en pasos y revisa las unidades."
+    },
+    {
+      "id": "m2",
+      "category": "Matemáticas",
+      "difficulty": "Normal",
+      "question": "Si tienes 3/4 de una pizza y comes 1/4, ¿cuánto queda?",
+      "options": [
+        "1/4",
+        "1/8",
+        "1/2",
+        "3/4"
+      ],
+      "correct": 2,
+      "explanation": "3/4 - 1/4 = 2/4 = 1/2. Dos cuartos equivalen a la mitad.",
+      "hint": "Divide el cálculo en pasos y revisa las unidades."
+    },
+    {
+      "id": "m3",
+      "category": "Matemáticas",
+      "difficulty": "Difícil",
+      "question": "¿Cuál es el resultado de 2³ + 3²?",
+      "options": [
+        "13",
+        "17",
+        "15",
+        "19"
+      ],
+      "correct": 1,
+      "explanation": "2³ = 8 y 3² = 9. Entonces 8 + 9 = 17.",
+      "hint": "Divide el cálculo en pasos y revisa las unidades."
+    },
+    {
+      "id": "m4",
+      "category": "Matemáticas",
+      "difficulty": "Normal",
+      "question": "Un 20% de 150 es:",
+      "options": [
+        "20",
+        "25",
+        "30",
+        "35"
+      ],
+      "correct": 2,
+      "explanation": "20% de 150 = 0.20 × 150 = 30.",
+      "hint": "Divide el cálculo en pasos y revisa las unidades."
+    },
+    {
+      "id": "m5",
+      "category": "Matemáticas",
+      "difficulty": "Fácil",
+      "question": "¿Cuántos lados tiene un hexágono?",
+      "options": [
+        "5",
+        "6",
+        "7",
+        "8"
+      ],
+      "correct": 1,
+      "explanation": "Un hexágono tiene 6 lados. Hexa- viene del griego y significa seis.",
+      "hint": "Divide el cálculo en pasos y revisa las unidades."
+    },
+    {
+      "id": "c1",
+      "category": "Ciberseguridad",
+      "difficulty": "Fácil",
+      "question": "¿Qué opción protege mejor las contraseñas de tus cuentas?",
+      "options": [
+        "Repetir una clave",
+        "Usar tu nombre y año",
+        "Claves largas, aleatorias y únicas guardadas en un gestor",
+        "Usar 123456"
+      ],
+      "correct": 2,
+      "explanation": "Longitud, imprevisibilidad y una clave distinta por servicio ayudan más que sustituir algunas letras por símbolos.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "c2",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "Recibes un correo pidiendo tu contraseña bancaria urgentemente. ¿Qué haces?",
+      "options": [
+        "La envío rápido",
+        "Llamo al banco directamente",
+        "Respondo pidiendo más info",
+        "Ignoro el correo sin hacer nada"
+      ],
+      "correct": 1,
+      "explanation": "Nunca compartas contraseñas por correo. Los bancos reales nunca las solicitan así. Siempre verifica llamando al número oficial.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "c3",
+      "category": "Ciberseguridad",
+      "difficulty": "Fácil",
+      "question": "¿Qué significa MFA o autenticación de dos factores?",
+      "options": [
+        "Usar dos contraseñas distintas",
+        "Verificar identidad con un segundo método además de la contraseña",
+        "Iniciar sesión en dos dispositivos",
+        "Guardar contraseñas en dos lugares"
+      ],
+      "correct": 1,
+      "explanation": "MFA añade una prueba distinta a la contraseña. Reduce el riesgo, pero no elimina todos los ataques; no compartas códigos ni apruebes solicitudes ajenas.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "c4",
+      "category": "Ciberseguridad",
+      "difficulty": "Difícil",
+      "question": "¿Qué tipo de ataque engaña a alguien para que revele información confidencial haciéndose pasar por una persona de confianza?",
+      "options": [
+        "Brute force",
+        "SQL injection",
+        "Ingeniería social",
+        "DDoS"
+      ],
+      "correct": 2,
+      "explanation": "La ingeniería social manipula psicológicamente a las personas. No explota software, sino la confianza humana. Es uno de los ataques más efectivos.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "c5",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "¿Cuál es el riesgo principal de conectarte a una Wi-Fi pública sin contraseña?",
+      "options": [
+        "Tu batería se gasta más",
+        "Alguien puede interceptar tu tráfico",
+        "La velocidad es más lenta",
+        "Tu dispositivo puede recalentarse"
+      ],
+      "correct": 1,
+      "explanation": "Una red desconocida puede ser falsa o manipular tráfico sin cifrar. HTTPS protege el contenido en tránsito, pero debes comprobar el sitio y no ignorar avisos de certificados.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "c6",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "¿Qué es el phishing?",
+      "options": [
+        "Un virus que daña archivos",
+        "Un engaño para robar información mediante mensajes falsos",
+        "Un ataque que satura un servidor",
+        "Un programa que espía tu pantalla"
+      ],
+      "correct": 1,
+      "explanation": "El phishing usa mensajes (correos, SMS, webs) que imitan entidades legítimas para robarte datos como contraseñas o números de tarjeta.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "c7",
+      "category": "Ciberseguridad",
+      "difficulty": "Fácil",
+      "question": "¿Qué deberías hacer con una memoria USB desconocida que encuentras?",
+      "options": [
+        "Conectarla para ver qué tiene",
+        "Dejarla sin conectar o entregarla a alguien responsable",
+        "Formatearla inmediatamente",
+        "Compartirla con amigos"
+      ],
+      "correct": 1,
+      "explanation": "Las memorias USB desconocidas pueden contener malware que se ejecuta automáticamente al conectarlas. Es mejor no conectarlas.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "p1",
+      "category": "Programación",
+      "difficulty": "Fácil",
+      "question": "En Python, ¿qué hace print('Hola')?",
+      "options": [
+        "Guarda 'Hola' en memoria",
+        "Muestra 'Hola' en pantalla",
+        "Crea una variable llamada Hola",
+        "Elimina el texto Hola"
+      ],
+      "correct": 1,
+      "explanation": "print() es una función que muestra texto en la consola o pantalla. Es uno de los primeros comandos que aprenden los programadores.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "p2",
+      "category": "Programación",
+      "difficulty": "Normal",
+      "question": "¿Cuál es el resultado de este código?\nx = 5\nx = x + 3\nprint(x)",
+      "options": [
+        "5",
+        "3",
+        "8",
+        "15"
+      ],
+      "correct": 2,
+      "explanation": "Primero x vale 5. Luego x = x + 3 = 5 + 3 = 8. Entonces print(x) muestra 8.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "p3",
+      "category": "Programación",
+      "difficulty": "Normal",
+      "question": "¿Qué estructura repite una acción varias veces en programación?",
+      "options": [
+        "if/else",
+        "función",
+        "bucle/loop",
+        "variable"
+      ],
+      "correct": 2,
+      "explanation": "Un bucle (for, while) repite un bloque de código. Por ejemplo: for i in range(5) ejecuta el código 5 veces.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "p4",
+      "category": "Programación",
+      "difficulty": "Difícil",
+      "question": "¿Qué devuelve este código en Python?\nlen([1, 2, 3, 4])",
+      "options": [
+        "1234",
+        "4",
+        "[4]",
+        "Error"
+      ],
+      "correct": 1,
+      "explanation": "len() devuelve la cantidad de elementos de una lista. La lista [1, 2, 3, 4] tiene 4 elementos, así que len() retorna 4.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "p5",
+      "category": "Programación",
+      "difficulty": "Fácil",
+      "question": "¿Qué es una variable en programación?",
+      "options": [
+        "Un error en el código",
+        "Un espacio con nombre para guardar un valor",
+        "Un tipo de bucle",
+        "Un comando que imprime texto"
+      ],
+      "correct": 1,
+      "explanation": "Una variable es como una caja con etiqueta donde guardas datos. Puedes cambiar el valor dentro en cualquier momento.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "ia1",
+      "category": "IA",
+      "difficulty": "Fácil",
+      "question": "¿Qué significa que una IA funcione 'localmente'?",
+      "options": [
+        "Que solo sirve en una ciudad",
+        "Que procesa datos en el dispositivo sin enviarlos a internet",
+        "Que es más lenta que las IAs en la nube",
+        "Que no puede aprender nada nuevo"
+      ],
+      "correct": 1,
+      "explanation": "Una IA local procesa todo en el propio dispositivo. No envía tus datos a servidores externos, lo que da más privacidad y funciona sin internet.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "ia2",
+      "category": "IA",
+      "difficulty": "Normal",
+      "question": "¿Qué es Machine Learning?",
+      "options": [
+        "Programar computadoras manualmente para cada tarea",
+        "Enseñar a una máquina a aprender de datos sin programar cada regla",
+        "Un tipo de robot físico",
+        "Un lenguaje de programación"
+      ],
+      "correct": 1,
+      "explanation": "Machine Learning permite a los sistemas aprender patrones de datos. En lugar de programar cada regla, el modelo las aprende solo de ejemplos.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "ia3",
+      "category": "IA",
+      "difficulty": "Normal",
+      "question": "¿Puede una IA cometer errores en sus respuestas?",
+      "options": [
+        "No, siempre tiene razón",
+        "Sí, puede generar respuestas incorrectas que suenan convincentes",
+        "Solo si hay fallas de hardware",
+        "Solo en matemáticas"
+      ],
+      "correct": 1,
+      "explanation": "Las IAs generan respuestas estadísticamente probables, no garantizadas. Pueden alucinar datos o cometer errores. Siempre verifica información importante.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "ia4",
+      "category": "IA",
+      "difficulty": "Difícil",
+      "question": "¿Qué es un modelo de lenguaje grande (LLM)?",
+      "options": [
+        "Una base de datos muy grande",
+        "Un sistema entrenado en texto para generar y entender lenguaje natural",
+        "Un traductor automático de idiomas",
+        "Un motor de búsqueda avanzado"
+      ],
+      "correct": 1,
+      "explanation": "Un LLM (Large Language Model) es entrenado en enormes cantidades de texto para generar, resumir y razonar sobre lenguaje natural. GPT, Llama y Gemini son ejemplos.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "t1",
+      "category": "Tecnología",
+      "difficulty": "Fácil",
+      "question": "¿Para qué sirve una dirección IP?",
+      "options": [
+        "Para proteger contraseñas",
+        "Para identificar dispositivos en una red",
+        "Para medir la velocidad de internet",
+        "Para guardar fotos"
+      ],
+      "correct": 1,
+      "explanation": "Una IP (Internet Protocol) es como la dirección de tu casa en la red. Permite que los datos lleguen al dispositivo correcto.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "t2",
+      "category": "Tecnología",
+      "difficulty": "Normal",
+      "question": "¿Cuántos bits forman un byte?",
+      "options": [
+        "4",
+        "8",
+        "16",
+        "2"
+      ],
+      "correct": 1,
+      "explanation": "Un byte = 8 bits. Los bits son los ceros y unos básicos de la computación. Con 8 bits puedes representar 256 valores distintos (0-255).",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "t3",
+      "category": "Tecnología",
+      "difficulty": "Normal",
+      "question": "¿Qué es la RAM en una computadora?",
+      "options": [
+        "Donde se guarda el sistema operativo permanentemente",
+        "Memoria temporal que usa el procesador para trabajar",
+        "El disco duro donde guardas tus archivos",
+        "El nombre del procesador"
+      ],
+      "correct": 1,
+      "explanation": "La RAM (Random Access Memory) es la memoria de trabajo temporal. Cuando apagas el equipo, se borra. Más RAM = puedes tener más programas abiertos a la vez.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "i1",
+      "category": "Inglés",
+      "difficulty": "Fácil",
+      "question": "¿Qué significa 'Learn' en inglés?",
+      "options": [
+        "Enseñar",
+        "Aprender",
+        "Leer",
+        "Escribir"
+      ],
+      "correct": 1,
+      "explanation": "'Learn' significa aprender. 'I learn' = yo aprendo. 'I am learning' = estoy aprendiendo.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "i2",
+      "category": "Inglés",
+      "difficulty": "Normal",
+      "question": "¿Cuál es la traducción correcta de 'I have three cats'?",
+      "options": [
+        "Yo quiero tres gatos",
+        "Tengo tres gatos",
+        "Yo tenía tres gatos",
+        "Hay tres gatos"
+      ],
+      "correct": 1,
+      "explanation": "'I have' = yo tengo. 'Three' = tres. 'Cats' = gatos. 'I have three cats' = Tengo tres gatos.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "i3",
+      "category": "Inglés",
+      "difficulty": "Fácil",
+      "question": "¿Cómo se dice 'Buenos días' en inglés?",
+      "options": [
+        "Good night",
+        "Good evening",
+        "Good morning",
+        "Good afternoon"
+      ],
+      "correct": 2,
+      "explanation": "'Good morning' = buenos días. 'Good afternoon' = buenas tardes. 'Good evening' = buenas noches (al llegar). 'Good night' = buenas noches (al despedirse).",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "s1",
+      "category": "Ciencia",
+      "difficulty": "Fácil",
+      "question": "¿Cuántos planetas tiene el sistema solar?",
+      "options": [
+        "7",
+        "8",
+        "9",
+        "10"
+      ],
+      "correct": 1,
+      "explanation": "El sistema solar tiene 8 planetas: Mercurio, Venus, Tierra, Marte, Júpiter, Saturno, Urano y Neptuno. En 2006, Plutón fue reclasificado como planeta enano.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "s2",
+      "category": "Ciencia",
+      "difficulty": "Normal",
+      "question": "¿Qué es la fotosíntesis?",
+      "options": [
+        "El proceso por el que los animales respiran",
+        "El proceso por el que las plantas convierten luz en energía",
+        "La forma en que los peces se mueven",
+        "El proceso de digestión en humanos"
+      ],
+      "correct": 1,
+      "explanation": "La fotosíntesis es el proceso que usan las plantas para convertir luz solar, agua y CO₂ en glucosa (energía) y liberar oxígeno.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "s3",
+      "category": "Ciencia",
+      "difficulty": "Difícil",
+      "question": "¿A qué temperatura hierve el agua al nivel del mar?",
+      "options": [
+        "90°C",
+        "95°C",
+        "100°C",
+        "105°C"
+      ],
+      "correct": 2,
+      "explanation": "El agua hierve a 100°C (212°F) al nivel del mar. A mayor altitud, la presión atmosférica baja y el agua hierve a menor temperatura.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "l1",
+      "category": "Lógica",
+      "difficulty": "Normal",
+      "question": "¿Qué número sigue en la serie: 2, 4, 8, 16, ___?",
+      "options": [
+        "24",
+        "28",
+        "32",
+        "36"
+      ],
+      "correct": 2,
+      "explanation": "Cada número se multiplica por 2: 2×2=4, 4×2=8, 8×2=16, 16×2=32.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "l2",
+      "category": "Lógica",
+      "difficulty": "Difícil",
+      "question": "Si todos los gatos son animales, y algunos animales son salvajes, ¿podemos afirmar con certeza que algunos gatos son salvajes?",
+      "options": [
+        "Sí, siempre",
+        "No, no necesariamente",
+        "Solo si son grandes",
+        "Depende del país"
+      ],
+      "correct": 1,
+      "explanation": "No. La lógica dice: 'algunos animales son salvajes' no implica que esos animales salvajes sean gatos. No hay una conexión directa garantizada.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "l3",
+      "category": "Lógica",
+      "difficulty": "Fácil",
+      "question": "Un hombre mira una fotografía y dice: 'No tengo hermanos ni hermanas, pero el padre de este hombre es el hijo de mi padre.' ¿A quién está mirando?",
+      "options": [
+        "A su padre",
+        "A su hijo",
+        "A sí mismo",
+        "A su abuelo"
+      ],
+      "correct": 1,
+      "explanation": "El padre del hombre en la foto es el hijo del padre del que habla, es decir, su propio hijo. Por tanto, la persona en la foto es su hijo.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "r1",
+      "category": "Redes",
+      "difficulty": "Fácil",
+      "question": "¿Cuál es la función principal de un router en tu casa?",
+      "options": [
+        "Generar electricidad",
+        "Conectar tus dispositivos a Internet y dirigir el tráfico entre ellos",
+        "Guardar tus fotos y videos",
+        "Aumentar la memoria de tu computadora"
+      ],
+      "correct": 1,
+      "explanation": "El router es el director del tráfico de red: conecta la red local de tu casa con la red externa (Internet) y distribuye los paquetes de datos a cada equipo.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "r2",
+      "category": "Redes",
+      "difficulty": "Normal",
+      "question": "¿Qué hace el protocolo DNS en Internet?",
+      "options": [
+        "Traduce nombres como google.com a direcciones IP numéricas",
+        "Aumenta la velocidad de descarga",
+        "Protege contra virus de correo",
+        "Crea páginas web automáticamente"
+      ],
+      "correct": 0,
+      "explanation": "DNS (Domain Name System) es la libreta de contactos de Internet: traduce nombres legibles para humanos a números IP que las máquinas entienden.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "r3",
+      "category": "Redes",
+      "difficulty": "Difícil",
+      "question": "¿Cuál es la diferencia principal entre IPv4 e IPv6?",
+      "options": [
+        "IPv6 es solo para celulares",
+        "IPv6 usa 128 bits permitiendo miles de millones más de direcciones que IPv4 (32 bits)",
+        "IPv4 es más rápido que IPv6",
+        "IPv6 no necesita cables"
+      ],
+      "correct": 1,
+      "explanation": "IPv4 tiene ~4.3 mil millones de direcciones (32 bits). Como se agotaron, IPv6 usa 128 bits, ofreciendo una cantidad prácticamente ilimitada de direcciones únicas.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "st1",
+      "category": "STEAM",
+      "difficulty": "Fácil",
+      "question": "¿Qué significan las siglas STEAM?",
+      "options": [
+        "Software, Tecnología, Energía, Arte, Mecánica",
+        "Ciencia, Tecnología, Ingeniería, Arte y Matemáticas",
+        "Sistemas, Teoría, Electricidad, Audio y Móvil",
+        "Ciencia, Tutoría, Educación, Aprendizaje y Memoria"
+      ],
+      "correct": 1,
+      "explanation": "STEAM proviene del inglés: Science, Technology, Engineering, Arts and Mathematics. Fomenta el aprendizaje interdisciplinario y la resolución creativa de problemas.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "st2",
+      "category": "STEAM",
+      "difficulty": "Normal",
+      "question": "Si construyes un puente de espaguetis o madera, ¿qué forma geométrica da mayor rigidez y resistencia a la estructura?",
+      "options": [
+        "El cuadrado",
+        "El círculo",
+        "El triángulo",
+        "El rectángulo"
+      ],
+      "correct": 2,
+      "explanation": "El triángulo es la figura geométrica indeformable por excelencia en ingeniería civil. Distribuye las fuerzas de compresión y tensión de manera uniforme.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "st3",
+      "category": "STEAM",
+      "difficulty": "Difícil",
+      "question": "¿Qué componente electrónico convierte energía eléctrica en movimiento rotatorio continuo?",
+      "options": [
+        "Un condensador",
+        "Un motor eléctrico",
+        "Un potenciómetro",
+        "Un transistor"
+      ],
+      "correct": 1,
+      "explanation": "El motor eléctrico aprovecha el electromagnetismo para transformar la energía eléctrica en energía mecánica o rotación continua en un eje.",
+      "hint": "Piensa en la función principal del concepto, no en su apariencia. Descarta opciones que no respondan a la pregunta."
+    },
+    {
+      "id": "advanced_Matemáticas_0",
+      "category": "Matemáticas",
+      "difficulty": "Difícil",
+      "question": "Un valor sube 20% y baja 20%. ¿Qué porcentaje del original queda?",
+      "options": [
+        "96%",
+        "100%",
+        "80%"
+      ],
+      "correct": 0,
+      "explanation": "1,2 × 0,8 = 0,96: los porcentajes usan bases diferentes.",
+      "hint": "Empieza con 100 y aplica cada cambio."
+    },
+    {
+      "id": "advanced_Matemáticas_1",
+      "category": "Matemáticas",
+      "difficulty": "Difícil",
+      "question": "Si 3(x − 2) = 2x + 5, x vale…",
+      "options": [
+        "11",
+        "7",
+        "1"
+      ],
+      "correct": 0,
+      "explanation": "3x − 6 = 2x + 5; restar 2x y sumar 6 da x = 11.",
+      "hint": "Distribuye primero el 3."
+    },
+    {
+      "id": "advanced_Matemáticas_2",
+      "category": "Matemáticas",
+      "difficulty": "Difícil",
+      "question": "En 2, 3, 4, 5, 100, ¿qué medida cambia menos si 100 pasa a 1000?",
+      "options": [
+        "Mediana",
+        "Media",
+        "Suma"
+      ],
+      "correct": 0,
+      "explanation": "La mediana sigue siendo 4; la media y suma aumentan.",
+      "hint": "Ordena los números y busca el central."
+    },
+    {
+      "id": "advanced_Matemáticas_3",
+      "category": "Matemáticas",
+      "difficulty": "Difícil",
+      "question": "Dos dados justos: ¿probabilidad de que ambos den 6?",
+      "options": [
+        "1/36",
+        "1/6",
+        "1/12"
+      ],
+      "correct": 0,
+      "explanation": "Los sucesos son independientes: 1/6 × 1/6 = 1/36.",
+      "hint": "Multiplica las probabilidades independientes."
+    },
+    {
+      "id": "advanced_Matemáticas_4",
+      "category": "Matemáticas",
+      "difficulty": "Difícil",
+      "question": "Un mapa usa escala 1:500. ¿Qué representan 4 cm?",
+      "options": [
+        "20 m",
+        "2 m",
+        "200 m"
+      ],
+      "correct": 0,
+      "explanation": "4 × 500 = 2000 cm, equivalentes a 20 m.",
+      "hint": "Convierte los centímetros a metros al final."
+    },
+    {
+      "id": "advanced_Ciberseguridad_0",
+      "category": "Ciberseguridad",
+      "difficulty": "Difícil",
+      "question": "Un sitio de phishing tiene HTTPS. ¿Qué concluyes?",
+      "options": [
+        "La conexión está cifrada, pero el sitio puede engañar",
+        "El negocio está verificado",
+        "No puede pedir contraseñas"
+      ],
+      "correct": 0,
+      "explanation": "HTTPS protege el canal; no certifica la honestidad del contenido.",
+      "hint": "Separa seguridad de transporte y confianza en el sitio."
+    },
+    {
+      "id": "advanced_Ciberseguridad_1",
+      "category": "Ciberseguridad",
+      "difficulty": "Difícil",
+      "question": "Recibes una aprobación MFA que no iniciaste. ¿Qué haces?",
+      "options": [
+        "Rechazo y reviso la cuenta desde el canal oficial",
+        "Apruebo para que deje de aparecer",
+        "Comparto el código con quien llama"
+      ],
+      "correct": 0,
+      "explanation": "Una solicitud no iniciada puede indicar un intento ajeno; verifica sesiones y credenciales por el canal oficial.",
+      "hint": "¿Quién inició el acceso?"
+    },
+    {
+      "id": "advanced_Ciberseguridad_2",
+      "category": "Ciberseguridad",
+      "difficulty": "Difícil",
+      "question": "¿Qué expresa el principio de mínimo privilegio?",
+      "options": [
+        "Dar solo los permisos necesarios para una tarea",
+        "Dar acceso completo por comodidad",
+        "Usar la contraseña más corta"
+      ],
+      "correct": 0,
+      "explanation": "Limitar permisos reduce el alcance de errores o accesos comprometidos.",
+      "hint": "Piensa en cuánto acceso necesita realmente la función."
+    },
+    {
+      "id": "advanced_Ciberseguridad_3",
+      "category": "Ciberseguridad",
+      "difficulty": "Difícil",
+      "question": "¿Por qué separar una copia de seguridad del equipo principal?",
+      "options": [
+        "Para que un incidente no alcance ambas copias con facilidad",
+        "Para que todos puedan editarla",
+        "Para evitar comprobarla"
+      ],
+      "correct": 0,
+      "explanation": "Una copia separada y probada ayuda a recuperarse si el original se pierde o es cifrado.",
+      "hint": "Considera un fallo que afecte al equipo completo."
+    },
+    {
+      "id": "advanced_Ciberseguridad_4",
+      "category": "Ciberseguridad",
+      "difficulty": "Difícil",
+      "question": "Un correo parece venir de tu director y pide datos. ¿Qué verificación ayuda más?",
+      "options": [
+        "Confirmar con el director por un canal ya conocido",
+        "Confiar en la foto del perfil",
+        "Responder con los datos para preguntar"
+      ],
+      "correct": 0,
+      "explanation": "La apariencia y el nombre visible se pueden imitar; un canal independiente aporta otra comprobación.",
+      "hint": "No uses para verificar el mismo contacto que te genera dudas."
+    },
+    {
+      "id": "advanced_Programación_0",
+      "category": "Programación",
+      "difficulty": "Difícil",
+      "question": "Python: a = [1]; b = a; b.append(2). ¿Qué vale a?",
+      "options": [
+        "[1, 2]",
+        "[1]",
+        "[2]"
+      ],
+      "correct": 0,
+      "explanation": "a y b hacen referencia a la misma lista mutable.",
+      "hint": "Asignar una lista a otro nombre no la copia."
+    },
+    {
+      "id": "advanced_Programación_1",
+      "category": "Programación",
+      "difficulty": "Difícil",
+      "question": "¿Qué defecto tiene while x > 0 si el cuerpo nunca cambia x?",
+      "options": [
+        "Puede no terminar si x empieza positivo",
+        "Siempre se ejecuta una sola vez",
+        "Elimina x"
+      ],
+      "correct": 0,
+      "explanation": "Si la condición no puede cambiar, el bucle puede continuar indefinidamente.",
+      "hint": "Busca cómo llegará la condición a ser falsa."
+    },
+    {
+      "id": "advanced_Programación_2",
+      "category": "Programación",
+      "difficulty": "Difícil",
+      "question": "¿Qué devuelve len(set([2, 2, 4, 4, 6]))?",
+      "options": [
+        "3",
+        "5",
+        "18"
+      ],
+      "correct": 0,
+      "explanation": "El conjunto conserva valores únicos: 2, 4 y 6.",
+      "hint": "Un conjunto elimina duplicados."
+    },
+    {
+      "id": "advanced_Programación_3",
+      "category": "Programación",
+      "difficulty": "Difícil",
+      "question": "¿Qué prueba descubre un error en el promedio de una lista vacía?",
+      "options": [
+        "Usar [] y comprobar el caso sin elementos",
+        "Usar solo [10, 20]",
+        "Cambiar el color del texto"
+      ],
+      "correct": 0,
+      "explanation": "La lista vacía fuerza a tratar el caso de división por cero.",
+      "hint": "Piensa en una entrada límite."
+    },
+    {
+      "id": "advanced_Programación_4",
+      "category": "Programación",
+      "difficulty": "Difícil",
+      "question": "¿Qué distingue return de print dentro de una función?",
+      "options": [
+        "return entrega un valor al llamador; print muestra texto",
+        "Son siempre equivalentes",
+        "print termina siempre el programa"
+      ],
+      "correct": 0,
+      "explanation": "Un valor retornado puede usarse en cálculos posteriores, mientras print produce una salida visible.",
+      "hint": "Distingue resultado de la función y salida por pantalla."
+    },
+    {
+      "id": "advanced_IA_0",
+      "category": "IA",
+      "difficulty": "Difícil",
+      "question": "¿Qué es una fuga de datos en una evaluación de ML?",
+      "options": [
+        "Que información de prueba influya en el entrenamiento",
+        "Que el archivo sea pequeño",
+        "Que el modelo tenga nombre"
+      ],
+      "correct": 0,
+      "explanation": "Si el entrenamiento conoce datos de evaluación, la métrica puede parecer mejor de lo que generaliza.",
+      "hint": "La evaluación debe mantenerse independiente."
+    },
+    {
+      "id": "advanced_IA_1",
+      "category": "IA",
+      "difficulty": "Difícil",
+      "question": "¿Qué cambia al añadir un documento al contexto de un modelo?",
+      "options": [
+        "La información disponible en esa respuesta",
+        "Todos los pesos del modelo necesariamente",
+        "El procesador físico"
+      ],
+      "correct": 0,
+      "explanation": "Aportar contexto no equivale a volver a entrenar los pesos.",
+      "hint": "Distingue contexto y entrenamiento."
+    },
+    {
+      "id": "advanced_IA_2",
+      "category": "IA",
+      "difficulty": "Difícil",
+      "question": "Un clasificador acierta 99% cuando 99% de casos son negativos. ¿Qué falta?",
+      "options": [
+        "Revisar errores por clase y compararlo con predecir siempre negativo",
+        "Declararlo perfecto",
+        "Borrar los positivos"
+      ],
+      "correct": 0,
+      "explanation": "La exactitud global puede ocultar que falla en todos los casos minoritarios.",
+      "hint": "¿Cuánto acertaría una regla que siempre responde negativo?"
+    },
+    {
+      "id": "advanced_IA_3",
+      "category": "IA",
+      "difficulty": "Difícil",
+      "question": "¿Por qué puede inventar una cita un modelo de lenguaje?",
+      "options": [
+        "Genera texto plausible sin verificar necesariamente una fuente",
+        "Porque toda cita existe",
+        "Porque no tiene pantalla"
+      ],
+      "correct": 0,
+      "explanation": "La generación probable no garantiza que una referencia exista.",
+      "hint": "Fluidez y verificación son propiedades distintas."
+    },
+    {
+      "id": "advanced_IA_4",
+      "category": "IA",
+      "difficulty": "Difícil",
+      "question": "¿Qué ayuda a evaluar sesgos en un sistema?",
+      "options": [
+        "Comparar errores y resultados entre grupos relevantes",
+        "Mirar solo una respuesta",
+        "Aumentar el tamaño de la fuente"
+      ],
+      "correct": 0,
+      "explanation": "La evaluación por grupos puede revelar diferencias ocultas por el promedio.",
+      "hint": "Un promedio puede esconder resultados desiguales."
+    },
+    {
+      "id": "advanced_Tecnología_0",
+      "category": "Tecnología",
+      "difficulty": "Difícil",
+      "question": "¿Qué ocurre al perder energía con un dato solo en RAM?",
+      "options": [
+        "Normalmente se pierde",
+        "Se copia siempre al disco",
+        "Se envía automáticamente por Internet"
+      ],
+      "correct": 0,
+      "explanation": "La RAM habitual es volátil; guardar de forma persistente requiere almacenamiento.",
+      "hint": "Distingue memoria de trabajo y almacenamiento."
+    },
+    {
+      "id": "advanced_Tecnología_1",
+      "category": "Tecnología",
+      "difficulty": "Difícil",
+      "question": "¿Qué requisito permite usar una app local sin Internet?",
+      "options": [
+        "Tener instalados sus recursos y servicios necesarios",
+        "Usar una fuente de letra concreta",
+        "Cerrar siempre el navegador"
+      ],
+      "correct": 0,
+      "explanation": "Código, datos y dependencias necesarios deben estar disponibles localmente.",
+      "hint": "Piensa qué necesita cargar la aplicación."
+    },
+    {
+      "id": "advanced_Tecnología_2",
+      "category": "Tecnología",
+      "difficulty": "Difícil",
+      "question": "¿Por qué un hash no es una copia de seguridad?",
+      "options": [
+        "No permite recuperar todo el archivo original",
+        "Siempre guarda dos copias",
+        "Es una imagen del archivo"
+      ],
+      "correct": 0,
+      "explanation": "Un hash es una huella; no contiene el archivo completo para restaurarlo.",
+      "hint": "Distingue comprobar integridad y recuperar contenido."
+    },
+    {
+      "id": "advanced_Tecnología_3",
+      "category": "Tecnología",
+      "difficulty": "Difícil",
+      "question": "¿Qué permite una API local?",
+      "options": [
+        "Comunicar componentes en el mismo equipo",
+        "Exigir siempre una nube pública",
+        "Duplicar la batería"
+      ],
+      "correct": 0,
+      "explanation": "La API define un contrato de intercambio y puede funcionar en loopback.",
+      "hint": "API describe una interfaz, no una ubicación."
+    },
+    {
+      "id": "advanced_Tecnología_4",
+      "category": "Tecnología",
+      "difficulty": "Difícil",
+      "question": "¿Por qué probar una app sin su modelo de IA?",
+      "options": [
+        "Para comprobar recuperación y contenido alternativo",
+        "Para borrar los datos",
+        "Para evitar todas las pruebas posteriores"
+      ],
+      "correct": 0,
+      "explanation": "Probar dependencias fallidas verifica que la experiencia continúe de forma honesta.",
+      "hint": "Considera qué ocurre cuando una dependencia no responde."
+    },
+    {
+      "id": "advanced_Inglés_0",
+      "category": "Inglés",
+      "difficulty": "Difícil",
+      "question": "Complete: If I had more time, I ___ learn robotics.",
+      "options": [
+        "would",
+        "will",
+        "am"
+      ],
+      "correct": 0,
+      "explanation": "El segundo condicional usa if + pasado y would + verbo.",
+      "hint": "Es una situación hipotética, no una promesa."
+    },
+    {
+      "id": "advanced_Inglés_1",
+      "category": "Inglés",
+      "difficulty": "Difícil",
+      "question": "Choose the passive form of “They built the robot.”",
+      "options": [
+        "The robot was built.",
+        "The robot build.",
+        "The robot is building them."
+      ],
+      "correct": 0,
+      "explanation": "Pasiva en pasado: was + participio built.",
+      "hint": "El robot pasa de objeto a sujeto."
+    },
+    {
+      "id": "advanced_Inglés_2",
+      "category": "Inglés",
+      "difficulty": "Difícil",
+      "question": "Complete: I have lived here ___ 2020.",
+      "options": [
+        "since",
+        "for",
+        "during"
+      ],
+      "correct": 0,
+      "explanation": "Since introduce un punto de inicio; for una duración.",
+      "hint": "2020 es un punto de inicio."
+    },
+    {
+      "id": "advanced_Inglés_3",
+      "category": "Inglés",
+      "difficulty": "Difícil",
+      "question": "What does “Although it was difficult, she continued” express?",
+      "options": [
+        "Contrast",
+        "Cause only",
+        "A question"
+      ],
+      "correct": 0,
+      "explanation": "Although significa aunque e introduce un contraste.",
+      "hint": "Compara la dificultad con la decisión de continuar."
+    },
+    {
+      "id": "advanced_Inglés_4",
+      "category": "Inglés",
+      "difficulty": "Difícil",
+      "question": "Choose the correct indirect question.",
+      "options": [
+        "Could you tell me where the lab is?",
+        "Could you tell me where is the lab?",
+        "Could you tell me where the lab are?"
+      ],
+      "correct": 0,
+      "explanation": "En la pregunta indirecta se usa orden declarativo: where the lab is.",
+      "hint": "La segunda parte no invierte sujeto y verbo."
+    },
+    {
+      "id": "advanced_Ciencia_0",
+      "category": "Ciencia",
+      "difficulty": "Difícil",
+      "question": "Dos plantas reciben distinta luz y distinto riego. ¿Qué limita la conclusión?",
+      "options": [
+        "Cambiaron dos variables a la vez",
+        "Se usaron plantas",
+        "Se midió el tiempo"
+      ],
+      "correct": 0,
+      "explanation": "No puedes atribuir una diferencia solo a la luz si el riego también cambia.",
+      "hint": "¿Qué otras causas podrían explicar la diferencia?"
+    },
+    {
+      "id": "advanced_Ciencia_1",
+      "category": "Ciencia",
+      "difficulty": "Difícil",
+      "question": "¿Qué distingue correlación de causalidad?",
+      "options": [
+        "Dos variables pueden cambiar juntas sin que una cause la otra",
+        "Son exactamente iguales",
+        "La correlación prueba siempre la causa"
+      ],
+      "correct": 0,
+      "explanation": "Puede haber otra variable o una coincidencia; establecer causalidad requiere más evidencia.",
+      "hint": "Piensa en una tercera variable."
+    },
+    {
+      "id": "advanced_Ciencia_2",
+      "category": "Ciencia",
+      "difficulty": "Difícil",
+      "question": "¿Por qué repetir una medición?",
+      "options": [
+        "Para observar variación y reducir el efecto de errores aleatorios",
+        "Para garantizar que nunca haya errores",
+        "Para elegir solo el resultado deseado"
+      ],
+      "correct": 0,
+      "explanation": "Repetir permite estimar la dispersión; no elimina todos los errores sistemáticos.",
+      "hint": "Compara consistencia entre intentos."
+    },
+    {
+      "id": "advanced_Ciencia_3",
+      "category": "Ciencia",
+      "difficulty": "Difícil",
+      "question": "¿Por qué el agua puede hervir a menor temperatura en altura?",
+      "options": [
+        "La presión atmosférica es menor",
+        "El agua deja de ser agua",
+        "La gravedad desaparece"
+      ],
+      "correct": 0,
+      "explanation": "La ebullición depende de la presión externa, que disminuye con la altura.",
+      "hint": "El punto de ebullición depende de la presión."
+    },
+    {
+      "id": "advanced_Ciencia_4",
+      "category": "Ciencia",
+      "difficulty": "Difícil",
+      "question": "Una hipótesis contradice resultados repetidos. ¿Qué procede?",
+      "options": [
+        "Revisarla y comprobar el método",
+        "Ocultar los datos",
+        "Declararla verdadera por costumbre"
+      ],
+      "correct": 0,
+      "explanation": "La evidencia orienta la revisión de una explicación y de sus mediciones.",
+      "hint": "La conclusión debe responder a los resultados."
+    },
+    {
+      "id": "advanced_Lógica_0",
+      "category": "Lógica",
+      "difficulty": "Difícil",
+      "question": "Si A implica B y B es falso, entonces…",
+      "options": [
+        "A es falso",
+        "A es verdadero",
+        "No existe relación"
+      ],
+      "correct": 0,
+      "explanation": "Es contraposición: A verdadero obligaría B verdadero.",
+      "hint": "Supón A verdadero y busca la contradicción."
+    },
+    {
+      "id": "advanced_Lógica_1",
+      "category": "Lógica",
+      "difficulty": "Difícil",
+      "question": "Si todos los A son B, ¿qué no se puede concluir?",
+      "options": [
+        "Todos los B son A",
+        "Cada A pertenece a B",
+        "Un A particular es B"
+      ],
+      "correct": 0,
+      "explanation": "Una inclusión no implica que ambos conjuntos sean iguales.",
+      "hint": "Un conjunto puede ser parte de otro más grande."
+    },
+    {
+      "id": "advanced_Lógica_2",
+      "category": "Lógica",
+      "difficulty": "Difícil",
+      "question": "¿Cuál niega correctamente “todos aprobaron”?",
+      "options": [
+        "Al menos uno no aprobó",
+        "Nadie aprobó",
+        "Todos reprobaron"
+      ],
+      "correct": 0,
+      "explanation": "Basta un contraejemplo para negar una afirmación universal.",
+      "hint": "Negar todos no significa ninguno."
+    },
+    {
+      "id": "advanced_Lógica_3",
+      "category": "Lógica",
+      "difficulty": "Difícil",
+      "question": "“Si estudio, apruebo. Aprobé; por tanto estudié” es…",
+      "options": [
+        "Una inferencia no garantizada",
+        "Siempre válido",
+        "Una equivalencia por definición"
+      ],
+      "correct": 0,
+      "explanation": "Afirma el consecuente: podría aprobar por otra razón.",
+      "hint": "¿La regla dice que estudiar sea la única causa?"
+    },
+    {
+      "id": "advanced_Lógica_4",
+      "category": "Lógica",
+      "difficulty": "Difícil",
+      "question": "Hay 3 interruptores y cada uno tiene 2 estados. ¿Cuántas combinaciones?",
+      "options": [
+        "8",
+        "6",
+        "9"
+      ],
+      "correct": 0,
+      "explanation": "Estados independientes: 2 × 2 × 2 = 8.",
+      "hint": "Multiplica las opciones de cada interruptor."
+    },
+    {
+      "id": "advanced_Redes_0",
+      "category": "Redes",
+      "difficulty": "Difícil",
+      "question": "Un equipo llega a una IP pero no resuelve nombres. ¿Qué revisar primero?",
+      "options": [
+        "DNS",
+        "El brillo",
+        "El teclado"
+      ],
+      "correct": 0,
+      "explanation": "DNS relaciona nombres con direcciones. Conectividad IP no garantiza resolución de nombres.",
+      "hint": "Distingue el nombre del destino de su dirección."
+    },
+    {
+      "id": "advanced_Redes_1",
+      "category": "Redes",
+      "difficulty": "Difícil",
+      "question": "¿Qué indica la máscara de subred IPv4?",
+      "options": [
+        "Qué bits corresponden a red y host",
+        "El color del router",
+        "La contraseña del Wi-Fi"
+      ],
+      "correct": 0,
+      "explanation": "La máscara divide los bits de la dirección en parte de red y de host.",
+      "hint": "No atribuyas calles o ciudades a cada octeto."
+    },
+    {
+      "id": "advanced_Redes_2",
+      "category": "Redes",
+      "difficulty": "Difícil",
+      "question": "¿Qué función tiene un router?",
+      "options": [
+        "Encaminar paquetes entre redes",
+        "Traducir todos los lenguajes de programación",
+        "Aumentar la RAM"
+      ],
+      "correct": 0,
+      "explanation": "Usa rutas para decidir el siguiente salto hacia la red destino.",
+      "hint": "Piensa en una decisión entre redes."
+    },
+    {
+      "id": "advanced_Redes_3",
+      "category": "Redes",
+      "difficulty": "Difícil",
+      "question": "¿Por qué 256.1.1.1 no es una IPv4 válida?",
+      "options": [
+        "Un octeto no puede superar 255",
+        "Tiene puntos",
+        "Empieza en número par"
+      ],
+      "correct": 0,
+      "explanation": "Cada octeto tiene 8 bits y permite valores de 0 a 255.",
+      "hint": "Revisa el rango de cada bloque."
+    },
+    {
+      "id": "advanced_Redes_4",
+      "category": "Redes",
+      "difficulty": "Difícil",
+      "question": "¿Qué aporta TLS en HTTPS?",
+      "options": [
+        "Cifrado y autenticación del servidor mediante certificados",
+        "Garantía de que el negocio es honesto",
+        "Un antivirus para todos los archivos"
+      ],
+      "correct": 0,
+      "explanation": "TLS protege el canal y permite verificar el servidor, no la intención comercial del sitio.",
+      "hint": "Separa el canal de comunicación de su contenido."
+    },
+    {
+      "id": "advanced_STEAM_0",
+      "category": "STEAM",
+      "difficulty": "Difícil",
+      "question": "Con 5 V, un LED de caída 2 V y corriente 0,01 A, ¿qué resistencia ideal limita la corriente?",
+      "options": [
+        "300 Ω",
+        "3 Ω",
+        "30 000 Ω"
+      ],
+      "correct": 0,
+      "explanation": "R = (5 − 2) / 0,01 = 300 Ω; en un circuito real revisa tolerancias y especificaciones.",
+      "hint": "La resistencia recibe la diferencia entre fuente y LED."
+    },
+    {
+      "id": "advanced_STEAM_1",
+      "category": "STEAM",
+      "difficulty": "Difícil",
+      "question": "Un sensor lee 100 en seco y 800 en húmedo. ¿Qué conviene hacer antes de fijar el umbral?",
+      "options": [
+        "Repetir y calibrar con el montaje real",
+        "Usar cualquier número sin medir",
+        "Asumir que todos los sensores son iguales"
+      ],
+      "correct": 0,
+      "explanation": "Calibrar observa el rango real; módulos y condiciones pueden variar.",
+      "hint": "Las lecturas dependen del dispositivo y del entorno."
+    },
+    {
+      "id": "advanced_STEAM_2",
+      "category": "STEAM",
+      "difficulty": "Difícil",
+      "question": "¿Qué hace un sistema de control con realimentación?",
+      "options": [
+        "Mide el resultado y ajusta su acción",
+        "Ignora el sensor",
+        "Actúa una vez y nunca compara"
+      ],
+      "correct": 0,
+      "explanation": "La realimentación usa la diferencia entre objetivo y medida para ajustar el control.",
+      "hint": "Piensa en un termostato que vuelve a medir."
+    },
+    {
+      "id": "advanced_STEAM_3",
+      "category": "STEAM",
+      "difficulty": "Difícil",
+      "question": "¿Por qué documentar una iteración del prototipo?",
+      "options": [
+        "Para relacionar el cambio con los resultados de la prueba",
+        "Para no volver a probar",
+        "Para ocultar fallos"
+      ],
+      "correct": 0,
+      "explanation": "Registrar cambios y resultados permite comparar versiones y aprender.",
+      "hint": "Sin registro, ¿cómo sabrás qué cambio ayudó?"
+    },
+    {
+      "id": "advanced_STEAM_4",
+      "category": "STEAM",
+      "difficulty": "Difícil",
+      "question": "¿Qué prueba aporta más al diseño de un puente de papel?",
+      "options": [
+        "Medir carga con la misma luz de apoyo y material",
+        "Comparar solo el color",
+        "Cambiar todas las condiciones entre pruebas"
+      ],
+      "correct": 0,
+      "explanation": "Mantener condiciones comparables permite estudiar el efecto de la estructura.",
+      "hint": "Controla las otras variables del ensayo."
+    },
+    {
+      "id": "lesson_ciber_phishing",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "¿Cuál es la mejor acción si recibes un correo urgente pidiendo tu contraseña bancaria?",
+      "options": [
+        "Hacer clic y verificar rápido",
+        "Ignorar el correo y verificar llamando al canal oficial del banco",
+        "Reenviarlo a todos tus amigos para avisarles"
+      ],
+      "correct": 1,
+      "explanation": "¡Exacto! Las entidades bancarias y de confianza nunca te pedirán contraseñas por correo. Verificar por canales oficiales es la regla de oro.",
+      "hint": "Es como si alguien se disfrazara de cartero para pedirte la llave de tu casa."
+    },
+    {
+      "id": "lesson_ciber_passwords",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "¿Por qué es riesgoso usar 'TuNombre123' en todas tus cuentas?",
+      "options": [
+        "Porque usa datos predecibles y si hackean un sitio acceden a todas tus cuentas",
+        "Porque el computador gasta más batería",
+        "Porque los nombres propios están prohibidos en Internet"
+      ],
+      "correct": 0,
+      "explanation": "Reutilizar una clave permite que una filtración de un servicio ponga en riesgo otras cuentas.",
+      "hint": "Una contraseña es como un candado: mientras más combinaciones y dientes tenga, más difícil será abrirlo a la fuerza."
+    },
+    {
+      "id": "lesson_ciber_mfa",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "Si alguien descubre tu contraseña pero tienes MFA activo, ¿qué sucede?",
+      "options": [
+        "Siempre entra de inmediato",
+        "Se le pide otra prueba; esto reduce el riesgo, pero no garantiza protección total",
+        "Se borra la cuenta"
+      ],
+      "correct": 1,
+      "explanation": "MFA añade una comprobación. No compartas códigos ni apruebes accesos que no iniciaste.",
+      "hint": "Es como entrar a tu casa con una llave (algo que tienes) y además digitar un código secreto en la alarma (algo que sabes)."
+    },
+    {
+      "id": "lesson_prog_variables",
+      "category": "Programación",
+      "difficulty": "Normal",
+      "question": "Si tienes `saldo = 50` y luego ejecutas `saldo = saldo + 25`, ¿cuánto vale saldo?",
+      "options": [
+        "50",
+        "25",
+        "75"
+      ],
+      "correct": 2,
+      "explanation": "¡Perfecto! Se toma el valor previo (50), se le suman 25 y el resultado (75) se almacena de nuevo en la caja 'saldo'.",
+      "hint": "Imagina una caja con una etiqueta donde guardas un juguete. Puedes cambiar el juguete cuando quieras, pero la etiqueta sigue siendo la misma."
+    },
+    {
+      "id": "lesson_prog_conditionals",
+      "category": "Programación",
+      "difficulty": "Normal",
+      "question": "temperatura = 32\nif temperatura > 30:\n    print('Calor')\nelse:\n    print('Agradable')\n¿Qué imprime?",
+      "options": [
+        "Calor",
+        "Agradable",
+        "Error"
+      ],
+      "correct": 0,
+      "explanation": "¡Exacto! Como 32 es mayor que 30, la condición se cumple y se ejecuta la primera rama.",
+      "hint": "Es como decir: 'Si llueve, llevo paraguas; de lo contrario, salgo con gafas de sol'."
+    },
+    {
+      "id": "lesson_ia_whatis",
+      "category": "IA",
+      "difficulty": "Normal",
+      "question": "¿Cómo produce una respuesta un modelo de lenguaje como Allen?",
+      "options": [
+        "Sintiendo emociones y pensando como una persona",
+        "Calculando probabilidades matemáticas sobre patrones de texto aprendidos",
+        "Buscando en vivo una enciclopedia humana secreta"
+      ],
+      "correct": 1,
+      "explanation": "¡Muy bien! Los modelos de lenguaje son motores de cálculo matemático y reconocimiento de patrones, no mentes biológicas.",
+      "hint": "No es magia ni una mente viva: es un programa muy avanzado que busca patrones en millones de ejemplos que se le mostraron antes."
+    },
+    {
+      "id": "lesson_ia_local",
+      "category": "IA",
+      "difficulty": "Normal",
+      "question": "¿Cuál es la principal ventaja de la IA local para una escuela sin Internet estable?",
+      "options": [
+        "Puede responder con un modelo instalado sin depender de Internet",
+        "Puede predecir el futuro",
+        "Nunca se puede equivocar"
+      ],
+      "correct": 0,
+      "explanation": "La IA local reduce la dependencia de Internet. La privacidad también depende de cómo se configure y proteja el dispositivo.",
+      "hint": "Es como tener un libro en tu propia mochila en lugar de tener que viajar a la biblioteca central cada vez que quieres leer una página."
+    },
+    {
+      "id": "lesson_net_ip",
+      "category": "Redes",
+      "difficulty": "Normal",
+      "question": "¿Qué función cumple una dirección IP en una red de computadoras?",
+      "options": [
+        "Aumentar el brillo de la pantalla",
+        "Identificar un dispositivo para encaminar datos hacia él",
+        "Guardar contraseñas de forma segura"
+      ],
+      "correct": 1,
+      "explanation": "¡Así es! La IP es la dirección que permite a los enrutadores saber a dónde enviar cada bloque de información.",
+      "hint": "Es como el número y calle de tu casa: sin esa dirección, el mensajero no sabría dónde entregar el paquete."
+    },
+    {
+      "id": "lesson_math_fractions",
+      "category": "Matemáticas",
+      "difficulty": "Normal",
+      "question": "Si una barra de chocolate tiene 8 trozos iguales y regalas 4 trozos, ¿qué fracción regalaste?",
+      "options": [
+        "4/8 (o 1/2)",
+        "8/4",
+        "1/8"
+      ],
+      "correct": 0,
+      "explanation": "¡Muy bien! 4 trozos de 8 corresponden a 4/8, que simplificado dividiendo entre 4 es igual a la mitad (1/2).",
+      "hint": "Si partes una pizza en 4 rebanadas iguales y te comes 1 rebanada, te has comido 1/4 de la pizza."
+    },
+    {
+      "id": "lesson_logic_deduction",
+      "category": "Lógica",
+      "difficulty": "Normal",
+      "question": "Todos los robots necesitan energía. Allen funciona con energía. ¿Significa necesariamente que todo lo que usa energía es un robot?",
+      "options": [
+        "Sí, todo lo que use energía es un robot",
+        "No, una bombilla o una tostadora usan energía y no son robots",
+        "Solo si son de color naranja"
+      ],
+      "correct": 1,
+      "explanation": "¡Excelente deducción! La regla dice que los robots necesitan energía, pero no que la energía sea exclusiva de los robots.",
+      "hint": "Si sabes que todos los pájaros del parque tienen plumas, y ves a Piolín que es un pájaro de ese parque, deduces con certeza que Piolín tiene plumas."
+    },
+    {
+      "id": "lesson_robot_sensors",
+      "category": "STEAM",
+      "difficulty": "Normal",
+      "question": "¿Qué le permite a un robot autónomo frenar antes de chocar contra un obstáculo?",
+      "options": [
+        "Un sensor de proximidad o ultrasonido que mide la distancia",
+        "Pintura reflectante en el chasis",
+        "Un motor más ruidoso"
+      ],
+      "correct": 0,
+      "explanation": "¡Exacto! El sensor de proximidad mide la distancia en tiempo real y avisa al microcontrolador para detener los motores.",
+      "hint": "Son los ojos, oídos y tacto de un robot. Sin ellos, el robot se movería a ciegas sin saber qué hay frente a él."
+    },
+    {
+      "id": "lesson_elec_circuits",
+      "category": "STEAM",
+      "difficulty": "Normal",
+      "question": "¿Qué ocurre si cortas uno de los cables de un circuito simple que enciende un foco?",
+      "options": [
+        "El foco se enciende más fuerte",
+        "El circuito queda abierto y el foco se apaga de inmediato",
+        "Los electrones salen volando por la habitación"
+      ],
+      "correct": 1,
+      "explanation": "¡Muy bien! Sin un camino cerrado continuo, la corriente eléctrica no puede circular y la bombilla se apaga.",
+      "hint": "Es como una pista circular de carreras: si la pista está rota en algún punto (circuito abierto), los autos (electrones) se detienen por completo."
+    },
+    {
+      "id": "lesson_ciber_social",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "¿Cómo verificas una llamada inesperada de soporte?",
+      "options": [
+        "Llamo al número oficial que ya conozco",
+        "Entrego el código que me piden",
+        "Desactivo la protección"
+      ],
+      "correct": 0,
+      "explanation": "Volver a contactar por un canal conocido reduce la posibilidad de hablar con un impostor.",
+      "hint": "Un engaño que aprovecha la confianza para conseguir información o una acción."
+    },
+    {
+      "id": "lesson_ciber_malware",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "¿Qué haces con un instalador inesperado?",
+      "options": [
+        "Lo abro para probar",
+        "Verifico su origen antes de ejecutarlo",
+        "Lo comparto con todos"
+      ],
+      "correct": 1,
+      "explanation": "Verificar el origen y no ejecutar archivos desconocidos ayuda a prevenir infecciones.",
+      "hint": "Software diseñado para realizar acciones dañinas o no autorizadas."
+    },
+    {
+      "id": "lesson_ciber_wifi",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "¿HTTPS garantiza que una tienda sea honesta?",
+      "options": [
+        "Sí, siempre",
+        "No: cifra la conexión, pero el sitio puede engañar",
+        "Solo si tiene imágenes"
+      ],
+      "correct": 1,
+      "explanation": "Cifrado y confianza en el negocio son cosas diferentes.",
+      "hint": "Una red segura combina configuración cuidada, actualizaciones y conexiones cifradas."
+    },
+    {
+      "id": "lesson_ciber_privacy",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "¿Qué permiso parece innecesario para una calculadora?",
+      "options": [
+        "Contactos",
+        "Teclas de números",
+        "Mostrar resultados"
+      ],
+      "correct": 0,
+      "explanation": "Una calculadora básica no necesita tus contactos para hacer operaciones.",
+      "hint": "Decidir qué información compartes, con quién y para qué."
+    },
+    {
+      "id": "lesson_ciber_networks",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "Un desconocido pide tu ubicación exacta. ¿Qué haces?",
+      "options": [
+        "La envío",
+        "No la comparto y reviso el contacto",
+        "Publico la ubicación para todos"
+      ],
+      "correct": 1,
+      "explanation": "Tu ubicación es un dato personal. Puedes pedir ayuda a una persona de confianza si la solicitud insiste.",
+      "hint": "Prácticas para controlar tu audiencia y proteger tus cuentas."
+    },
+    {
+      "id": "lesson_ciber_scams",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "¿Qué haces si te piden pagar para recibir un premio inesperado?",
+      "options": [
+        "Pago enseguida",
+        "Verifico la oferta por un canal independiente",
+        "Envío mi contraseña"
+      ],
+      "correct": 1,
+      "explanation": "Verificar por un canal independiente ayuda a evitar decisiones apresuradas.",
+      "hint": "Engaños que buscan obtener dinero, datos o acceso usando una historia falsa."
+    },
+    {
+      "id": "lesson_ciber_accounts",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "¿Dónde conviene guardar códigos de recuperación?",
+      "options": [
+        "En un lugar seguro separado de la cuenta",
+        "En una publicación pública",
+        "En un chat con desconocidos"
+      ],
+      "correct": 0,
+      "explanation": "Una copia segura separada puede ayudarte si pierdes acceso al segundo factor.",
+      "hint": "Mantener el control de una cuenta y saber cómo recuperarla."
+    },
+    {
+      "id": "lesson_ciber_personal",
+      "category": "Ciberseguridad",
+      "difficulty": "Normal",
+      "question": "¿Qué haces antes de publicar una foto de tu credencial?",
+      "options": [
+        "Reviso y oculto datos; si no hace falta, no la publico",
+        "Solo cambio el color",
+        "Agrego mi dirección"
+      ],
+      "correct": 0,
+      "explanation": "Compartir menos datos reduce exposiciones innecesarias.",
+      "hint": "Datos que identifican a alguien o permiten saber cosas sobre su vida."
+    },
+    {
+      "id": "lesson_prog_python",
+      "category": "Programación",
+      "difficulty": "Normal",
+      "question": "¿Qué muestra print(2 + 3)?",
+      "options": [
+        "23",
+        "5",
+        "Un error"
+      ],
+      "correct": 1,
+      "explanation": "Python suma los números antes de llamar a print, así que muestra 5.",
+      "hint": "Python es un lenguaje de programación de propósito general, con una sintaxis legible. Sirve para escribir instrucciones que una computadora ejecuta."
+    },
+    {
+      "id": "lesson_prog_loops",
+      "category": "Programación",
+      "difficulty": "Normal",
+      "question": "¿Cuántas vueltas hace for i in range(3)?",
+      "options": [
+        "2",
+        "3",
+        "4"
+      ],
+      "correct": 1,
+      "explanation": "range(3) produce 0, 1 y 2: tres valores.",
+      "hint": "Un bucle repite un bloque de instrucciones."
+    },
+    {
+      "id": "lesson_prog_functions",
+      "category": "Programación",
+      "difficulty": "Normal",
+      "question": "¿Qué devuelve doble(5) si retorna n * 2?",
+      "options": [
+        "10",
+        "5",
+        "25"
+      ],
+      "correct": 0,
+      "explanation": "La función recibe 5, lo multiplica por 2 y devuelve 10.",
+      "hint": "Una función reúne instrucciones bajo un nombre para reutilizarlas."
+    },
+    {
+      "id": "lesson_prog_api",
+      "category": "Programación",
+      "difficulty": "Normal",
+      "question": "¿Una API necesita siempre Internet?",
+      "options": [
+        "Sí",
+        "No: también puede funcionar localmente",
+        "Solo los domingos"
+      ],
+      "correct": 1,
+      "explanation": "API describe una interfaz de comunicación; puede usarse dentro del mismo dispositivo.",
+      "hint": "Una API define cómo dos partes de un programa intercambian solicitudes y resultados."
+    },
+    {
+      "id": "lesson_prog_logic",
+      "category": "Programación",
+      "difficulty": "Normal",
+      "question": "¿Qué conviene hacer antes de dividir la suma por la cantidad?",
+      "options": [
+        "Comprobar que la cantidad no sea cero",
+        "Borrar los datos",
+        "Multiplicar siempre por cero"
+      ],
+      "correct": 0,
+      "explanation": "Evitar dividir por cero es parte de diseñar casos límite.",
+      "hint": "Ordenar instrucciones y decisiones para resolver un problema."
+    },
+    {
+      "id": "lesson_ia_ml",
+      "category": "IA",
+      "difficulty": "Normal",
+      "question": "¿Con qué datos conviene evaluar el modelo?",
+      "options": [
+        "Solo con los usados para entrenar",
+        "Con datos reservados que no vio al entrenar",
+        "Con el nombre del modelo"
+      ],
+      "correct": 1,
+      "explanation": "Los datos separados ayudan a detectar si memorizó en vez de generalizar.",
+      "hint": "Una forma de construir modelos que aprenden patrones a partir de ejemplos."
+    },
+    {
+      "id": "lesson_ia_llm",
+      "category": "IA",
+      "difficulty": "Normal",
+      "question": "¿Una respuesta muy segura demuestra que es cierta?",
+      "options": [
+        "Sí",
+        "No, debe verificarse",
+        "Solo si es larga"
+      ],
+      "correct": 1,
+      "explanation": "La fluidez no garantiza exactitud.",
+      "hint": "Modelos que trabajan con secuencias de texto y generan continuaciones según patrones aprendidos."
+    },
+    {
+      "id": "lesson_ia_gen",
+      "category": "IA",
+      "difficulty": "Normal",
+      "question": "¿Qué paso es importante después de generar contenido?",
+      "options": [
+        "Revisarlo",
+        "Publicarlo sin leer",
+        "Suponer que es original y exacto"
+      ],
+      "correct": 0,
+      "explanation": "Revisar permite detectar errores, sesgos y contenido que no corresponde a la tarea.",
+      "hint": "Sistemas que producen contenido nuevo usando patrones aprendidos."
+    },
+    {
+      "id": "lesson_ia_ethics",
+      "category": "IA",
+      "difficulty": "Normal",
+      "question": "¿Qué práctica es responsable?",
+      "options": [
+        "Ocultar todos los errores",
+        "Revisar resultados y explicar el uso de IA",
+        "Usar datos ajenos sin permiso"
+      ],
+      "correct": 1,
+      "explanation": "La revisión humana y la transparencia ayudan a usar IA con criterio.",
+      "hint": "Pensar cómo el uso de IA afecta a las personas y decidir con responsabilidad."
+    },
+    {
+      "id": "lesson_tech_hardware",
+      "category": "Tecnología",
+      "difficulty": "Normal",
+      "question": "¿Qué componente guarda archivos al apagar el equipo?",
+      "options": [
+        "RAM",
+        "Almacenamiento",
+        "Cursor"
+      ],
+      "correct": 1,
+      "explanation": "El almacenamiento conserva archivos sin energía; la RAM es memoria de trabajo.",
+      "hint": "Las partes físicas de un dispositivo, como procesador, memoria y almacenamiento."
+    },
+    {
+      "id": "lesson_data_tables",
+      "category": "STEAM",
+      "difficulty": "Normal",
+      "question": "¿Por qué indicar la unidad de una temperatura?",
+      "options": [
+        "Para interpretar correctamente el número",
+        "Para que la tabla pese más",
+        "No tiene importancia"
+      ],
+      "correct": 0,
+      "explanation": "20 °C y 20 °F representan condiciones diferentes. La unidad da significado al dato.",
+      "hint": "Una tabla organiza información en filas y columnas."
+    },
+    {
+      "id": "lesson_science_method",
+      "category": "Ciencia",
+      "difficulty": "Normal",
+      "question": "¿Qué ayuda a comparar un experimento?",
+      "options": [
+        "Cambiar todo a la vez",
+        "Controlar las otras condiciones",
+        "Elegir solo resultados que te gusten"
+      ],
+      "correct": 1,
+      "explanation": "Controlar condiciones facilita interpretar la variable que estás investigando.",
+      "hint": "Una forma de investigar con preguntas, hipótesis, pruebas y revisión de resultados."
+    },
+    {
+      "id": "lesson_english_learn",
+      "category": "Inglés",
+      "difficulty": "Normal",
+      "question": "¿Qué significa I learn?",
+      "options": [
+        "Yo aprendo",
+        "Yo enseño",
+        "Yo corro"
+      ],
+      "correct": 0,
+      "explanation": "I significa yo y learn significa aprender.",
+      "hint": "Learn significa aprender; learning puede significar aprendiendo o aprendizaje según la frase."
+    },
+    {
+      "id": "lesson_steam_physics",
+      "category": "STEAM",
+      "difficulty": "Normal",
+      "question": "¿Qué conviene hacer para comparar dos rampas?",
+      "options": [
+        "Cambiar todo sin medir",
+        "Usar el mismo carrito y medir",
+        "Mirar solo el color"
+      ],
+      "correct": 1,
+      "explanation": "Usar el mismo carrito controla una variable y permite comparar la inclinación.",
+      "hint": "La física estudia materia, energía, movimiento e interacciones."
+    },
+    {
+      "id": "lesson_steam_design",
+      "category": "STEAM",
+      "difficulty": "Normal",
+      "question": "¿Cómo compruebas que un diseño se entiende?",
+      "options": [
+        "Pidiendo a alguien que lo use",
+        "Añadiendo todos los colores",
+        "Ocultando los botones"
+      ],
+      "correct": 0,
+      "explanation": "Observar a una persona usarlo descubre problemas que el diseñador puede no notar.",
+      "hint": "Crear una solución teniendo en cuenta a quien la usará."
+    },
+    {
+      "id": "lesson_steam_math",
+      "category": "STEAM",
+      "difficulty": "Normal",
+      "question": "¿Qué debes revisar antes de sumar dos longitudes?",
+      "options": [
+        "Que estén en unidades compatibles",
+        "Que tengan colores iguales",
+        "Que ambas sean pares"
+      ],
+      "correct": 0,
+      "explanation": "Convierte centímetros y metros a una misma unidad antes de sumarlos.",
+      "hint": "Usar medidas y modelos matemáticos para resolver problemas concretos."
+    },
+    {
+      "id": "lesson_steam_prototype",
+      "category": "STEAM",
+      "difficulty": "Normal",
+      "question": "¿Qué haces si un prototipo falla?",
+      "options": [
+        "Anoto qué pasó y pruebo una mejora",
+        "Lo oculto",
+        "Digo que ya está terminado"
+      ],
+      "correct": 0,
+      "explanation": "Un fallo documentado puede orientar la siguiente versión.",
+      "hint": "Una versión de prueba que permite aprender antes de construir el producto final."
+    },
+    {
+      "id": "lesson_steam_creativity",
+      "category": "STEAM",
+      "difficulty": "Normal",
+      "question": "¿Qué ayuda a elegir entre ideas?",
+      "options": [
+        "Compararlas con necesidades y recursos",
+        "Elegir solo la más cara",
+        "No probar ninguna"
+      ],
+      "correct": 0,
+      "explanation": "Los criterios claros conectan la creatividad con un problema real.",
+      "hint": "Proponer distintas soluciones y evaluar cuál responde mejor al problema."
+    },
+    {
+      "id": "lesson_steam_robot_sensors",
+      "category": "STEAM",
+      "difficulty": "Normal",
+      "question": "¿Qué le permite a un robot autónomo frenar antes de chocar contra un obstáculo?",
+      "options": [
+        "Un sensor de proximidad o ultrasonido que mide la distancia",
+        "Pintura reflectante en el chasis",
+        "Un motor más ruidoso"
+      ],
+      "correct": 0,
+      "explanation": "¡Exacto! El sensor de proximidad mide la distancia en tiempo real y avisa al microcontrolador para detener los motores.",
+      "hint": "Son los ojos, oídos y tacto de un robot. Sin ellos, el robot se movería a ciegas sin saber qué hay frente a él."
+    },
+    {
+      "id": "lesson_steam_elec_circuits",
+      "category": "STEAM",
+      "difficulty": "Normal",
+      "question": "¿Qué ocurre si cortas uno de los cables de un circuito simple que enciende un foco?",
+      "options": [
+        "El foco se enciende más fuerte",
+        "El circuito queda abierto y el foco se apaga de inmediato",
+        "Los electrones salen volando por la habitación"
+      ],
+      "correct": 1,
+      "explanation": "¡Muy bien! Sin un camino cerrado continuo, la corriente eléctrica no puede circular y la bombilla se apaga.",
+      "hint": "Es como una pista circular de carreras: si la pista está rota en algún punto (circuito abierto), los autos (electrones) se detienen por completo."
+    },
+    {
+      "id": "basic_129",
+      "category": "Tecnología",
+      "difficulty": "Fácil",
+      "question": "¿Qué componente muestra imágenes?",
+      "options": [
+        "Pantalla",
+        "Teclado",
+        "Micrófono"
+      ],
+      "correct": 0,
+      "explanation": "La pantalla es un dispositivo de salida visual.",
+      "hint": "Piensa en dónde ves el resultado."
+    },
+    {
+      "id": "basic_130",
+      "category": "Tecnología",
+      "difficulty": "Fácil",
+      "question": "¿Qué es una copia de seguridad?",
+      "options": [
+        "Una copia recuperable de tus datos",
+        "El nombre de un archivo",
+        "Una contraseña"
+      ],
+      "correct": 0,
+      "explanation": "Permite recuperar información si el original se pierde.",
+      "hint": "Debe permitir restaurar el contenido."
+    },
+    {
+      "id": "basic_131",
+      "category": "Tecnología",
+      "difficulty": "Fácil",
+      "question": "¿Qué programa organiza archivos y recursos del equipo?",
+      "options": [
+        "Sistema operativo",
+        "Una foto",
+        "Un cable"
+      ],
+      "correct": 0,
+      "explanation": "El sistema operativo administra recursos y ofrece servicios a las aplicaciones.",
+      "hint": "Es el software base del equipo."
+    },
+    {
+      "id": "basic_132",
+      "category": "Inglés",
+      "difficulty": "Fácil",
+      "question": "What does “book” mean?",
+      "options": [
+        "Libro",
+        "Mesa",
+        "Agua"
+      ],
+      "correct": 0,
+      "explanation": "Book significa libro.",
+      "hint": "Es algo que puedes leer."
+    },
+    {
+      "id": "basic_133",
+      "category": "Inglés",
+      "difficulty": "Fácil",
+      "question": "Choose a greeting.",
+      "options": [
+        "Hello",
+        "Goodbye",
+        "Yesterday"
+      ],
+      "correct": 0,
+      "explanation": "Hello significa hola y se usa para saludar.",
+      "hint": "Busca una palabra para iniciar una conversación."
+    },
+    {
+      "id": "basic_134",
+      "category": "Inglés",
+      "difficulty": "Fácil",
+      "question": "Complete: I ___ a student.",
+      "options": [
+        "am",
+        "is",
+        "are"
+      ],
+      "correct": 0,
+      "explanation": "Con I usamos am: I am a student.",
+      "hint": "Es la forma de be para I."
+    },
+    {
+      "id": "basic_135",
+      "category": "Ciencia",
+      "difficulty": "Fácil",
+      "question": "¿Qué instrumento mide temperatura?",
+      "options": [
+        "Termómetro",
+        "Regla",
+        "Balanza"
+      ],
+      "correct": 0,
+      "explanation": "El termómetro mide temperatura; la regla longitud y la balanza masa.",
+      "hint": "Relaciona cada instrumento con su magnitud."
+    },
+    {
+      "id": "basic_136",
+      "category": "Ciencia",
+      "difficulty": "Fácil",
+      "question": "¿Qué necesitan las plantas para realizar fotosíntesis?",
+      "options": [
+        "Luz, agua y dióxido de carbono",
+        "Solo arena",
+        "Solo oscuridad"
+      ],
+      "correct": 0,
+      "explanation": "Usan energía luminosa, agua y dióxido de carbono para producir compuestos orgánicos.",
+      "hint": "Piensa en qué reciben del ambiente."
+    },
+    {
+      "id": "basic_137",
+      "category": "Ciencia",
+      "difficulty": "Fácil",
+      "question": "¿Qué describe mejor una observación?",
+      "options": [
+        "Registrar lo que se percibe o mide",
+        "Elegir una conclusión sin mirar",
+        "Copiar una opinión"
+      ],
+      "correct": 0,
+      "explanation": "Una observación registra información que luego puede analizarse.",
+      "hint": "Primero recoge evidencia."
+    },
+    {
+      "id": "basic_138",
+      "category": "Lógica",
+      "difficulty": "Fácil",
+      "question": "Sigue la serie: 5, 10, 15, …",
+      "options": [
+        "20",
+        "16",
+        "30"
+      ],
+      "correct": 0,
+      "explanation": "Se suman cinco unidades cada vez.",
+      "hint": "Compara las diferencias."
+    },
+    {
+      "id": "basic_139",
+      "category": "Lógica",
+      "difficulty": "Fácil",
+      "question": "Si todos los cuadernos de esta caja son azules y saco uno, será…",
+      "options": [
+        "Azul",
+        "Rojo necesariamente",
+        "Invisible"
+      ],
+      "correct": 0,
+      "explanation": "La regla del grupo se aplica al objeto que pertenece al grupo.",
+      "hint": "Usa la información dada."
+    },
+    {
+      "id": "basic_140",
+      "category": "Lógica",
+      "difficulty": "Fácil",
+      "question": "¿Cuál no pertenece al grupo de números pares?",
+      "options": [
+        "7",
+        "2",
+        "8"
+      ],
+      "correct": 0,
+      "explanation": "7 no es divisible entre 2 sin resto; 2 y 8 sí.",
+      "hint": "Un número par se divide en dos grupos iguales."
+    },
+    {
+      "id": "basic_141",
+      "category": "Redes",
+      "difficulty": "Fácil",
+      "question": "¿Qué permite una red local?",
+      "options": [
+        "Compartir datos entre dispositivos conectados",
+        "Cargar cualquier batería",
+        "Cambiar el tamaño de la pantalla"
+      ],
+      "correct": 0,
+      "explanation": "Una red conecta dispositivos para intercambiar información.",
+      "hint": "Local significa dentro de un entorno cercano."
+    },
+    {
+      "id": "basic_142",
+      "category": "Redes",
+      "difficulty": "Fácil",
+      "question": "¿Wi-Fi e Internet significan lo mismo?",
+      "options": [
+        "No: puede haber Wi-Fi sin acceso a Internet",
+        "Sí, siempre",
+        "Solo de noche"
+      ],
+      "correct": 0,
+      "explanation": "Wi-Fi conecta por radio a una red; esa red puede no tener salida a Internet.",
+      "hint": "Distingue conexión inalámbrica y acceso externo."
+    },
+    {
+      "id": "basic_143",
+      "category": "Redes",
+      "difficulty": "Fácil",
+      "question": "¿Qué es un cable Ethernet?",
+      "options": [
+        "Un medio para transmitir datos de red",
+        "Una aplicación",
+        "Una contraseña"
+      ],
+      "correct": 0,
+      "explanation": "Ethernet puede usar cables para conectar dispositivos de una red.",
+      "hint": "Es una conexión física."
+    }
+  ]
+}

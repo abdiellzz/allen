@@ -1,0 +1,357 @@
+{
+  "areas": [
+    {
+      "id": "cybersec",
+      "name": "Ciberseguridad",
+      "icon": "shield-check",
+      "color": "#547d75",
+      "tagline": "Protege lo digital que importa.",
+      "desc": "Aprende a protegerte y proteger a otros en el mundo digital.",
+      "whatIs": "La ciberseguridad es el conjunto de prácticas, tecnologías y procesos diseñados para proteger sistemas, redes y datos de ataques, daños o accesos no autorizados.",
+      "usedFor": "Proteger datos personales y empresariales, detectar y prevenir ciberataques, asegurar infraestructuras críticas como bancos o hospitales, y educar a las personas sobre riesgos digitales.",
+      "realExamples": [
+        "Sistemas de autenticación en bancos en línea",
+        "Detección de malware en tiempo real (antivirus)",
+        "Protocolos HTTPS para cifrar tu conexión",
+        "Equipos de respuesta a incidentes en empresas"
+      ],
+      "skills": [
+        "Redes y protocolos",
+        "Programación (Python, Bash)",
+        "Análisis de vulnerabilidades",
+        "Criptografía básica",
+        "Pensamiento analítico"
+      ],
+      "simpleProject": "Crea tarjetas de phishing educativo con mensajes ficticios y explica cada decisión.",
+      "learningPath": [
+        "Comprende cuentas, permisos y redes",
+        "Practica con los escenarios preventivos de Allen",
+        "Aprende a verificar alertas por canales oficiales",
+        "Construye un juego de decisiones con datos ficticios"
+      ]
+    },
+    {
+      "id": "ai",
+      "name": "Inteligencia Artificial",
+      "icon": "sparkles",
+      "color": "#bb5316",
+      "tagline": "Enseña a las máquinas a aprender.",
+      "desc": "Entiende y crea sistemas que aprenden y toman decisiones.",
+      "whatIs": "La inteligencia artificial es la capacidad de las máquinas para simular procesos de razonamiento humano como aprender, razonar, resolver problemas o entender lenguaje.",
+      "usedFor": "Reconocimiento de voz y texto, diagnóstico médico asistido, conducción autónoma, traducción automática, sistemas de recomendación (Netflix, Spotify) y asistentes educativos como Allen.",
+      "realExamples": [
+        "Allen: IA local educativa que funciona sin internet",
+        "ChatGPT y Gemini: modelos de lenguaje",
+        "Filtros de spam en correos",
+        "Diagnóstico de imágenes médicas con IA"
+      ],
+      "skills": [
+        "Matemáticas (álgebra lineal, estadística)",
+        "Programación en Python",
+        "Manejo de datos",
+        "Lógica y razonamiento"
+      ],
+      "simpleProject": "Construye un clasificador de texto que detecte si una frase es positiva o negativa.",
+      "learningPath": [
+        "Aprende Python",
+        "Estudia estadística básica",
+        "Practica con scikit-learn",
+        "Explora TensorFlow o PyTorch"
+      ]
+    },
+    {
+      "id": "programming",
+      "name": "Programación",
+      "icon": "code",
+      "color": "#3a6ea8",
+      "tagline": "Da instrucciones a las computadoras.",
+      "desc": "Aprende a crear programas, automatizar tareas y resolver problemas con código.",
+      "whatIs": "La programación es el proceso de escribir instrucciones (código) que una computadora puede ejecutar para realizar tareas específicas. Es el lenguaje con el que los humanos hablan con las máquinas.",
+      "usedFor": "Crear aplicaciones web y móviles, automatizar procesos repetitivos, analizar datos, construir videojuegos, desarrollar IA y controlar robots.",
+      "realExamples": [
+        "Instagram y TikTok (apps móviles)",
+        "Excel y sus macros (automatización)",
+        "Minecraft (videojuego programado en Java)",
+        "Scripts que automatizan tareas diarias"
+      ],
+      "skills": [
+        "Lógica y pensamiento algorítmico",
+        "Sintaxis de lenguajes (Python, JavaScript)",
+        "Resolución de errores (debugging)",
+        "Control de versiones (Git)"
+      ],
+      "simpleProject": "Crea un juego de preguntas y respuestas en Python con puntaje.",
+      "learningPath": [
+        "Aprende Python desde cero",
+        "Construye proyectos pequeños",
+        "Aprende web con HTML, CSS, JavaScript",
+        "Estudia estructuras de datos y algoritmos"
+      ]
+    },
+    {
+      "id": "networks",
+      "name": "Redes",
+      "icon": "network",
+      "color": "#4a6fa5",
+      "tagline": "Conecta el mundo digital.",
+      "desc": "Descubre cómo los dispositivos se comunican entre sí.",
+      "whatIs": "Las redes informáticas son sistemas que permiten la comunicación e intercambio de datos entre dispositivos usando protocolos y hardware especializado.",
+      "usedFor": "Internet (la red de redes), redes empresariales, conectar dispositivos en hogares, streaming de video, videojuegos en línea y comunicaciones.",
+      "realExamples": [
+        "El Wi-Fi de tu casa",
+        "Internet: la red global de redes",
+        "Redes 4G/5G de celulares",
+        "Redes privadas en hospitales y bancos"
+      ],
+      "skills": [
+        "Modelos TCP/IP y OSI",
+        "Configuración de routers y switches",
+        "Direccionamiento IP y subredes",
+        "Protocolos: HTTP, DNS, DHCP"
+      ],
+      "simpleProject": "Instala un servidor web local con Python y accede desde otro dispositivo en tu red.",
+      "learningPath": [
+        "Estudia el modelo OSI y TCP/IP",
+        "Practica con Packet Tracer (Cisco)",
+        "Obtén certificación CCNA",
+        "Aprende sobre ciberseguridad de redes"
+      ]
+    },
+    {
+      "id": "cloud",
+      "name": "Cloud",
+      "icon": "cloud",
+      "color": "#2e86ab",
+      "tagline": "Computación en cualquier lugar.",
+      "desc": "Comprende cómo se almacenan y procesan datos remotamente.",
+      "whatIs": "La computación en la nube es el uso de servidores remotos (en internet) para almacenar, gestionar y procesar datos en lugar de hacerlo en tu computadora local.",
+      "usedFor": "Almacenamiento (Google Drive, Dropbox), aplicaciones web, servidores de videojuegos, streaming (Netflix usa la nube de Amazon AWS) y desarrollo de software.",
+      "realExamples": [
+        "Google Drive y Gmail",
+        "Netflix (usa Amazon AWS)",
+        "iCloud para backups de iPhone",
+        "GitHub para código fuente"
+      ],
+      "skills": [
+        "Virtualización y contenedores (Docker)",
+        "Fundamentos de Linux",
+        "Servicios cloud (AWS, GCP, Azure)",
+        "Redes básicas"
+      ],
+      "simpleProject": "Dibuja cómo una aplicación usaría un servicio remoto y compáralo con un servicio local. La maqueta funciona sin Internet.",
+      "learningPath": [
+        "Comprende cliente y servidor",
+        "Compara almacenamiento local y remoto",
+        "Simula una solicitud y respuesta con tarjetas",
+        "Estudia disponibilidad, permisos y costos antes de usar un proveedor"
+      ]
+    },
+    {
+      "id": "data",
+      "name": "Datos",
+      "icon": "database",
+      "color": "#6b4226",
+      "tagline": "Convierte observaciones en preguntas útiles.",
+      "desc": "Aprende a recolectar, analizar y visualizar datos para tomar mejores decisiones.",
+      "whatIs": "La ciencia de datos es la disciplina que combina estadística, programación y conocimiento del dominio para extraer información valiosa de grandes conjuntos de datos.",
+      "usedFor": "Predecir ventas en empresas, detectar fraudes bancarios, personalizar recomendaciones (Spotify, Netflix), mejorar el diagnóstico médico y guiar decisiones de gobierno.",
+      "realExamples": [
+        "Spotify recomienda música basada en tus datos",
+        "Netflix predice qué shows te gustarán",
+        "Supermercados predicen qué comprarás",
+        "Análisis de partidos deportivos"
+      ],
+      "skills": [
+        "Python (Pandas, NumPy)",
+        "Estadística y probabilidad",
+        "Visualización (Matplotlib, Tableau)",
+        "SQL para bases de datos"
+      ],
+      "simpleProject": "Analiza datos de tu propia lista de calificaciones y crea un gráfico de barras.",
+      "learningPath": [
+        "Aprende Python y estadística",
+        "Estudia SQL",
+        "Practica con datasets reales en Kaggle",
+        "Explora machine learning"
+      ]
+    },
+    {
+      "id": "robotics",
+      "name": "Robótica",
+      "icon": "bot",
+      "color": "#5c4033",
+      "tagline": "Dale vida a las máquinas.",
+      "desc": "Combina electrónica, programación y mecánica para crear máquinas que hacen cosas reales.",
+      "whatIs": "La robótica es la rama que diseña, construye y programa robots: máquinas capaces de ejecutar tareas de forma automatizada o controlada por humanos.",
+      "usedFor": "Manufactura (brazos robóticos en fábricas), exploración espacial (rovers en Marte), cirugía asistida por robots, robots de limpieza doméstica y drones.",
+      "realExamples": [
+        "Roomba (robot aspiradora)",
+        "Curiosity (rover de Marte)",
+        "Brazos robóticos de Tesla",
+        "Drones de entrega de Amazon"
+      ],
+      "skills": [
+        "Electrónica (sensores, actuadores)",
+        "Programación (C, Python, ROS)",
+        "Mecánica y diseño",
+        "Pensamiento sistemático"
+      ],
+      "simpleProject": "Construye un semáforo funcional con Arduino y LEDs.",
+      "learningPath": [
+        "Aprende electrónica básica",
+        "Programa con Arduino",
+        "Estudia ROS (Robot Operating System)",
+        "Participa en competencias de robótica"
+      ]
+    },
+    {
+      "id": "automation",
+      "name": "Automatización",
+      "icon": "zap",
+      "color": "#8b6914",
+      "tagline": "Haz que las máquinas trabajen por ti.",
+      "desc": "Aprende a automatizar tareas repetitivas con código y herramientas digitales.",
+      "whatIs": "La automatización es el uso de tecnología para ejecutar procesos o tareas con mínima intervención humana, aumentando eficiencia y reduciendo errores.",
+      "usedFor": "Generar reportes automáticos, enviar correos masivos, scraping web, pruebas de software automáticas, procesos de manufactura y bots de redes sociales.",
+      "realExamples": [
+        "Scripts que organizan archivos automáticamente",
+        "Bots que publican en redes sociales",
+        "Pruebas automáticas en aplicaciones",
+        "Pipelines de procesamiento de datos"
+      ],
+      "skills": [
+        "Python (básico a avanzado)",
+        "Selenium para automatizar navegadores",
+        "Bash scripting",
+        "APIs y webhooks"
+      ],
+      "simpleProject": "Escribe un script Python que organice archivos de una carpeta por tipo.",
+      "learningPath": [
+        "Aprende Python",
+        "Estudia Selenium y Playwright",
+        "Explora herramientas como Zapier",
+        "Aprende CI/CD para automatización de software"
+      ]
+    },
+    {
+      "id": "electronics",
+      "name": "Electrónica",
+      "icon": "cpu",
+      "color": "#6d6875",
+      "tagline": "El lenguaje de los circuitos.",
+      "desc": "Entiende cómo funcionan los dispositivos electrónicos y construye los tuyos.",
+      "whatIs": "La electrónica estudia el comportamiento de los electrones en materiales semiconductores para crear componentes y circuitos que procesan información o controlan dispositivos.",
+      "usedFor": "Todo dispositivo electrónico: celulares, computadoras, TVs, autos modernos, electrodomésticos inteligentes y sistemas de control industrial.",
+      "realExamples": [
+        "El chip en tu celular (SoC)",
+        "Sensores en tu auto",
+        "LEDs y pantallas OLED",
+        "Placas Arduino y Raspberry Pi"
+      ],
+      "skills": [
+        "Ley de Ohm y circuitos básicos",
+        "Componentes: resistencias, capacitores, LEDs",
+        "Uso del multímetro",
+        "Soldadura básica",
+        "Lectura de diagramas"
+      ],
+      "simpleProject": "Construye un circuito con un LED que parpadea usando Arduino.",
+      "learningPath": [
+        "Estudia electrónica analógica básica",
+        "Practica con protoboard",
+        "Aprende a soldar",
+        "Diseña PCBs con Fritzing o EasyEDA"
+      ]
+    },
+    {
+      "id": "software",
+      "name": "Desarrollo de Software",
+      "icon": "layers",
+      "color": "#1d3461",
+      "tagline": "De la idea al producto.",
+      "desc": "Aprende el proceso completo de crear aplicaciones profesionales.",
+      "whatIs": "El desarrollo de software es el proceso de diseñar, programar, probar y mantener aplicaciones que resuelven problemas reales de usuarios y organizaciones.",
+      "usedFor": "Crear aplicaciones web (Facebook, Gmail), apps móviles (WhatsApp), sistemas empresariales, videojuegos y cualquier software que uses diariamente.",
+      "realExamples": [
+        "GitHub: plataforma para código colaborativo",
+        "VSCode: editor de código open source",
+        "Trello: gestión de proyectos",
+        "Spotify: app de streaming musical"
+      ],
+      "skills": [
+        "Programación en varios lenguajes",
+        "Control de versiones (Git)",
+        "Bases de datos",
+        "Metodologías ágiles (Scrum)",
+        "Pruebas de software"
+      ],
+      "simpleProject": "Crea una landing page personal con HTML, CSS y un formulario de contacto.",
+      "learningPath": [
+        "Aprende HTML, CSS y JavaScript",
+        "Estudia un framework (React, Vue)",
+        "Aprende bases de datos (SQL)",
+        "Practica con proyectos personales y contribuye a open source"
+      ]
+    },
+    {
+      "id": "iot",
+      "name": "Internet de las Cosas",
+      "icon": "radio",
+      "color": "#2a7f62",
+      "tagline": "Conecta el mundo físico al digital.",
+      "desc": "Descubre cómo objetos cotidianos se conectan a internet para ser más inteligentes.",
+      "whatIs": "El Internet de las Cosas (IoT) es la interconexión de objetos físicos (electrodomésticos, sensores, vehículos) a internet para recopilar y intercambiar datos.",
+      "usedFor": "Hogares inteligentes (luces, termostatos automatizados), wearables (smartwatches), ciudades inteligentes, agricultura de precisión y monitoreo de salud.",
+      "realExamples": [
+        "Amazon Echo (Alexa)",
+        "Termostato Nest",
+        "Smartwatch para monitorear salud",
+        "Sensores agrícolas de humedad"
+      ],
+      "skills": [
+        "Electrónica y microcontroladores",
+        "Protocolos IoT (MQTT, HTTP)",
+        "Programación en Python/C",
+        "Plataformas cloud (AWS IoT)",
+        "Seguridad en dispositivos conectados"
+      ],
+      "simpleProject": "Conecta un Arduino al Wi-Fi con un módulo ESP8266 y muestra datos en tiempo real.",
+      "learningPath": [
+        "Aprende Arduino y electrónica básica",
+        "Estudia ESP32 o Raspberry Pi",
+        "Practica con MQTT",
+        "Aprende seguridad en IoT"
+      ]
+    },
+    {
+      "id": "computing",
+      "name": "Computación",
+      "icon": "monitor",
+      "color": "#4a4e69",
+      "tagline": "El fundamento de todo lo digital.",
+      "desc": "Entiende cómo piensan y funcionan las computadoras desde sus fundamentos.",
+      "whatIs": "La computación es la ciencia que estudia la teoría, experimentación y el diseño de los sistemas que procesan información, incluyendo hardware, software y algoritmos.",
+      "usedFor": "Es la base de absolutamente toda la tecnología: desde apps móviles hasta cohetes, pasando por IA, videojuegos, redes sociales y medicina.",
+      "realExamples": [
+        "Algoritmos de Google para búsquedas",
+        "Sistemas operativos (Windows, Linux, Android)",
+        "Compiladores que traducen código",
+        "Procesadores y arquitecturas de CPU"
+      ],
+      "skills": [
+        "Álgebra de Boole y lógica binaria",
+        "Estructuras de datos y algoritmos",
+        "Sistemas operativos",
+        "Arquitectura de computadoras",
+        "Teoría de la complejidad"
+      ],
+      "simpleProject": "Implementa un algoritmo de búsqueda binaria en Python y explica por qué es más eficiente.",
+      "learningPath": [
+        "Aprende un lenguaje de programación",
+        "Estudia estructuras de datos y algoritmos",
+        "Comprende cómo funciona un sistema operativo",
+        "Profundiza en arquitectura de computadoras"
+      ]
+    }
+  ]
+}

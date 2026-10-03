@@ -1,0 +1,439 @@
+{
+  "interests": [
+    "tecnología",
+    "medio ambiente",
+    "seguridad",
+    "educación",
+    "salud",
+    "automatización",
+    "robótica",
+    "videojuegos",
+    "comunidad"
+  ],
+  "projects": [
+    {
+      "id": "sp1",
+      "name": "Detector de humedad para plantas",
+      "interest": [
+        "tecnología",
+        "medio ambiente",
+        "ciencia"
+      ],
+      "category": "Electrónica",
+      "problem": "Las plantas mueren cuando nos olvidamos de regarlas.",
+      "solution": "Un sensor que detecta cuando la tierra está seca y enciende una luz de aviso.",
+      "materials": [
+        "Sensor de humedad de suelo (FC-28)",
+        "Arduino Uno o Nano",
+        "LED rojo y verde",
+        "Resistencias 220Ω",
+        "Cables y protoboard"
+      ],
+      "difficulty": "Fácil",
+      "estimatedTime": "2-3 horas",
+      "learnings": [
+        "Programación básica en C/Arduino",
+        "Cómo funcionan los sensores analógicos",
+        "Lógica condicional",
+        "Electrónica básica"
+      ],
+      "steps": [
+        "Conecta el sensor a una entrada compatible siguiendo su documentación, con baja tensión",
+        "Conecta cada LED en serie con su resistencia limitadora",
+        "Mide tierra seca y húmeda para calibrar el rango; el sentido de lectura puede variar",
+        "Elige un umbral entre ambos valores y programa la luz de aviso",
+        "Prueba varias muestras y protege los componentes de la humedad"
+      ]
+    },
+    {
+      "id": "sp2",
+      "name": "Mini estación ambiental",
+      "interest": [
+        "tecnología",
+        "medio ambiente",
+        "ciencia"
+      ],
+      "category": "Ciencia",
+      "problem": "No sabemos las condiciones ambientales exactas de nuestra habitación o aula.",
+      "solution": "Un dispositivo que mide temperatura y humedad del aire y los muestra en una pantalla.",
+      "materials": [
+        "Sensor DHT11 o DHT22",
+        "Arduino Uno",
+        "Pantalla LCD 16x2 con módulo I2C",
+        "Cables"
+      ],
+      "difficulty": "Normal",
+      "estimatedTime": "3-4 horas",
+      "learnings": [
+        "Uso de bibliotecas en Arduino",
+        "Comunicación I2C",
+        "Lectura de sensores digitales",
+        "Presentación de datos en pantalla"
+      ],
+      "steps": [
+        "Instala la biblioteca DHT y LiquidCrystal_I2C en el IDE de Arduino",
+        "Conecta el DHT11 al pin digital 2 y la LCD al SDA/SCL del Arduino",
+        "Programa la lectura del sensor cada 2 segundos",
+        "Muestra temperatura en la primera línea y humedad en la segunda",
+        "Opcional: agrega un registro de la temperatura máxima y mínima del día"
+      ]
+    },
+    {
+      "id": "sp3",
+      "name": "Juego educativo en Python",
+      "interest": [
+        "tecnología",
+        "educación",
+        "videojuegos"
+      ],
+      "category": "Programación",
+      "problem": "Los juegos de trivia son aburridos o no enseñan nada real.",
+      "solution": "Un juego de preguntas en la consola que enseña sobre ciberseguridad o tecnología.",
+      "materials": [
+        "Computadora con Python instalado",
+        "Editor de texto (VSCode, Notepad++)",
+        "Ganas de programar"
+      ],
+      "difficulty": "Normal",
+      "estimatedTime": "2-4 horas",
+      "learnings": [
+        "Listas y diccionarios en Python",
+        "Bucles y condicionales",
+        "Funciones básicas",
+        "Lógica de puntuación"
+      ],
+      "steps": [
+        "Crea una lista de preguntas con sus opciones y respuesta correcta",
+        "Usa un bucle for para mostrar cada pregunta",
+        "Pide al usuario que escriba su respuesta (1, 2, 3 o 4)",
+        "Compara con la respuesta correcta y suma puntos",
+        "Al final muestra el puntaje total y un mensaje personalizado"
+      ]
+    },
+    {
+      "id": "sp4",
+      "name": "Simulador de phishing educativo",
+      "interest": [
+        "tecnología",
+        "seguridad",
+        "educación"
+      ],
+      "category": "Tecnología",
+      "problem": "Muchas personas no reconocen correos de phishing.",
+      "solution": "Una página web local que muestra ejemplos de correos falsos y enseña a identificarlos.",
+      "materials": [
+        "Editor de texto",
+        "Navegador web",
+        "HTML y CSS básico (sin servidor)"
+      ],
+      "difficulty": "Normal",
+      "estimatedTime": "3-5 horas",
+      "learnings": [
+        "HTML y CSS básico",
+        "Diseño de interfaz educativa",
+        "Reconocimiento de phishing",
+        "Lógica de quiz interactivo"
+      ],
+      "steps": [
+        "Crea un archivo index.html con la estructura básica",
+        "Diseña un correo falso convincente con señales de alerta",
+        "Añade botones: 'Es phishing' y 'Es legítimo'",
+        "Muestra retroalimentación según la respuesta",
+        "Agrega más escenarios: SMS, notificaciones de redes sociales, etc."
+      ]
+    },
+    {
+      "id": "sp5",
+      "name": "Herramienta educativa de contraseñas seguras",
+      "interest": [
+        "tecnología",
+        "seguridad"
+      ],
+      "category": "Programación",
+      "problem": "Las personas crean contraseñas débiles porque no saben cómo mejorarlas.",
+      "solution": "Un programa que analiza la fortaleza de una contraseña y genera contraseñas seguras.",
+      "materials": [
+        "Python",
+        "Módulos secrets y string incluidos en Python",
+        "Solo ejemplos ficticios; nunca contraseñas reales"
+      ],
+      "difficulty": "Fácil",
+      "estimatedTime": "1-2 horas",
+      "learnings": [
+        "Aleatoriedad criptográfica con secrets",
+        "Longitud y unicidad",
+        "Límites de una comprobación local"
+      ],
+      "steps": [
+        "Usa únicamente claves ficticias para las pruebas",
+        "Explica que longitud y patrones importan, pero una regla local no garantiza seguridad",
+        "Genera caracteres usando secrets.choice, no random",
+        "Muestra cómo evitar reutilizar claves; no guardes lo escrito",
+        "Aclara que esta demostración no sustituye un gestor de contraseñas"
+      ]
+    },
+    {
+      "id": "sp6",
+      "name": "Semáforo con Arduino",
+      "interest": [
+        "tecnología",
+        "robótica"
+      ],
+      "category": "Robótica",
+      "problem": "¿Cómo funciona la lógica detrás de un semáforo real?",
+      "solution": "Construir y programar un semáforo funcional con LEDs y Arduino.",
+      "materials": [
+        "Arduino Uno",
+        "LEDs: rojo, amarillo, verde",
+        "Resistencias 220Ω",
+        "Protoboard y cables"
+      ],
+      "difficulty": "Fácil",
+      "estimatedTime": "1-2 horas",
+      "learnings": [
+        "Salidas digitales en Arduino",
+        "Timing y delays",
+        "Lógica de estados secuenciales",
+        "Electrónica básica LED"
+      ],
+      "steps": [
+        "Conecta el LED rojo al pin 13, amarillo al 12 y verde al 11",
+        "Programa la secuencia: verde 5s, amarillo 2s, rojo 5s",
+        "Prueba el funcionamiento y ajusta los tiempos",
+        "Opcional: agrega un peatonal con un LED azul y un botón",
+        "Documenta el proyecto con fotos y una explicación"
+      ]
+    },
+    {
+      "id": "sp7",
+      "name": "Clasificador simple con Python",
+      "interest": [
+        "tecnología",
+        "educación"
+      ],
+      "category": "Matemáticas",
+      "problem": "La IA parece magia. ¿Cómo funciona realmente un clasificador básico?",
+      "solution": "Construir un clasificador de texto que detecte si una frase es positiva o negativa.",
+      "materials": [
+        "Python",
+        "Biblioteca sklearn (scikit-learn)",
+        "Lista de frases de ejemplo"
+      ],
+      "difficulty": "Difícil",
+      "estimatedTime": "4-6 horas",
+      "learnings": [
+        "Conceptos básicos de machine learning",
+        "Vectorización de texto (TF-IDF)",
+        "Clasificador Naive Bayes",
+        "División train/test",
+        "Evaluación de modelos"
+      ],
+      "steps": [
+        "Instala scikit-learn con pip install scikit-learn",
+        "Crea una lista de frases positivas y negativas etiquetadas",
+        "Vectoriza el texto con TfidfVectorizer",
+        "Entrena un clasificador MultinomialNB",
+        "Evalúa con frases nuevas y mide la precisión",
+        "Intenta mejorarlo agregando más datos de entrenamiento"
+      ]
+    },
+    {
+      "id": "sp8",
+      "name": "Sistema de inventario escolar",
+      "interest": [
+        "tecnología",
+        "educación",
+        "comunidad",
+        "automatización"
+      ],
+      "category": "Programación",
+      "problem": "Las escuelas no saben exactamente qué materiales tienen ni cuántos.",
+      "solution": "Un programa en Python que registra, busca y actualiza el inventario de materiales.",
+      "materials": [
+        "Python",
+        "Archivo CSV o biblioteca sqlite3",
+        "Editor de texto"
+      ],
+      "difficulty": "Normal",
+      "estimatedTime": "3-5 horas",
+      "learnings": [
+        "Archivos CSV o bases de datos SQLite en Python",
+        "CRUD (Crear, Leer, Actualizar, Eliminar)",
+        "Menús de consola",
+        "Manejo de errores"
+      ],
+      "steps": [
+        "Diseña la estructura: nombre, cantidad, categoría, fecha",
+        "Implementa la función de agregar un artículo",
+        "Implementa la búsqueda por nombre o categoría",
+        "Añade la función de actualizar cantidad",
+        "Crea un reporte de artículos con poca cantidad"
+      ]
+    },
+    {
+      "id": "sp9",
+      "name": "Sitio web educativo sobre tecnología",
+      "interest": [
+        "tecnología",
+        "educación",
+        "comunidad"
+      ],
+      "category": "Programación",
+      "problem": "Muchos estudiantes no tienen acceso a recursos visuales sobre tecnología.",
+      "solution": "Una página web estática que explica conceptos de tecnología de forma visual y clara.",
+      "materials": [
+        "Editor de texto",
+        "Navegador web",
+        "HTML, CSS y JavaScript básico",
+        "Imágenes o iconos (SVG)"
+      ],
+      "difficulty": "Normal",
+      "estimatedTime": "4-8 horas",
+      "learnings": [
+        "HTML semántico",
+        "CSS layout (Grid, Flexbox)",
+        "Diseño responsivo",
+        "JavaScript básico para interactividad"
+      ],
+      "steps": [
+        "Elige 3-5 temas tecnológicos para explicar",
+        "Crea la estructura HTML con navegación y secciones",
+        "Añade estilos CSS con colores coherentes",
+        "Incluye explicaciones, ejemplos y quizzes simples con JavaScript",
+        "Prueba en móvil y computadora"
+      ]
+    },
+    {
+      "id": "sp10",
+      "name": "Detector de movimiento con alarma",
+      "interest": [
+        "tecnología",
+        "seguridad",
+        "robótica"
+      ],
+      "category": "Ingeniería",
+      "problem": "¿Cómo funcionan los sistemas básicos de seguridad del hogar?",
+      "solution": "Un sensor PIR que detecta movimiento y activa un buzzer o LED de alarma.",
+      "materials": [
+        "Arduino Uno",
+        "Sensor PIR (HC-SR501)",
+        "Buzzer piezoeléctrico o LED",
+        "Resistencias",
+        "Cables y protoboard"
+      ],
+      "difficulty": "Normal",
+      "estimatedTime": "2-3 horas",
+      "learnings": [
+        "Sensores infrarrojos pasivos (PIR)",
+        "Entradas digitales en Arduino",
+        "Condicionales y respuestas a eventos",
+        "Electrónica de sensores"
+      ],
+      "steps": [
+        "Conecta el PIR al pin digital 7 y el buzzer al pin 8",
+        "Programa: si el PIR detecta movimiento, activa el buzzer por 2 segundos",
+        "Prueba caminando frente al sensor",
+        "Ajusta la sensibilidad y tiempo de retardo del PIR (con sus potenciómetros)",
+        "Opcional: añade un LED que muestre el estado del sistema"
+      ]
+    },
+    {
+      "id": "sp11",
+      "name": "Chatbot educativo local simple",
+      "interest": [
+        "tecnología",
+        "educación",
+        "videojuegos"
+      ],
+      "category": "Tecnología",
+      "problem": "Los estudiantes no saben cómo funciona un chatbot por dentro.",
+      "solution": "Un chatbot de consola que responde preguntas básicas usando un diccionario de respuestas.",
+      "materials": [
+        "Python",
+        "Editor de texto",
+        "Creatividad para las respuestas"
+      ],
+      "difficulty": "Fácil",
+      "estimatedTime": "1-3 horas",
+      "learnings": [
+        "Diccionarios en Python",
+        "Procesamiento básico de texto",
+        "Bucles infinitos y condicionales",
+        "Lógica de coincidencia de palabras clave"
+      ],
+      "steps": [
+        "Crea un diccionario con preguntas clave y sus respuestas",
+        "Implementa un bucle que lea la entrada del usuario",
+        "Normaliza el texto (minúsculas, sin acentos)",
+        "Busca palabras clave en la entrada y devuelve la respuesta",
+        "Añade una respuesta por defecto cuando no entiende",
+        "Opcional: guarda el historial de la conversación"
+      ]
+    },
+    {
+      "id": "sp12",
+      "name": "Medidor de velocidad de reacción",
+      "interest": [
+        "tecnología",
+        "videojuegos",
+        "ciencia",
+        "salud"
+      ],
+      "category": "Programación",
+      "problem": "¿Cuán rápido es el tiempo de reacción humano? ¿Cómo se puede medir con código?",
+      "solution": "Un programa que mide tiempos entre un aviso y una tecla para aprender a registrar datos; no es una prueba médica.",
+      "materials": [
+        "Python",
+        "Biblioteca time (incluida)",
+        "Biblioteca random (incluida)"
+      ],
+      "difficulty": "Fácil",
+      "estimatedTime": "1 hora",
+      "learnings": [
+        "Módulo time en Python",
+        "Números aleatorios",
+        "Cálculo de promedios",
+        "Presentación de resultados"
+      ],
+      "steps": [
+        "Espera un intervalo aleatorio antes de mostrar AHORA",
+        "Mide el tiempo desde el aviso hasta pulsar Enter",
+        "Repite cinco veces y calcula el promedio",
+        "Compara tus propios intentos, indicando que el teclado, pantalla y programa introducen latencia",
+        "No uses esta actividad para evaluar salud ni diagnosticar capacidades"
+      ]
+    },
+    {
+      "id": "sp13",
+      "name": "Carteles interactivos de ciencia",
+      "interest": [
+        "educación",
+        "comunidad",
+        "tecnología"
+      ],
+      "category": "Arte",
+      "problem": "Una explicación larga puede ser difícil de recordar.",
+      "solution": "Un cartel con ilustraciones y solapas revela una pregunta, un ejemplo y una explicación.",
+      "materials": [
+        "Cartón reutilizado",
+        "Papel",
+        "Marcadores",
+        "Pegamento"
+      ],
+      "difficulty": "Fácil",
+      "estimatedTime": "1-2 horas",
+      "learnings": [
+        "Comunicación visual",
+        "Diseño de información",
+        "Pruebas con visitantes"
+      ],
+      "steps": [
+        "Elige un concepto científico y comprueba la explicación",
+        "Dibuja un ejemplo con etiquetas claras",
+        "Añade una pregunta bajo una solapa",
+        "Prueba el cartel con otra persona",
+        "Mejora el texto y los dibujos según lo que no entendió"
+      ]
+    }
+  ]
+}

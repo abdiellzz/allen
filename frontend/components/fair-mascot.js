@@ -1,4 +1,10 @@
 import {AllenMascot as BaseMascot} from './ui.js';
+// Only register locally bundled files here. Until pose art is supplied, the
+// current inline ALLEN vector is the fallback, so no missing image is requested.
+export const ALLEN_POSE_ASSETS=Object.freeze({});
+const poseContexts={enter:'wave',learning:'learning',think:'thinking',achievement:'trophy',project:'project',game:'celebrating',sessionEnd:'celebrating',rest:'resting'};
+export function getAllenPose(context='default',assets=ALLEN_POSE_ASSETS){const pose=poseContexts[context]||context||'default';return assets[pose]||null;}
+export function AllenPose(context='default',size='medium',assets=ALLEN_POSE_ASSETS){const src=getAllenPose(context,assets);if(!src){const state=context==='enter'?'hello':context==='achievement'||context==='sessionEnd'?'victory':context==='think'?'thinking':context==='project'?'reading':context==='game'?'celebrating':'happy';return AllenMascot(state,size);}const safeContext=Object.hasOwn(poseContexts,context)?context:'default';return `<img class="allen-pose allen-pose-${safeContext} ${size}" src="${src}" alt="Allen te acompaña" onerror="this.onerror=null;this.src='/static/assets/allen.svg'">`;}
 const descriptions={hello:'te saluda',thinking:'está pensando',listening:'te escucha',speaking:'está hablando',happy:'está feliz',celebrating:'celebra tu esfuerzo',reading:'está leyendo',teaching:'te enseña',confused:'piensa contigo',sleeping:'está despertando',offline:'descansa sin conexión',challenge:'te propone un reto',success:'celebra tu respuesta',error:'necesita intentarlo de nuevo',explorer:'explora contigo',logic:'investiga con una lupa',math:'resuelve con una libreta',english:'lee una palabra',coding:'programa contigo',ai:'piensa en inteligencia artificial',hint:'te da una pista',victory:'celebra la misión con un trofeo'};
 export function AllenMascot(state='happy',size='medium'){
  if(!Object.hasOwn(descriptions,state))state='happy';

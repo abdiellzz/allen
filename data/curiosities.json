@@ -1,0 +1,183 @@
+{
+  "activities": [
+    {
+      "id": "riddle",
+      "type": "Acertijo",
+      "title": "El mapa",
+      "text": "Tengo ciudades, pero no casas; ríos, pero no agua. ¿Qué soy?",
+      "explanation": "Un mapa representa lugares; no contiene los objetos reales.",
+      "question": "¿Cuál es la respuesta?",
+      "options": [
+        "Un mapa",
+        "Una piscina",
+        "Una casa"
+      ],
+      "correct": 0,
+      "hint": "Piensa en una representación de un lugar."
+    },
+    {
+      "id": "logic",
+      "type": "Reto de lógica",
+      "title": "El siguiente paso",
+      "text": "Observa: 3, 6, 12, 24. ¿Qué número sigue?",
+      "explanation": "Cada término duplica el anterior: 24 × 2 = 48.",
+      "question": "¿Qué número sigue?",
+      "options": [
+        "30",
+        "48",
+        "36"
+      ],
+      "correct": 1,
+      "hint": "Compara un término con el siguiente."
+    },
+    {
+      "id": "byte",
+      "type": "Curiosidad tecnológica",
+      "title": "Ocho decisiones",
+      "text": "Un bit tiene dos valores posibles. Ocho bits forman un byte.",
+      "explanation": "Cada bit duplica el número de combinaciones: 2 elevado a 8 es 256.",
+      "question": "¿Cuántas combinaciones tienen dos bits?",
+      "options": [
+        "2",
+        "4",
+        "8"
+      ],
+      "correct": 1,
+      "hint": "Escribe 00, 01, 10 y 11."
+    },
+    {
+      "id": "tf",
+      "type": "Verdadero/falso",
+      "title": "Una respuesta convincente",
+      "text": "Una IA puede equivocarse aunque explique con seguridad.",
+      "explanation": "Los modelos generan texto probable. Verifica los datos importantes con referencias confiables.",
+      "question": "¿La afirmación es verdadera?",
+      "options": [
+        "Verdadero",
+        "Falso"
+      ],
+      "correct": 0,
+      "hint": "Seguridad al hablar no significa exactitud."
+    },
+    {
+      "id": "error",
+      "type": "Encuentra el error",
+      "title": "Un nombre diferente",
+      "text": "puntos = 10\\nprint(punto)",
+      "explanation": "punto y puntos son nombres distintos. Si punto no fue definido, Python produce un error.",
+      "question": "¿Qué debes corregir?",
+      "options": [
+        "Usar puntos en print",
+        "Borrar el 10",
+        "Cerrar Internet"
+      ],
+      "correct": 0,
+      "hint": "Compara los nombres letra por letra."
+    },
+    {
+      "id": "mini",
+      "type": "Mini lección",
+      "title": "Variables",
+      "text": "En Python: vidas = 3. Si el jugador choca, vidas = vidas - 1. Ahora vidas contiene 2.",
+      "explanation": "Una variable es un nombre asociado a un valor que puedes utilizar o actualizar en un programa. Python asocia nombres con objetos. Al ejecutar puntos = puntos + 1 calcula el resultado y lo asocia al nombre puntos.",
+      "question": "Si tienes `saldo = 50` y luego ejecutas `saldo = saldo + 25`, ¿cuánto vale saldo?",
+      "options": [
+        "50",
+        "25",
+        "75"
+      ],
+      "correct": 2,
+      "hint": "Imagina una caja con una etiqueta donde guardas un juguete. Puedes cambiar el juguete cuando quieras, pero la etiqueta sigue siendo la misma."
+    },
+    {
+      "id": "cyber",
+      "type": "Pregunta de ciberseguridad",
+      "title": "Phishing",
+      "text": "Recibes un correo diciendo '¡Tu cuenta será cerrada en 10 minutos! Haz clic aquí para verificar tu clave'.",
+      "explanation": "El phishing es una técnica de engaño donde un atacante se hace pasar por una persona o entidad de confianza (como tu banco o escuela) para que entregues contraseñas o datos privados. Los mensajes pueden imitar una marca y usar urgencia o premios para llevarte a una página falsa. Comprobar el remitente ayuda, pero no basta: verifica por un canal conocido.",
+      "question": "¿Cuál es la mejor acción si recibes un correo urgente pidiendo tu contraseña bancaria?",
+      "options": [
+        "Hacer clic y verificar rápido",
+        "Ignorar el correo y verificar llamando al canal oficial del banco",
+        "Reenviarlo a todos tus amigos para avisarles"
+      ],
+      "correct": 1,
+      "hint": "Es como si alguien se disfrazara de cartero para pedirte la llave de tu casa."
+    },
+    {
+      "id": "program",
+      "type": "Actividad de programación",
+      "title": "Python",
+      "text": "print(\"Hola\") muestra Hola. Con puntos = 10 y print(puntos + 5), muestra 15.",
+      "explanation": "Python es un lenguaje de programación de propósito general, con una sintaxis legible. Sirve para escribir instrucciones que una computadora ejecuta. El intérprete ejecuta las instrucciones. La indentación organiza bloques como bucles y condiciones.",
+      "question": "¿Qué muestra print(2 + 3)?",
+      "options": [
+        "23",
+        "5",
+        "Un error"
+      ],
+      "correct": 1,
+      "hint": "Python es un lenguaje de programación de propósito general, con una sintaxis legible. Sirve para escribir instrucciones que una computadora ejecuta."
+    },
+    {
+      "id": "steam",
+      "type": "Desafío STEAM",
+      "title": "Prototipos",
+      "text": "Haces un puente de papel para probar su forma.",
+      "explanation": "Una versión de prueba que permite aprender antes de construir el producto final. Construyes, observas, anotas fallos y cambias una parte para volver a probar.",
+      "question": "¿Qué haces si un prototipo falla?",
+      "options": [
+        "Anoto qué pasó y pruebo una mejora",
+        "Lo oculto",
+        "Digo que ya está terminado"
+      ],
+      "correct": 0,
+      "hint": "Una versión de prueba que permite aprender antes de construir el producto final."
+    },
+    {
+      "id": "project",
+      "type": "Idea de proyecto",
+      "title": "Diseño",
+      "text": "Crea un juego de tarjetas sobre privacidad. Dibuja una situación por tarjeta y pide al jugador explicar su decisión.",
+      "explanation": "Crear una solución teniendo en cuenta a quien la usará. Preguntas qué necesita la persona, haces un boceto, pruebas y mejoras.",
+      "question": "¿Cómo compruebas que un diseño se entiende?",
+      "options": [
+        "Pidiendo a alguien que lo use",
+        "Añadiendo todos los colores",
+        "Ocultando los botones"
+      ],
+      "correct": 0,
+      "hint": "Crear una solución teniendo en cuenta a quien la usará."
+    },
+    {
+      "id": "ai",
+      "type": "Concepto de IA",
+      "title": "Machine Learning",
+      "text": "Un clasificador aprende a distinguir mensajes de spam usando ejemplos etiquetados.",
+      "explanation": "Una forma de construir modelos que aprenden patrones a partir de ejemplos. Se ajustan parámetros con datos de entrenamiento y se evalúa con datos separados para comprobar generalización.",
+      "question": "¿Con qué datos conviene evaluar el modelo?",
+      "options": [
+        "Solo con los usados para entrenar",
+        "Con datos reservados que no vio al entrenar",
+        "Con el nombre del modelo"
+      ],
+      "correct": 1,
+      "hint": "Una forma de construir modelos que aprenden patrones a partir de ejemplos."
+    },
+    {
+      "id": "real",
+      "type": "Situación real",
+      "title": "Protección de cuentas",
+      "text": "Activas MFA y guardas los códigos de recuperación fuera del correo protegido.",
+      "explanation": "Mantener el control de una cuenta y saber cómo recuperarla. Una clave única, MFA y opciones de recuperación actualizadas trabajan juntas.",
+      "question": "¿Dónde conviene guardar códigos de recuperación?",
+      "options": [
+        "En un lugar seguro separado de la cuenta",
+        "En una publicación pública",
+        "En un chat con desconocidos"
+      ],
+      "correct": 0,
+      "hint": "Mantener el control de una cuenta y saber cómo recuperarla."
+    }
+  ]
+}

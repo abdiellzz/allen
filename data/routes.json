@@ -1,0 +1,410 @@
+{
+  "routes": [
+    {
+      "id": "digital",
+      "name": "Fundamentos Digitales",
+      "objective": "Reconoce las piezas de un sistema digital y cómo trabajar sin Internet.",
+      "category": "Tecnología",
+      "duration": "35–57 minutos",
+      "level": "Adaptable: Fácil, Normal o Difícil",
+      "modules": [
+        {
+          "lesson": "tech_hardware",
+          "title": "Hardware"
+        },
+        {
+          "lesson": "tech_software",
+          "title": "Software"
+        },
+        {
+          "lesson": "tech_storage",
+          "title": "Almacenamiento"
+        },
+        {
+          "lesson": "tech_offline",
+          "title": "Aplicaciones offline"
+        }
+      ],
+      "finalProject": {
+        "title": "Mapa de un equipo educativo",
+        "task": "Dibuja o describe cómo se conectan entrada, procesamiento, almacenamiento y salida.",
+        "checklist": [
+          "Identifica cuatro componentes y su función",
+          "Explica dónde se guardan los archivos",
+          "Describe qué necesita Allen para funcionar offline"
+        ]
+      }
+    },
+    {
+      "id": "python",
+      "name": "Python desde cero",
+      "objective": "Construye un pequeño programa y explica sus decisiones.",
+      "category": "Programación",
+      "duration": "45–73 minutos",
+      "level": "Adaptable: Fácil, Normal o Difícil",
+      "modules": [
+        {
+          "lesson": "prog_python",
+          "title": "Python"
+        },
+        {
+          "lesson": "prog_variables",
+          "title": "Variables"
+        },
+        {
+          "lesson": "prog_conditionals",
+          "title": "Condicionales"
+        },
+        {
+          "lesson": "prog_loops",
+          "title": "Bucles"
+        },
+        {
+          "lesson": "prog_functions",
+          "title": "Funciones"
+        },
+        {
+          "lesson": "prog_logic",
+          "title": "Algoritmos"
+        }
+      ],
+      "finalProject": {
+        "title": "Un programa de preguntas",
+        "task": "Escribe un programa breve o pseudocódigo que haga una pregunta y compruebe una respuesta.",
+        "checklist": [
+          "Define una variable y una entrada",
+          "Usa una condición o bucle",
+          "Prueba dos entradas y anota resultados"
+        ]
+      }
+    },
+    {
+      "id": "cyber",
+      "name": "Ciberseguridad Básica",
+      "objective": "Reconoce riesgos digitales y decide cómo verificarlos.",
+      "category": "Ciberseguridad",
+      "duration": "45–73 minutos",
+      "level": "Adaptable: Fácil, Normal o Difícil",
+      "modules": [
+        {
+          "lesson": "ciber_accounts",
+          "title": "Protección de cuentas"
+        },
+        {
+          "lesson": "ciber_passwords",
+          "title": "Contraseñas"
+        },
+        {
+          "lesson": "ciber_mfa",
+          "title": "Autenticación y MFA"
+        },
+        {
+          "lesson": "ciber_phishing",
+          "title": "Phishing"
+        },
+        {
+          "lesson": "ciber_social",
+          "title": "Ingeniería social"
+        },
+        {
+          "lesson": "ciber_privacy",
+          "title": "Privacidad"
+        }
+      ],
+      "finalProject": {
+        "title": "Guía de prevención del phishing",
+        "task": "Analiza un mensaje ficticio de bloqueo de cuenta y crea una guía de prevención.",
+        "checklist": [
+          "Señala dos indicios que requieren verificación",
+          "Propón un canal independiente para verificar",
+          "Escribe tres recomendaciones y qué hacer si ya se compartieron datos"
+        ]
+      }
+    },
+    {
+      "id": "ai",
+      "name": "Introducción a IA",
+      "objective": "Explica cómo se usan los modelos y comprueba sus límites.",
+      "category": "IA",
+      "duration": "45–73 minutos",
+      "level": "Adaptable: Fácil, Normal o Difícil",
+      "modules": [
+        {
+          "lesson": "ia_whatis",
+          "title": "Qué es IA"
+        },
+        {
+          "lesson": "ia_ml",
+          "title": "Machine Learning"
+        },
+        {
+          "lesson": "ia_llm",
+          "title": "Modelos de lenguaje"
+        },
+        {
+          "lesson": "ia_gen",
+          "title": "IA generativa"
+        },
+        {
+          "lesson": "ia_hallucinations",
+          "title": "Alucinaciones de IA"
+        },
+        {
+          "lesson": "ia_local",
+          "title": "IA local"
+        }
+      ],
+      "finalProject": {
+        "title": "Evaluar respuestas de IA",
+        "task": "Compara dos afirmaciones de ejemplo de una IA: «Una IA nunca falla» y «Puede equivocarse aunque suene segura».",
+        "checklist": [
+          "Identifica qué afirmación requiere corrección",
+          "Explica cómo verificar un dato importante",
+          "Describe una ventaja y un límite de la IA local"
+        ]
+      }
+    },
+    {
+      "id": "steam",
+      "name": "STEAM y proyectos",
+      "objective": "Combina diseño, pruebas y comunicación en un prototipo.",
+      "category": "STEAM",
+      "duration": "45–73 minutos",
+      "level": "Adaptable: Fácil, Normal o Difícil",
+      "modules": [
+        {
+          "lesson": "steam_science",
+          "title": "Ciencia"
+        },
+        {
+          "lesson": "steam_technology",
+          "title": "Tecnología"
+        },
+        {
+          "lesson": "steam_engineering",
+          "title": "Ingeniería"
+        },
+        {
+          "lesson": "steam_art",
+          "title": "Arte"
+        },
+        {
+          "lesson": "steam_design",
+          "title": "Diseño"
+        },
+        {
+          "lesson": "steam_prototype",
+          "title": "Prototipos"
+        }
+      ],
+      "finalProject": {
+        "title": "Prototipo de feria",
+        "task": "Diseña un prototipo en papel que resuelva una necesidad de tu aula.",
+        "checklist": [
+          "Define el problema y los recursos",
+          "Crea un boceto con funciones claras",
+          "Prueba con otra persona y anota una mejora"
+        ]
+      }
+    },
+    {
+      "id": "networks",
+      "name": "Redes desde Cero",
+      "objective": "Comprende cómo se comunican dispositivos de una red.",
+      "category": "Redes",
+      "duration": "45–73 minutos",
+      "level": "Adaptable: Fácil, Normal o Difícil",
+      "modules": [
+        {
+          "lesson": "net_basics",
+          "title": "Qué es una red"
+        },
+        {
+          "lesson": "net_ip",
+          "title": "Direcciones IP"
+        },
+        {
+          "lesson": "net_router",
+          "title": "Router"
+        },
+        {
+          "lesson": "net_dns",
+          "title": "DNS"
+        },
+        {
+          "lesson": "net_lan",
+          "title": "LAN y WAN"
+        },
+        {
+          "lesson": "net_protocols",
+          "title": "Protocolos básicos"
+        }
+      ],
+      "finalProject": {
+        "title": "Mapa de una red local",
+        "task": "Diseña en papel o texto una red con dos equipos, un router y una impresora.",
+        "checklist": [
+          "Nombra los componentes y conexiones",
+          "Describe el recorrido de un mensaje",
+          "Distingue Wi-Fi, red local y acceso a Internet"
+        ]
+      }
+    },
+    {
+      "id": "robotics",
+      "name": "Robótica y Sensores",
+      "objective": "Diseña un sistema que observe y actúe sobre su entorno.",
+      "category": "STEAM",
+      "duration": "40–65 minutos",
+      "level": "Adaptable: Fácil, Normal o Difícil",
+      "modules": [
+        {
+          "lesson": "robot_basics",
+          "title": "Qué es un robot"
+        },
+        {
+          "lesson": "robot_sensors",
+          "title": "Sensores en Robótica"
+        },
+        {
+          "lesson": "robot_actuator",
+          "title": "Actuadores"
+        },
+        {
+          "lesson": "robot_motors",
+          "title": "Motores"
+        },
+        {
+          "lesson": "robot_automation",
+          "title": "Automatización"
+        }
+      ],
+      "finalProject": {
+        "title": "Sistema con sensor",
+        "task": "Diseña un carrito que se detenga antes de un obstáculo.",
+        "checklist": [
+          "Elige un sensor y un actuador",
+          "Escribe una regla de decisión",
+          "Describe una prueba y un posible fallo"
+        ]
+      }
+    },
+    {
+      "id": "electronics",
+      "name": "Electrónica Básica",
+      "objective": "Relaciona voltaje, corriente y componentes de un circuito.",
+      "category": "STEAM",
+      "duration": "40–65 minutos",
+      "level": "Adaptable: Fácil, Normal o Difícil",
+      "modules": [
+        {
+          "lesson": "elec_circuits",
+          "title": "Circuitos Básicos"
+        },
+        {
+          "lesson": "elec_voltage",
+          "title": "Voltaje"
+        },
+        {
+          "lesson": "elec_current",
+          "title": "Corriente"
+        },
+        {
+          "lesson": "elec_resistance",
+          "title": "Resistencia"
+        },
+        {
+          "lesson": "elec_led",
+          "title": "LEDs"
+        }
+      ],
+      "finalProject": {
+        "title": "Diseño de un indicador LED",
+        "task": "Dibuja un circuito de baja tensión con una fuente, un LED y su resistencia.",
+        "checklist": [
+          "Indica polaridad y camino cerrado",
+          "Explica para qué sirve la resistencia",
+          "Comprueba el diseño con especificaciones antes de montarlo"
+        ]
+      }
+    },
+    {
+      "id": "data",
+      "name": "Datos y Análisis",
+      "objective": "Organiza datos y comunica una conclusión con sus límites.",
+      "category": "Matemáticas",
+      "duration": "40–65 minutos",
+      "level": "Adaptable: Fácil, Normal o Difícil",
+      "modules": [
+        {
+          "lesson": "data_tables",
+          "title": "Tablas y datos"
+        },
+        {
+          "lesson": "data_types",
+          "title": "Tipos de datos"
+        },
+        {
+          "lesson": "data_charts",
+          "title": "Gráficos"
+        },
+        {
+          "lesson": "data_db",
+          "title": "Bases de datos"
+        },
+        {
+          "lesson": "data_analysis",
+          "title": "Análisis básico"
+        }
+      ],
+      "finalProject": {
+        "title": "Una pequeña visualización",
+        "task": "Usa estos datos ficticios: lunes 3 libros, martes 5, miércoles 2. Diseña un gráfico y explica una observación.",
+        "checklist": [
+          "Organiza una tabla con unidades",
+          "Describe o dibuja un gráfico con etiquetas",
+          "Escribe una conclusión y qué no puedes concluir"
+        ]
+      }
+    },
+    {
+      "id": "logic",
+      "name": "Pensamiento Lógico",
+      "objective": "Justifica conclusiones y organiza soluciones por pasos.",
+      "category": "Lógica",
+      "duration": "40–65 minutos",
+      "level": "Adaptable: Fácil, Normal o Difícil",
+      "modules": [
+        {
+          "lesson": "logic_patterns",
+          "title": "Patrones"
+        },
+        {
+          "lesson": "logic_sequences",
+          "title": "Secuencias"
+        },
+        {
+          "lesson": "logic_deduction",
+          "title": "Deducción Lógica"
+        },
+        {
+          "lesson": "logic_reasoning",
+          "title": "Problemas de razonamiento"
+        },
+        {
+          "lesson": "logic_computational",
+          "title": "Pensamiento computacional"
+        }
+      ],
+      "finalProject": {
+        "title": "Algoritmo de decisiones",
+        "task": "Crea un diagrama o pseudocódigo para clasificar objetos por dos propiedades.",
+        "checklist": [
+          "Define las propiedades con claridad",
+          "Incluye al menos dos decisiones",
+          "Prueba tres ejemplos y explica un caso límite"
+        ]
+      }
+    }
+  ]
+}

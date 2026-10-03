@@ -1,0 +1,304 @@
+{
+  "scenarios": [
+    {
+      "id": "sim1",
+      "category": "Phishing",
+      "title": "El correo urgente del banco",
+      "scenario": "Recibes este correo:\n\n De: seguridad@banco-alerta.com\nAsunto:  TU CUENTA SERÁ BLOQUEADA EN 10 MINUTOS\n\n'Detectamos actividad sospechosa en tu cuenta. Para evitar el bloqueo, VERIFICA TU CUENTA ahora.\n\n[VERIFICAR MI CUENTA]\n\nSi no lo haces en 10 minutos, tu cuenta quedará suspendida.'\n\n¿Qué haces?",
+      "options": [
+        {
+          "text": "Hago clic en el enlace inmediatamente para no perder mi cuenta",
+          "isCorrect": false,
+          "risk": "alto"
+        },
+        {
+          "text": "Verifico el remitente y llamo al banco usando su número oficial",
+          "isCorrect": true,
+          "risk": "ninguno"
+        },
+        {
+          "text": "Respondo el correo pidiendo más información",
+          "isCorrect": false,
+          "risk": "medio"
+        },
+        {
+          "text": "Envío mi contraseña para desbloquear la cuenta",
+          "isCorrect": false,
+          "risk": "crítico"
+        }
+      ],
+      "allenExplanation": "La urgencia, la petición de datos y la dirección inesperada son señales para verificar. Una organización puede enviar alertas legítimas; el mensaje por sí solo no demuestra su autenticidad. Abre la app oficial o llama a un número que ya conozcas.",
+      "lesson": "Los ataques de phishing crean urgencia para que actúes sin pensar. Tómate un momento para verificar el remitente y usar canales oficiales."
+    },
+    {
+      "id": "sim2",
+      "category": "Contraseñas",
+      "title": "La contraseña débil",
+      "scenario": "Tu amigo usa 'Abdiel123' como contraseña para todas sus cuentas. Dice que es segura porque tiene su nombre, números y más de 8 caracteres.\n\n¿Qué le dirías?",
+      "options": [
+        {
+          "text": "Tiene razón, es una buena contraseña",
+          "isCorrect": false,
+          "risk": "alto"
+        },
+        {
+          "text": "Es insegura porque usa información personal predecible y se repite en todas las cuentas",
+          "isCorrect": true,
+          "risk": "ninguno"
+        },
+        {
+          "text": "Solo debe agregarle un punto al final para hacerla segura",
+          "isCorrect": false,
+          "risk": "medio"
+        },
+        {
+          "text": "Solo importa que sea larga",
+          "isCorrect": false,
+          "risk": "medio"
+        }
+      ],
+      "allenExplanation": "Abdiel123 tiene varios problemas: usa un nombre real (fácil de adivinar), un patrón numérico simple (123) y se repite en todas las cuentas. Si hackean una cuenta, tendrán acceso a todas. Una buena contraseña combina caracteres aleatorios o frases largas. Y nunca reutilices contraseñas entre cuentas importantes.",
+      "lesson": "Una contraseña segura debe ser única para cada cuenta, larga, y sin información personal predecible."
+    },
+    {
+      "id": "sim3",
+      "category": "Redes Sociales",
+      "title": "El desconocido en línea",
+      "scenario": "En una red social, alguien que no conoces en persona te envía un mensaje:\n\n'Hola! Vi que vives cerca de mí. ¿En qué barrio quedas exactamente? Quiero saber si somos vecinos '\n\n¿Qué haces?",
+      "options": [
+        {
+          "text": "Le doy mi dirección exacta porque parece simpático",
+          "isCorrect": false,
+          "risk": "crítico"
+        },
+        {
+          "text": "Le digo solo el nombre de la ciudad, sin más detalles",
+          "isCorrect": false,
+          "risk": "medio"
+        },
+        {
+          "text": "No comparto mi ubicación y configuro mi perfil como privado",
+          "isCorrect": true,
+          "risk": "ninguno"
+        },
+        {
+          "text": "Le envío fotos de mi casa para que me ubique",
+          "isCorrect": false,
+          "risk": "crítico"
+        }
+      ],
+      "allenExplanation": "Compartir tu ubicación exacta con desconocidos en línea es un riesgo real de seguridad. No puedes verificar quién está realmente del otro lado. Las personas con malas intenciones usan la simpatía para obtener información. Mantén tu perfil privado y no compartas información de dónde vives, estudias o cuándo no estás en casa.",
+      "lesson": "Tu ubicación es información sensible. No la compartas con personas que no conoces en persona, aunque parezcan amigables."
+    },
+    {
+      "id": "sim4",
+      "category": "Wi-Fi",
+      "title": "La Wi-Fi pública gratuita",
+      "scenario": "Estás en un café y ves esta red Wi-Fi disponible:\n 'CafeGratis - Sin contraseña'\n\nNecesitas revisar tu cuenta bancaria urgentemente. ¿Qué haces?",
+      "options": [
+        {
+          "text": "Me conecto y entro a mi banca en línea sin problema",
+          "isCorrect": false,
+          "risk": "alto"
+        },
+        {
+          "text": "Uso mis datos móviles para la banca y solo uso la Wi-Fi para cosas no sensibles",
+          "isCorrect": true,
+          "risk": "ninguno"
+        },
+        {
+          "text": "Me conecto porque el café parece confiable",
+          "isCorrect": false,
+          "risk": "alto"
+        },
+        {
+          "text": "Entro al banco porque el sitio tiene candado (HTTPS)",
+          "isCorrect": false,
+          "risk": "medio"
+        }
+      ],
+      "allenExplanation": "Una red desconocida puede imitar una red legítima. HTTPS cifra la comunicación, pero verifica el sitio y no ignores avisos de certificados. Confirma el nombre de la red y desactiva compartir archivos.",
+      "lesson": "Nunca realices transacciones financieras en redes Wi-Fi públicas. Usa tus datos móviles para actividades sensibles."
+    },
+    {
+      "id": "sim5",
+      "category": "USB",
+      "title": "La memoria USB misteriosa",
+      "scenario": "Encuentras una memoria USB en el suelo del pasillo de tu escuela. Tiene una etiqueta que dice: ' FOTOS PRIVADAS - NO ABRIR'\n\n¿Qué haces?",
+      "options": [
+        {
+          "text": "La conecto en mi computadora para ver qué tiene y devolvérsela al dueño",
+          "isCorrect": false,
+          "risk": "alto"
+        },
+        {
+          "text": "La entrego a un profesor o encargado sin conectarla",
+          "isCorrect": true,
+          "risk": "ninguno"
+        },
+        {
+          "text": "La llevo a casa y la conecto ahí para estar más seguro",
+          "isCorrect": false,
+          "risk": "alto"
+        },
+        {
+          "text": "La borro y me la quedo",
+          "isCorrect": false,
+          "risk": "medio"
+        }
+      ],
+      "allenExplanation": "Este es un ataque conocido como 'USB Drop'. Los atacantes dejan USBs con etiquetas llamativas para despertar curiosidad. Al conectarla, puede ejecutarse malware automáticamente incluso antes de abrir un archivo. Nunca conectes dispositivos de almacenamiento desconocidos. Entrégasela a alguien de autoridad.",
+      "lesson": "Los dispositivos de almacenamiento desconocidos pueden contener malware. La curiosidad puede ser peligrosa aquí."
+    },
+    {
+      "id": "sim6",
+      "category": "MFA",
+      "title": "El código de verificación",
+      "scenario": "Recibes este mensaje de texto:\n\n'Tu código de verificación de Instagram es: 847291. No lo compartas con nadie.\n\nLuego recibes otro mensaje de alguien que dice ser de soporte de Instagram: 'Hola, necesitamos ese código para verificar tu cuenta y evitar que la suspendan. Por favor envíalo.'\n\n¿Qué haces?",
+      "options": [
+        {
+          "text": "Envío el código porque dice ser soporte oficial",
+          "isCorrect": false,
+          "risk": "crítico"
+        },
+        {
+          "text": "Nunca comparto el código. Ningún servicio legítimo lo pide por mensaje",
+          "isCorrect": true,
+          "risk": "ninguno"
+        },
+        {
+          "text": "Pido más pruebas de que es soporte antes de enviarlo",
+          "isCorrect": false,
+          "risk": "medio"
+        },
+        {
+          "text": "Solo envío la mitad del código por si acaso",
+          "isCorrect": false,
+          "risk": "alto"
+        }
+      ],
+      "allenExplanation": "El código es una prueba de acceso. Compartirlo puede permitir un inicio de sesión ajeno. Rechaza solicitudes inesperadas y revisa la cuenta desde su canal oficial.",
+      "lesson": "Los códigos de verificación de dos factores son privados. Nunca los compartas, ni con personas que digan ser de soporte técnico."
+    },
+    {
+      "id": "sim7",
+      "category": "Estafas",
+      "title": "¡Ganaste un premio!",
+      "scenario": "Recibes esta notificación en tu celular:\n\n' ¡FELICITACIONES! Eres el visitante número 1,000,000 de nuestro sitio. Has ganado un iPhone 15 PRO.\n\nPara reclamar tu premio GRATIS, solo paga el envío: $15.00\nOferta válida por 10 minutos.'\n\n¿Qué haces?",
+      "options": [
+        {
+          "text": "Pago rápido el envío antes de que expire",
+          "isCorrect": false,
+          "risk": "alto"
+        },
+        {
+          "text": "Cierro la notificación, es claramente una estafa",
+          "isCorrect": true,
+          "risk": "ninguno"
+        },
+        {
+          "text": "Busco información sobre este sitio primero",
+          "isCorrect": false,
+          "risk": "medio"
+        },
+        {
+          "text": "Pago con tarjeta de crédito porque es solo $15",
+          "isCorrect": false,
+          "risk": "alto"
+        }
+      ],
+      "allenExplanation": "¡Clásica estafa de 'visitante millón'! Estas alertas son falsas al 100%. Los indicadores: premio inesperado, urgencia de tiempo, pago requerido para recibir algo 'gratis'. En realidad, roban tu dinero del 'envío' o tus datos de tarjeta. Las empresas legítimas no regalan iPhones a visitantes aleatorios.",
+      "lesson": "Si algo suena demasiado bueno para ser verdad, probablemente es una estafa. Ningún premio legítimo requiere que pagues para recibirlo."
+    },
+    {
+      "id": "sim8",
+      "category": "Privacidad",
+      "title": "La app que pide demasiado",
+      "scenario": "Descargas una app de linterna (flashlight) gratuita. Al instalarla, pide estos permisos:\n\n Cámara\n Micrófono\n Contactos\n Ubicación\n Llamadas telefónicas\n\n¿Qué haces?",
+      "options": [
+        {
+          "text": "Acepto todos los permisos para que funcione correctamente",
+          "isCorrect": false,
+          "risk": "alto"
+        },
+        {
+          "text": "Rechazo los permisos innecesarios o busco otra app más honesta",
+          "isCorrect": true,
+          "risk": "ninguno"
+        },
+        {
+          "text": "Acepto solo cámara y micrófono",
+          "isCorrect": false,
+          "risk": "alto"
+        },
+        {
+          "text": "No importa, es solo para la linterna",
+          "isCorrect": false,
+          "risk": "alto"
+        }
+      ],
+      "allenExplanation": "Una linterna solo necesita acceso a la luz LED del teléfono. No necesita contactos, micrófono, cámara ni ubicación. Pedir permisos innecesarios es señal de que la app recopila y vende tus datos. Antes de aceptar permisos, pregúntate: ¿por qué esta función necesita acceso a esto?",
+      "lesson": "Revisa los permisos que pide cada app. Si pide más de lo necesario para su función, es una señal de alerta."
+    },
+    {
+      "id": "sim9",
+      "category": "Programación",
+      "title": "El error en el código",
+      "scenario": "Un amigo programó este código en Python y no funciona:\n\nnotas = [8, 9, 7, 10]\npromedio = suma(notas) / 4\nprint('El promedio es:', promedio)\n\n¿Cuál es el problema?",
+      "options": [
+        {
+          "text": "La lista 'notas' está mal escrita",
+          "isCorrect": false,
+          "risk": "ninguno"
+        },
+        {
+          "text": "En Python la función es sum(), no suma()",
+          "isCorrect": true,
+          "risk": "ninguno"
+        },
+        {
+          "text": "No se puede dividir entre 4 en Python",
+          "isCorrect": false,
+          "risk": "ninguno"
+        },
+        {
+          "text": "print() no puede mostrar texto y números juntos",
+          "isCorrect": false,
+          "risk": "ninguno"
+        }
+      ],
+      "allenExplanation": "El error está en 'suma()'. En Python la función para sumar listas se llama sum(), en inglés. Lo correcto sería: promedio = sum(notas) / 4. Este es un error muy común: confundir nombres de funciones entre idiomas. Python usa inglés para sus funciones integradas.",
+      "lesson": "Python usa nombres de funciones en inglés. sum() suma una lista, len() da su longitud, print() imprime en pantalla."
+    },
+    {
+      "id": "sim10",
+      "category": "IA",
+      "title": "La IA que parece segura",
+      "scenario": "Usas una IA para buscar información sobre un medicamento. La IA responde con mucha confianza y detalle:\n\n'La dosis recomendada de ese medicamento es 500mg tres veces al día para adultos, según estudios recientes.'\n\n¿Qué haces con esa información?",
+      "options": [
+        {
+          "text": "La sigo porque la IA parece muy segura de lo que dice",
+          "isCorrect": false,
+          "risk": "alto"
+        },
+        {
+          "text": "Verifico la información con un médico o fuente oficial antes de actuar",
+          "isCorrect": true,
+          "risk": "ninguno"
+        },
+        {
+          "text": "La comparto con mis amigos como un consejo médico",
+          "isCorrect": false,
+          "risk": "alto"
+        },
+        {
+          "text": "Solo la uso si el tema no es importante",
+          "isCorrect": false,
+          "risk": "medio"
+        }
+      ],
+      "allenExplanation": "Las IAs pueden generar respuestas incorrectas con mucha confianza. Este fenómeno se llama 'alucinación'. Para temas médicos, legales o financieros, SIEMPRE consulta un profesional calificado. Las IAs son herramientas de apoyo, no sustituyen el criterio experto.",
+      "lesson": "Las IAs pueden equivocarse aunque suenen seguras. Para información crítica (salud, leyes, finanzas), siempre consulta fuentes oficiales o profesionales."
+    }
+  ]
+}

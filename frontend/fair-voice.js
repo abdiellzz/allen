@@ -22,7 +22,7 @@ export class TextToSpeechService {
  get voices(){return window.speechSynthesis?.getVoices().filter(v=>v.localService&&v.lang.startsWith('es'))||[];}
  play(text,onState=()=>{}){
   this.stop();
-  if(!this.enabled)throw new Error('La voz está desactivada. El presentador puede activarla; puedes seguir leyendo.');
+  if(!this.enabled)throw new Error('La voz está desactivada. Puedes seguir leyendo y escribir tu pregunta.');
   if(!this.voices.length)throw new Error('No hay una voz española local disponible. La respuesta sigue disponible para leer.');
   const utterance=new SpeechSynthesisUtterance(text.replace(/[*#`]/g,''));utterance.voice=this.voices[0];utterance.rate=this.rate;
   utterance.onend=()=>onState('idle');utterance.onerror=()=>onState('error');
