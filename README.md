@@ -1,6 +1,6 @@
 # ALLEN — aprende, incluso sin Internet
 
-## Modo Feria
+## Main
 
 Abre **http://127.0.0.1:8787/fair** para una experiencia con retos, microlecciones, chat temporal y tarjeta de logro,. **Nueva persona** limpia la sesión del visitante; la inactividad también la reinicia. Consulta [FAIR_MODE.md](FAIR_MODE.md) para preparar el stand, configurar voz opcional y conocer las pruebas y límites.
 
