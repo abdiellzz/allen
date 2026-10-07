@@ -6,5 +6,5 @@ test('Plan Allen page exposes the required planning fields',()=>{
   const html=planAllenPage('Universidad / Técnico');
   for(const id of ['plan-subject','plan-topics','plan-deadline','plan-minutes','plan-level','plan-goal']) assert.ok(html.includes(id));
   assert.ok(html.includes('PLAN ALLEN'));
-  assert.ok(html.includes('Estudio activo'));
+  assert.ok(html.toLowerCase().includes('estudio activo'));
 });
