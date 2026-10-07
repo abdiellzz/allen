@@ -190,6 +190,7 @@ class SimulationProgress(Strict):
     profile_id: int = Field(ge=1)
     answers: list[str] = Field(default_factory=list,max_length=10)
     status: Literal['active','paused','interrupted'] = 'active'
+    remaining_seconds: int | None = Field(None,ge=0,le=43200)
 
 
 class TeacherImport(Strict):
