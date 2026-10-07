@@ -124,6 +124,8 @@ async function sendMessage(regenerate=false,action=''){
  try{
   const selectedLevel=$('#chat-level')?.value||profile().level;if(selectedLevel!==profile().level){const p=profile();await api('/profiles/'+p.id,'PUT',{name:p.name,age:p.age,avatar:p.avatar,level:selectedLevel});p.level=selectedLevel;}
   await streamChat({profile_id:state.profile,message,mode:state.page==='Preguntar'?'Aprender':(chatOptions[state.page]?state.page:'Aprender'),subject:$('#chat-subject')?.value||'General',option:$('#chat-option')?.value||'',action,conversation_state:currentChat.state||null,history:previous,conversation_id:currentChat.id,regenerate,use_library:$('#use-library').checked},controller.signal,event=>{
+   if(event.type==='meta'&&event.queue_state==='queued'&&!answer){currentChat.messages.at(-1).content='Allen está terminando otra tarea…';if(epoch===pageEpoch&&chat===currentChat)drawMessages();}
+   if(event.type==='meta'&&event.queue_state==='running'&&!answer){currentChat.messages.at(-1).content='Allen está pensando…';if(epoch===pageEpoch&&chat===currentChat)drawMessages();}
    if(event.type==='delta'){answer+=event.text;currentChat.messages.at(-1).content=answer;if(epoch===pageEpoch&&chat===currentChat)drawMessages();}
    if(event.type==='error'){failed=true;throw new Error(event.message);}
    if(event.type==='done'){done=true;currentChat.id=event.conversation_id;currentChat.state=event.conversation_state;if(event.demo)toast('Modo demo: esta respuesta no proviene de un modelo de IA.');}
