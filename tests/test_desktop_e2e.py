@@ -77,7 +77,7 @@ def test_desktop_guided_learning_smoke_and_viewports():
                 page.get_by_role("button",name="Guardar revisión y aprobar").click()
                 page.get_by_role("button",name="Publicar").wait_for()
                 page.get_by_role("button",name="Publicar").click()
-                page.get_by_text("Publicado").wait_for()
+                page.get_by_text("Publicado",exact=True).wait_for()
 
                 page.locator('[data-page="Cursos"]').first.click()
                 page.get_by_role("heading",name="Curso E2E").wait_for()
