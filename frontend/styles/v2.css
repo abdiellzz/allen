@@ -312,3 +312,7 @@ body{min-width:1024px}
 .teacher-exam-review summary{cursor:pointer;font-weight:800}
 .teacher-exam-review li{margin:.45rem 0;line-height:1.4}
 .teacher-exam-review .correct-option{color:var(--v2-green);font-weight:700}
+
+#course-help-panel:not(:empty){margin:20px 0}
+#course-help-panel .allen-guide-card{margin:0 0 10px;background:linear-gradient(145deg,#eef5f1,#fffdf8)}
+.course-help-source{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;background:#f8efe3;color:var(--v2-muted)}
