@@ -175,3 +175,20 @@ def test_learning_intelligence_tables_survive_backup_roundtrip():
         assert restored.status_code==200
         assert c.get(f"/api/teacher/courses/{cid}/graph?profile_id=1").json()["persisted_edges"]
         c.close()
+
+
+def test_old_v1_backup_rebuilds_derived_intelligence():
+    with tempfile.TemporaryDirectory() as tmp:
+        path=Path(tmp)/"allen.sqlite3"
+        c=client_for(path)
+        cid,_=create_course(c)
+        backup=c.get("/api/backup/export?profile_id=1").json()
+        # Simulate a valid backup v1 produced before Learning Intelligence existed.
+        for table in ("curriculum_edges","question_bank","course_quality_reviews","diagnostic_results"):
+            backup["tables"].pop(table,None)
+        restored=c.post("/api/backup/restore",json=backup)
+        assert restored.status_code==200
+        assert c.get(f"/api/teacher/courses/{cid}/graph?profile_id=1").json()["persisted_edges"]
+        questions=c.get(f"/api/teacher/courses/{cid}/questions?profile_id=1").json()
+        assert questions and all(q["status"]=="approved" for q in questions)
+        c.close()
