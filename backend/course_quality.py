@@ -48,10 +48,37 @@ def evaluate_course(structure):
     checks+=1
     if exam: passed+=1
     else: issues.append({"severity":"warning","code":"no_final_exam","message":"El curso no tiene examen final."})
+
     score=round((passed/max(1,checks))*100)
     blocking=sum(1 for i in issues if i["severity"]=="error")
-    return {"score":score,"checks":checks,"passed":passed,"blocking_issues":blocking,"issues":issues,
-            "status":"ready" if blocking==0 and score>=80 else "review"}
+    counts={}
+    for issue in issues:
+        counts[issue["code"]]=counts.get(issue["code"],0)+1
+    breakdown={
+        "source_grounding":{
+            "ok":sum(1 for _,_,t in topics if t.get("source") and t.get("source_excerpt")),
+            "total":len(topics),
+        },
+        "measurable_objectives":{
+            "ok":sum(1 for _,_,t in topics if any(v in (t.get("objective") or "").lower() for v in MEASURABLE)),
+            "total":len(topics),
+        },
+        "assessed_topics":{
+            "ok":sum(1 for _,_,t in topics if t.get("questions")),
+            "total":len(topics),
+        },
+        "final_exam":{"ok":1 if exam else 0,"total":1},
+        "issue_counts":counts,
+    }
+    return {
+        "score":score,
+        "checks":checks,
+        "passed":passed,
+        "blocking_issues":blocking,
+        "issues":issues,
+        "breakdown":breakdown,
+        "status":"ready" if blocking==0 and score>=80 else "review",
+    }
 
 def publication_allowed(report):
     return report["blocking_issues"]==0 and report["score"]>=80
