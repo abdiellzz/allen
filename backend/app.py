@@ -20,10 +20,11 @@ from .ai import LocalAI
 from .database import Database, now
 from .education import catalog, generate, grade
 from .library import Library
-from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration
+from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest
 from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
+from .study_planner import build_plan, cornell_guide, study_guide
 
 ROOT=Path(__file__).resolve().parent.parent
 
@@ -199,6 +200,68 @@ def create_app(db_path=None, ai=None):
         db.execute('INSERT INTO learning_sessions(user_id,subject,seconds,created) VALUES(?,?,?,?)',(value.profile_id,value.subject,value.seconds,now()))
         db.award(value.profile_id,'study',value.subject,5,date.today().isoformat())
         return {'ok':True}
+
+
+    @app.post('/api/study-plans')
+    def create_study_plan(value:StudyPlanCreate):
+        user(value.profile_id)
+        quiz_rows=db.all('SELECT result FROM quiz_results WHERE user_id=? ORDER BY id DESC LIMIT 30',(value.profile_id,))
+        cards=db.all('SELECT question,answer,due,interval FROM flashcards WHERE user_id=?',(value.profile_id,))
+        try:
+            plan=build_plan(value.subject,value.topics,value.deadline,value.minutes_per_day,value.level,value.goal,quiz_rows,cards,db.progress(value.profile_id))
+        except ValueError as exc:
+            raise HTTPException(422,str(exc))
+        pid=db.execute('INSERT INTO study_plans(user_id,subject,goal,deadline,minutes_per_day,level,topics,plan,created) VALUES(?,?,?,?,?,?,?,?,?)',
+            (value.profile_id,value.subject,value.goal,value.deadline,value.minutes_per_day,value.level,json.dumps(value.topics,ensure_ascii=False),json.dumps(plan,ensure_ascii=False),now()))
+        return {'id':pid,**plan}
+
+    @app.get('/api/study-plans')
+    def study_plans(profile_id:int=1):
+        user(profile_id)
+        rows=db.all('SELECT id,subject,goal,deadline,minutes_per_day,level,topics,plan,created FROM study_plans WHERE user_id=? ORDER BY id DESC LIMIT 50',(profile_id,))
+        for row in rows:
+            row['topics']=json.loads(row['topics']); row['plan']=json.loads(row['plan'])
+        return rows
+
+    @app.get('/api/study-plans/{pid}')
+    def study_plan(pid:int,profile_id:int=1):
+        user(profile_id)
+        row=db.one('SELECT * FROM study_plans WHERE id=? AND user_id=?',(pid,profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese plan.')
+        row['topics']=json.loads(row['topics']); row['plan']=json.loads(row['plan'])
+        return row
+
+    @app.post('/api/study-plans/{pid}/start')
+    def start_study_plan(pid:int,profile_id:int=1):
+        user(profile_id)
+        row=db.one('SELECT * FROM study_plans WHERE id=? AND user_id=?',(pid,profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese plan.')
+        today=date.today().isoformat()
+        existing=db.one('SELECT * FROM study_sessions WHERE plan_id=? AND user_id=? AND day=?',(pid,profile_id,today))
+        if existing: return existing
+        sid=db.execute('INSERT INTO study_sessions(user_id,plan_id,day,status,started) VALUES(?,?,?,?,?)',(profile_id,pid,today,'active',now()))
+        return db.one('SELECT * FROM study_sessions WHERE id=?',(sid,))
+
+    @app.post('/api/study-sessions/{sid}/event')
+    def study_session_event(sid:int,value:StudySessionEvent):
+        user(value.profile_id)
+        session=db.one('SELECT * FROM study_sessions WHERE id=? AND user_id=?',(sid,value.profile_id))
+        if not session: raise HTTPException(404,'No encontramos esa sesión.')
+        db.execute('INSERT INTO study_session_events(user_id,session_id,kind,activity_index,note,created) VALUES(?,?,?,?,?,?)',
+            (value.profile_id,sid,value.kind,value.activity_index,value.note,now()))
+        if value.kind in ('completed','skipped'):
+            db.execute('UPDATE study_sessions SET status=?,completed=? WHERE id=?',('completed' if value.kind=='completed' else 'skipped',now(),sid))
+        return {'ok':True}
+
+    @app.post('/api/guides/cornell')
+    def cornell(value:GuideRequest):
+        user(value.profile_id)
+        return cornell_guide(value.text,value.title)
+
+    @app.post('/api/guides/study')
+    def guide(value:GuideRequest):
+        user(value.profile_id)
+        return study_guide(value.text,value.title)
 
     @app.get('/api/conversations')
     def conversations(profile_id:int=1):
