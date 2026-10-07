@@ -99,15 +99,31 @@ export function bindCourses(root,{api,profileId,toast,go}){
  const list=root.querySelector('#student-course-list'),route=root.querySelector('#student-course-route');
  async function refresh(){const rows=await api('/courses?profile_id='+profileId);list.innerHTML=studentCards(rows);}
  async function open(id){const data=await api('/courses/'+id+'/route?profile_id='+profileId);route.innerHTML=routeView(data);route.scrollIntoView({behavior:'smooth',block:'start'});}
+ async function openExam(id){
+  const data=await api('/courses/'+id+'/exam?profile_id='+profileId);
+  route.innerHTML=`<section class="course-exam-shell" data-course-exam="${id}">
+   ${allenGuide('teaching','Llegaste al examen final. Aquí ya no te doy pistas: primero demuestra lo que recuerdas y después revisamos juntos.')}
+   <div class="row spaced"><div><span class="eyebrow">EXAMEN FINAL</span><h1>${esc(data.course.title)}</h1></div><span class="pill">${data.questions.length} preguntas</span></div>
+   <form id="course-exam-form">${data.questions.map((q,i)=>`<fieldset><legend>${i+1}. ${esc(q.prompt)}</legend>${q.options.map(o=>`<label class="answer-option"><input type="radio" name="course-exam-${i}" value="${esc(o)}" required><span>${esc(o)}</span></label>`).join('')}</fieldset>`).join('')}<button class="primary">Entregar examen</button></form>
+  </section>`;
+  route.scrollIntoView({behavior:'smooth',block:'start'});
+  route.querySelector('#course-exam-form').onsubmit=async e=>{e.preventDefault();try{
+   const answers=data.questions.map((_,i)=>route.querySelector(`input[name="course-exam-${i}"]:checked`)?.value||'');
+   const result=await api('/courses/'+id+'/exam/submit','POST',{profile_id:profileId,answers});
+   route.innerHTML=`<section class="course-exam-result">${allenGuide(result.percentage>=70?'celebrate':'progress',result.percentage>=70?'Terminaste el curso. Ahora sabemos qué temas dominas y cuáles conviene revisar.':'Terminaste el examen. No hace falta empezar de cero: vamos a reforzar exactamente lo que costó.',[{label:'Ver progreso',page:'Progreso',primary:true}])}<div class="panel"><span class="eyebrow">RESULTADO DEL CURSO</span><h1>${result.score}/${result.total} · ${result.percentage}%</h1><p><b>Fuertes:</b> ${esc(result.strong_topics.join(', ')||'todavía construyéndose')}</p><p><b>Reforzar:</b> ${esc(result.weak_topics.join(', ')||'ninguno destacado')}</p><details><summary>Revisar respuestas y fuentes</summary>${result.feedback.map((x,i)=>`<article class="exam-review ${x.correct?'correct':'review'}"><strong>${i+1}. ${esc(x.topic)}</strong><p>${x.correct?'Correcto':'Respuesta esperada: '+esc(x.correct_answer)}</p><small>Fuente: página ${x.source?.page||'—'}</small></article>`).join('')}</details>${result.weak_topics.length?'<button class="primary" id="course-reinforce">Crear Plan Allen de refuerzo</button>':''}</div></section>`;
+   const reinforce=route.querySelector('#course-reinforce');if(reinforce)reinforce.onclick=()=>{try{sessionStorage.setItem('allen-plan-prefill',JSON.stringify({subject:data.course.subject,topics:result.weak_topics,goal:'Reforzar examen del curso'}));}catch{}go('Plan Allen');};
+   await refresh();
+  }catch(err){toast(err.message);}};
+ }
  list.onclick=async e=>{const b=e.target.closest('[data-course-id]');if(!b)return;const id=Number(b.dataset.courseId);try{if(b.dataset.courseAction==='enroll')await api('/courses/'+id+'/enroll','POST',{profile_id:profileId});await open(id);await refresh();}catch(err){toast(err.message);}};
  route.onclick=async e=>{
   const shell=e.target.closest('[data-course-id]');if(!shell)return;const cid=Number(shell.dataset.courseId),u=Number(shell.dataset.unit),t=Number(shell.dataset.topic),st=Number(shell.dataset.step);
   const data=await api('/courses/'+cid+'/route?profile_id='+profileId),unit=data.course.structure.units[u],topic=unit.topics[t],steps=topic.route||[];
   if(e.target.id==='course-help'){try{sessionStorage.setItem('allen-course-help',JSON.stringify({course:data.course.title,topic:topic.title,excerpt:topic.source_excerpt}));}catch{}go('Tutor');toast('Allen te lo explicará de otra manera.');return;}
   if(e.target.id!=='course-next')return;
-  let nu=u,nt=t,ns=st+1,status='active';
-  if(ns>=steps.length){ns=0;nt++;if(nt>=unit.topics.length){nt=0;nu++;if(nu>=data.course.structure.units.length){nu=u;nt=t;ns=steps.length-1;status='completed';}}}
-  try{await api('/courses/'+cid+'/progress','POST',{profile_id:profileId,unit_index:nu,topic_index:nt,step_index:ns,status});if(status==='completed'){route.innerHTML=`${allenGuide('celebrate','Terminaste esta ruta. Tu progreso quedó guardado y ahora Allen puede usarlo para tus recomendaciones.',[{label:'Ver mi progreso',page:'Progreso',primary:true}])}`;toast('Curso completado.');}else await open(cid);await refresh();}catch(err){toast(err.message);}
+  let nu=u,nt=t,ns=st+1,finishedRoute=false;
+  if(ns>=steps.length){ns=0;nt++;if(nt>=unit.topics.length){nt=0;nu++;if(nu>=data.course.structure.units.length){finishedRoute=true;}}}
+  try{if(finishedRoute){await openExam(cid);toast('Ruta completada. Ahora toca comprobar lo aprendido.');return;}await api('/courses/'+cid+'/progress','POST',{profile_id:profileId,unit_index:nu,topic_index:nt,step_index:ns,status:'active'});await open(cid);await refresh();}catch(err){toast(err.message);}
  };
  refresh().catch(e=>toast(e.message));
 }
