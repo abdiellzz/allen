@@ -136,3 +136,29 @@ class SavedAnswer(Strict):
     profile_id: int = Field(ge=1)
     title: str = Field(min_length=1,max_length=120)
     content: str = Field(min_length=1,max_length=20000)
+
+
+class StudyPlanCreate(Strict):
+    profile_id: int = Field(ge=1)
+    subject: str = Field(min_length=1,max_length=80)
+    topics: list[str] = Field(min_length=1,max_length=12)
+    deadline: str = Field(min_length=10,max_length=10)
+    minutes_per_day: int = Field(ge=10,le=240)
+    level: Literal['Primaria','Premedia','Media','Universidad / Técnico'] = 'Premedia'
+    goal: str = Field(min_length=1,max_length=160)
+    @field_validator('topics')
+    @classmethod
+    def topic_lengths(cls,values):
+        if any(not v.strip() or len(v)>80 for v in values): raise ValueError('Tema no válido')
+        return values
+
+class StudySessionEvent(Strict):
+    profile_id: int = Field(ge=1)
+    kind: Literal['started','completed','skipped','hint','understood','not_understood']
+    activity_index: int = Field(ge=0,le=100)
+    note: str = Field('',max_length=500)
+
+class GuideRequest(Strict):
+    profile_id: int = Field(ge=1)
+    title: str = Field('Guía de estudio',max_length=120)
+    text: str = Field(min_length=20,max_length=20000)
