@@ -35,6 +35,6 @@ export function AllenMascot(state='happy',size='medium'){
  const src=mascotAssets[state]||'/static/assets/allen-brand.svg';
  return `<img class="allen-mascot allen-official ${esc(state)} ${esc(size)}" src="${src}" role="img" alt="Allen ${esc(mascotLabels[state])}">`;
 }
-export function AllenLoader(text='Allen está pensando…'){return `<div class="allen-loader" role="status">${AllenMascot('thinking','small')}<span>${esc(text)}<span class="loading-dots"> · · ·</span></span></div>`;}
+export function AllenLoader(text='Allen está pensando…'){return `<section class="allen-loader-shell" role="status" aria-live="polite" aria-busy="true"><div class="allen-loader">${AllenMascot('thinking','small')}<span>${esc(text)}<span class="loading-dots"> · · ·</span></span></div><div class="skeleton-grid" aria-hidden="true"><i></i><i></i><i></i></div></section>`;}
 export function FeatureCard(page,name,title,description){return `<button class="module-card" data-page="${esc(page)}"><span class="module-icon">${icon(name,44)}</span><b>${esc(title)}</b><p>${esc(description)}</p><span class="card-action">Empezar ${icon('arrow-right',18)}</span></button>`;}
-export function EmptyState(title,text,state='reading'){return `<div class="empty">${AllenMascot(state)}<h2>${esc(title)}</h2><p>${esc(text)}</p></div>`;}
+export function EmptyState(title,text,state='reading'){return `<section class="empty polished-empty" role="status">${AllenMascot(state)}<h2>${esc(title)}</h2><p>${esc(text)}</p><small>Cuando tengas contenido aquí, aparecerá automáticamente.</small></section>`;}
