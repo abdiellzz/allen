@@ -106,7 +106,7 @@ export async function bindPlanAllen(root,{api,profileId,profile,go,toast}){
 }
 
 function bindSession(stage,plan,session,{api,profileId,go,toast}){
- const day=(plan.plan?.days||[]).find(d=>d.date===session.day)||(plan.plan?.days||[])[0];let index=0;
+ const day=(plan.plan?.days||[]).find(d=>d.date===session.day)||(plan.plan?.days||[])[0];let index=Math.min(session.current_activity_index||0,Math.max(0,(day?.activities?.length||1)-1));
  const show=()=>{const activity=day.activities[index];stage.querySelector('#session-activity').innerHTML=renderActivity(activity,index,day.activities.length);stage.querySelector('#session-progress').value=index;};
  stage.onclick=async e=>{
   const action=e.target.closest('[data-session-action]')?.dataset.sessionAction;
@@ -123,8 +123,8 @@ function bindSession(stage,plan,session,{api,profileId,go,toast}){
    if(index<day.activities.length-1){index++;show();}else{stage.innerHTML='<section class="panel"><h2>Sesión completada</h2><p>Buen trabajo. Allen usará este avance para tu próxima recomendación.</p></section>';toast('Sesión Allen completada.');}
   }
   if(e.target.closest('[data-end-session]')){
-   await api('/study-sessions/'+session.id+'/event','POST',{profile_id:profileId,kind:'skipped',activity_index:index,note:'Sesión terminada por el estudiante.'}).catch(()=>{});
-   stage.innerHTML='<section class="panel"><h2>Sesión guardada</h2><p>Podemos ajustar el plan cuando quieras.</p></section>';
+   await api('/study-sessions/'+session.id+'/event','POST',{profile_id:profileId,kind:'paused',activity_index:index,note:'Sesión pausada por el estudiante.'}).catch(()=>{});
+   stage.innerHTML='<section class="panel"><h2>Sesión en pausa</h2><p>Tu progreso quedó guardado. Puedes continuar desde este mismo paso cuando vuelvas.</p></section>';
   }
  };
 }
