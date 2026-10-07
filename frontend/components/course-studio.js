@@ -46,13 +46,13 @@ export function bindTeacherStudio(root,{api,profileId,toast}){
  const form=root.querySelector('#teacher-import-form'),list=root.querySelector('#teacher-course-list'),review=root.querySelector('#teacher-course-review');
  let current=null;
  async function refresh(){const rows=await api('/teacher/courses?profile_id='+profileId);list.innerHTML=courseList(rows);}
- form.onsubmit=async e=>{e.preventDefault();try{
+ form.onsubmit=async e=>{e.preventDefault();const button=form.querySelector('button.primary');const original=button.textContent;button.disabled=true;button.textContent='Allen está organizando el material…';try{
    const file=root.querySelector('#course-file').files[0];if(!file)throw new Error('Selecciona un archivo.');
    if(file.size>8_000_000)throw new Error('El archivo supera 8 MB.');
    const base64=await fileToBase64(file);
    const data=await api('/teacher/import','POST',{profile_id:profileId,title:root.querySelector('#course-title').value.trim(),subject:root.querySelector('#course-subject').value.trim(),level:root.querySelector('#course-level').value,filename:file.name,mime:file.type||mimeFor(file.name),content_base64:base64});
    toast('Borrador creado. Ahora revísalo antes de publicar.');form.reset();await refresh();await openReview(data.course_id);
-  }catch(err){toast(err.message);}};
+  }catch(err){toast(err.message);}finally{button.disabled=false;button.textContent=original;}};
  async function openReview(id){current=await api('/teacher/courses/'+id+'?profile_id='+profileId);review.innerHTML=reviewView(current);review.scrollIntoView({behavior:'smooth',block:'start'});}
  list.onclick=e=>{const r=e.target.closest('[data-review-course]'),p=e.target.closest('[data-publish-course]'),x=e.target.closest('[data-export-pack]');if(r)openReview(r.dataset.reviewCourse).catch(err=>toast(err.message));if(p)publish(Number(p.dataset.publishCourse));if(x)exportPack(Number(x.dataset.exportPack));};
  async function publish(id){try{await api('/teacher/courses/'+id+'/publish','POST',{profile_id:profileId});toast('Curso publicado para este dispositivo.');await refresh();}catch(err){toast(err.message);}}
