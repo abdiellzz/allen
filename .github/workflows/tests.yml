@@ -9,6 +9,7 @@ on:
       - feature/allen-learning-continuity
       - feature/allen-product-polish
       - feature/allen-guided-learning-studio
+      - feature/allen-learning-intelligence
   pull_request:
 jobs:
   python:
