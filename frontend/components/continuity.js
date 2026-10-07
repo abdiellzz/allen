@@ -1,7 +1,6 @@
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-export async function continuityPanel(api,profileId){
- const c=await api('/continuity?profile_id='+profileId);
+export function continuityPanel(c){
  if(c.adventure){
   return `<section class="continuity-card primary-continuity"><img src="/static/assets/allen-resume.svg" alt=""><div><span class="eyebrow">CONTINÚA DONDE LO DEJASTE</span><h2>Aventura en curso</h2><p>Paso ${(c.adventure.current_step||0)+1}. Tu progreso está guardado en este dispositivo.</p><button class="primary" data-page="Aventura">Continuar aventura</button></div></section>`;
  }
@@ -16,10 +15,16 @@ export async function continuityPanel(api,profileId){
  return `<section class="continuity-card"><img src="/static/assets/allen-welcome.svg" alt=""><div><span class="eyebrow">EMPIEZA ALGO NUEVO</span><h2>Tu próxima curiosidad te espera.</h2><p>No tienes una sesión activa. Puedes explorar, practicar o crear un plan.</p><button data-page="Aprender">Explorar</button></div></section>`;
 }
 
-export async function recommendationPanel(api,profileId){
- const c=await api('/continuity?profile_id='+profileId);
- const text=c.recommendation||'Elige un tema y conviértelo en una pequeña práctica.';
- return `<section class="recommendation-card"><img src="/static/assets/allen-thinking-hard.svg" alt=""><div><span class="eyebrow">RECOMENDADO PARA TI</span><h2>${esc(text)}</h2><p>Esta sugerencia usa únicamente tu actividad local.</p></div></section>`;
+export function recommendationPanel(c){
+ const r=c?.recommendation||{};
+ const text=r.reason||'Elige un tema y conviértelo en una pequeña práctica.';
+ return `<section class="recommendation-card"><img src="/static/assets/allen-thinking-hard.svg" alt=""><div><span class="eyebrow">PRÓXIMA MEJOR ACCIÓN</span><h2>${esc(text)}</h2><p>Allen usa tu progreso local, no un ranking.</p></div></section>`;
+}
+
+export function masteryPanel(c){
+ const rows=c?.mastery||[];
+ if(!rows.length)return '';
+ return '<section class="mastery-panel"><div class="section-head"><div><span class="eyebrow">QUÉ ESTÁS DOMINANDO</span><h2>Tu progreso por tema</h2></div></div><div class="mastery-grid">'+rows.slice(0,6).map(row=>'<article><div class="row spaced"><strong>'+esc(row.topic)+'</strong><span>'+row.mastery_score+'%</span></div><small>'+esc(row.subject)+' · '+esc(String(row.status||'').replaceAll('_',' '))+'</small><div class="mastery-track"><i style="width:'+Math.max(3,row.mastery_score)+'%"></i></div></article>').join('')+'</div></section>';
 }
 
 export function detectExamIntent(text){
