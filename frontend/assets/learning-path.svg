@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" role="img" aria-labelledby="t d">
+<title id="t">Ruta de aprendizaje de Allen</title><desc id="d">Camino visual con estaciones para descubrir, practicar, comprobar y dominar un tema.</desc>
+<rect width="720" height="420" rx="36" fill="#fffaf2"/>
+<path d="M74 306C158 214 211 340 300 242S450 116 646 150" fill="none" stroke="#e6d4bd" stroke-width="18" stroke-linecap="round"/>
+<path d="M74 306C158 214 211 340 300 242S450 116 518 139" fill="none" stroke="#c8662a" stroke-width="18" stroke-linecap="round"/>
+<g font-family="Segoe UI,Arial,sans-serif" text-anchor="middle">
+<g transform="translate(76 306)"><circle r="34" fill="#4f766b"/><text y="7" fill="#fff" font-size="24" font-weight="800">1</text><text y="64" fill="#574536" font-size="17" font-weight="700">DESCUBRE</text></g>
+<g transform="translate(292 246)"><circle r="34" fill="#c8662a"/><text y="7" fill="#fff" font-size="24" font-weight="800">2</text><text y="64" fill="#574536" font-size="17" font-weight="700">PRACTICA</text></g>
+<g transform="translate(518 139)"><circle r="34" fill="#c8662a"/><text y="7" fill="#fff" font-size="24" font-weight="800">3</text><text y="64" fill="#574536" font-size="17" font-weight="700">COMPRUEBA</text></g>
+<g transform="translate(646 150)"><circle r="34" fill="#ead9c4"/><text y="7" fill="#7c6653" font-size="24" font-weight="800">4</text><text y="64" fill="#574536" font-size="17" font-weight="700">DOMINA</text></g>
+</g>
+<g fill="#f0b95d"><circle cx="165" cy="90" r="6"/><circle cx="197" cy="72" r="4"/><circle cx="602" cy="308" r="5"/></g>
+</svg>
