@@ -24,8 +24,10 @@ export async function recommendationPanel(api,profileId){
 
 export function detectExamIntent(text){
  const q=String(text||'').toLowerCase();
- const hit=/(examen|parcial|prueba|evaluaci[oó]n|estudiar para)/.test(q);
+ const hit=['examen','parcial','prueba','evaluación','evaluacion','estudiar para'].some(term=>q.includes(term));
  if(!hit)return null;
- const subject=(q.match(/(?:de|para)s+(matem[aá]ticas|redes|ciberseguridad|programaci[oó]n|python|ingl[eé]s|ciencias|ia)/)||[])[1]||'';
- return {subject,raw:text};
+ const subjects=['matemáticas','matematicas','redes','ciberseguridad','programación','programacion','python','inglés','ingles','ciencias','ia'];
+ const subject=subjects.find(name=>q.includes('de '+name)||q.includes('para '+name)||q.includes(name))||'';
+ const normalized={matematicas:'matemáticas',programacion:'programación',ingles:'inglés'};
+ return {subject:normalized[subject]||subject,raw:text};
 }
