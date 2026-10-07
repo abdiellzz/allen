@@ -182,6 +182,7 @@ class SimulationCreate(Strict):
     topics: list[str] = Field(min_length=1,max_length=12)
     question_count: int = Field(5,ge=3,le=10)
     minutes: int = Field(20,ge=5,le=120)
+    timed: bool = True
     level: Literal['Primaria','Premedia','Media','Universidad / Técnico'] = 'Premedia'
 
 
