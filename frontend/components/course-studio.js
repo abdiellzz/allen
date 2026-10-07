@@ -2,9 +2,10 @@ import {allenGuide,learningStepRail} from './allen-guide.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 export function teacherStudioPage(){
- return `<div class="v2-page-heading"><div><span class="eyebrow">ALLEN TEACHER STUDIO</span><h1>Convierte material docente en una ruta de aprendizaje.</h1><p>Importa PDF, TXT o Markdown. Allen estructura el contenido localmente y el profesor decide qué se publica.</p></div></div>
+ return `<div class="v2-page-heading teacher-studio-heading"><div><span class="eyebrow">ALLEN TEACHER STUDIO</span><h1>Diseña, revisa y mejora cursos con trazabilidad.</h1><p>Una sola superficie para contenido, calidad, preguntas, analytics y versiones. Importa PDF, TXT o Markdown y mantén todo local.</p></div><span class="teacher-mode-badge">MODO PROFESOR</span></div>
+ <nav class="teacher-studio-nav" aria-label="Secciones de Teacher Studio"><a href="#teacher-create">Crear curso</a><a href="#teacher-analytics">Analytics</a><a href="#teacher-course-list">Cursos</a><a href="#teacher-course-review">Revisión</a></nav>
  ${allenGuide('teaching','Primero organizo el material. Después tú revisas objetivos, temas, preguntas y fuentes antes de publicarlo.')}
- <section class="teacher-import panel">
+ <section id="teacher-create" class="teacher-import panel">
   <form id="teacher-import-form" class="stack">
    <div class="field-grid">
     <label>Título del curso<input id="course-title" maxlength="140" required placeholder="Fundamentos de Redes"></label>
@@ -17,9 +18,9 @@ export function teacherStudioPage(){
   </form>
   <details class="import-panel"><summary>Importar un Course Pack de Allen</summary><p>Los .allenpack se importan como borrador y deben revisarse antes de publicarse en este dispositivo.</p><input id="course-pack-file" type="file" accept=".allenpack,application/json"><button id="course-pack-import" type="button">Importar Course Pack</button></details>
  </section>
- <section id="teacher-analytics"></section>
- <section id="teacher-course-list"></section>
- <section id="teacher-course-review"></section>`;
+ <section id="teacher-analytics" class="teacher-anchor"></section>
+ <section id="teacher-course-list" class="teacher-anchor"></section>
+ <section id="teacher-course-review" class="teacher-anchor"></section>`;
 }
 
 function coverage(c={}){
@@ -36,9 +37,10 @@ function teacherAnalyticsView(data){
 function qualityView(q,graph){
  if(!q)return '';
  const b=q.breakdown||{},ratio=x=>x&&x.total?Math.round(x.ok/x.total*100):0;
- return `<section class="course-quality panel"><div class="row spaced"><div><span class="eyebrow">COURSE QUALITY</span><h2>${q.score}/100</h2></div><span class="pill ${q.blocking_issues?'warn':'green'}">${q.blocking_issues} bloqueos</span></div>
- <p>${q.passed}/${q.checks} checks superados · ${graph?.nodes?.length||0} conceptos · ${graph?.edges?.length||0} relaciones curriculares.</p>
- <div class="quality-breakdown"><article><b>${ratio(b.source_grounding)}%</b><span>Con fuente</span></article><article><b>${ratio(b.measurable_objectives)}%</b><span>Objetivos medibles</span></article><article><b>${ratio(b.assessed_topics)}%</b><span>Temas evaluados</span></article><article><b>${ratio(b.final_exam)}%</b><span>Examen final</span></article></div>
+ const metrics=[['Con fuente',ratio(b.source_grounding)],['Objetivos medibles',ratio(b.measurable_objectives)],['Temas evaluados',ratio(b.assessed_topics)],['Examen final',ratio(b.final_exam)]];
+ return `<section class="course-quality panel v3-quality"><div class="row spaced"><div><span class="eyebrow">COURSE QUALITY</span><h2>${q.score}/100</h2><p>${q.passed}/${q.checks} checks superados · ${graph?.nodes?.length||0} conceptos · ${graph?.edges?.length||0} relaciones curriculares.</p></div><div class="quality-status"><span class="pill ${q.blocking_issues?'warn':'green'}">${q.blocking_issues? q.blocking_issues+' bloqueos':'Listo para publicar'}</span></div></div>
+ <div class="quality-meter" aria-label="Calidad del curso ${q.score}%"><i style="width:${Math.max(0,Math.min(100,q.score))}%"></i></div>
+ <div class="quality-breakdown">${metrics.map(([label,value])=>`<article><div class="row spaced"><span>${label}</span><b>${value}%</b></div><div class="mini-meter"><i style="width:${value}%"></i></div></article>`).join('')}</div>
  ${q.issues.length?`<div class="quality-issues">${q.issues.slice(0,12).map(i=>`<article class="${i.severity}"><b>${esc(i.location||'Curso')}</b><span>${esc(i.message)}</span></article>`).join('')}</div>`:'<p class="success-copy">No encontramos problemas importantes antes de publicar.</p>'}
  </section>`;
 }
@@ -51,7 +53,7 @@ function questionBankView(rows=[]){
 }
 function courseList(rows){
  if(!rows.length)return '<section class="panel empty"><h2>Aún no hay cursos</h2><p>Importa un documento para crear el primer borrador.</p></section>';
- return `<section class="teacher-course-grid">${rows.map(r=>`<article class="teacher-course-card"><div class="row spaced"><span class="eyebrow">${esc(r.subject)} · ${esc(r.level)}</span><span class="pill">${esc(r.status)}</span></div><h2>${esc(r.title)}</h2>${coverage(r.coverage)}<div class="row"><button data-review-course="${r.id}">Revisar</button><button data-version-course="${r.id}">Nueva versión</button>${r.status==='reviewed'?`<button class="primary" data-publish-course="${r.id}">Publicar</button>`:''}${r.status==='published'?`<span class="pill green">Publicado</span><button data-export-pack="${r.id}">Exportar .allenpack</button>`:''}</div></article>`).join('')}</section>`;
+ return `<section class="teacher-course-grid">${rows.map(r=>`<article class="teacher-course-card v3-teacher-course"><div class="row spaced"><span class="eyebrow">${esc(r.subject)} · ${esc(r.level)}</span><span class="pill status-${esc(r.status)}">${esc(r.status)}</span></div><h2>${esc(r.title)}</h2>${coverage(r.coverage)}<div class="teacher-course-actions"><button data-review-course="${r.id}">Abrir revisión</button><button data-version-course="${r.id}">Nueva versión</button>${r.status==='reviewed'?`<button class="primary" data-publish-course="${r.id}">Publicar</button>`:''}${r.status==='published'?`<span class="pill green">Publicado</span><button data-export-pack="${r.id}">Exportar .allenpack</button>`:''}</div></article>`).join('')}</section>`;
 }
 function versionHistoryView(rows=[]){
  if(!rows.length)return '';
