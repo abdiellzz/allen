@@ -74,3 +74,50 @@ Los respaldos antiguos de formato `allen-backup` que no incluían historial de v
 Esta fase no implementa sincronización cloud ni edición colaborativa. El objetivo es que una instalación local sea segura, recuperable y actualizable.
 
 Una nueva versión de un curso entra en estado borrador y debe revisarse/publicarse otra vez. Esto evita publicar silenciosamente cambios derivados de un documento nuevo.
+
+
+## 6. Cómo usar Recovery local
+
+Abre **Configuración → Recovery local**.
+
+### Diagnosticar la base
+
+Pulsa **Diagnosticar base**. ALLEN ejecuta `PRAGMA integrity_check`, `PRAGMA foreign_key_check`, consulta la versión del esquema y muestra los snapshots disponibles.
+
+Si la interfaz indica **Base íntegra**, SQLite no reportó problemas en esas comprobaciones.
+
+### Crear un snapshot manual
+
+Pulsa la opción de crear snapshot antes de una operación que quieras proteger explícitamente. ALLEN también crea snapshots automáticamente antes de migraciones, nuevas versiones de cursos y restauraciones.
+
+### Restaurar un snapshot
+
+1. Abre la lista de snapshots.
+2. Elige una copia válida.
+3. Ejecuta la restauración.
+4. ALLEN crea primero una copia del estado actual.
+5. Después restaura el snapshot seleccionado y vuelve a comprobar integridad.
+
+ALLEN conserva hasta cinco snapshots recientes.
+
+## 7. Cómo funciona una migración
+
+El usuario no tiene que ejecutar comandos manuales.
+
+Al abrir una base antigua:
+
+1. ALLEN lee `PRAGMA user_version`.
+2. Crea un snapshot pre-migración.
+3. Ejecuta las migraciones pendientes de `backend/migrations.py`.
+4. Registra las migraciones aplicadas en `schema_migrations`.
+5. Conserva tablas y progreso existentes.
+
+En esta fase el schema actual es v10.
+
+## 8. Cómo actualizar un curso sin perder progreso
+
+Desde **Teacher Studio** usa **Nueva versión** sobre el curso existente. ALLEN procesa la nueva fuente, genera Course Diff y calcula progreso preservable.
+
+La nueva versión queda en `draft`, por lo que debe pasar por Teacher Review otra vez antes de publicarse.
+
+Para instrucciones completas de uso consulta [USAGE_GUIDE.md](USAGE_GUIDE.md).
