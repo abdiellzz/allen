@@ -89,7 +89,7 @@ function commandClose(){const modal=$('#command-palette');modal.hidden=true;docu
 function renderCommandResults(query=''){
  const q=query.trim().toLowerCase();
  const rows=commandItems.filter(x=>!q||x.join(' ').toLowerCase().includes(q)).slice(0,10);
- $('#command-results').innerHTML=rows.length?rows.map(([page,title,desc],i)=>`<button class="command-result ${i===0?'selected':''}" data-command-page="${esc(page)}"><span>${icon(page==='Teacher Studio'?'book-open':'arrow-right',18)}<b>${esc(title)}</b></span><small>${esc(desc)}</small></button>`).join(''):`<div class="command-empty"><b>Sin resultados</b><span>Prueba con “curso”, “quiz”, “progreso” o “configuración”.</span></div>`;
+ $('#command-results').innerHTML=rows.length?rows.map(([page,title,desc],i)=>`<button class="command-result ${i===0?'selected':''}" role="option" data-command-page="${esc(page)}"><span>${icon(page==='Teacher Studio'?'book-open':'arrow-right',18)}<b>${esc(title)}</b></span><small>${esc(desc)}</small></button>`).join(''):`<div class="command-empty"><b>Sin resultados</b><span>Prueba con “curso”, “quiz”, “progreso” o “configuración”.</span></div>`;
 }
 $('#global-search-open').onclick=commandOpen;
 $('#command-input').addEventListener('input',e=>renderCommandResults(e.target.value));
