@@ -15,6 +15,7 @@ class LocalAI:
         self._status_cache = None
         self._status_cache_key = None
         self._status_cache_until = 0.0
+        self.metrics = {'time_to_first_token':None,'generation_duration':None,'estimated_tokens':0,'tokens_per_second':None,'mode':'Equilibrado'}
 
     def client(self, timeout=90):
         return httpx.AsyncClient(timeout=timeout, trust_env=False, follow_redirects=False, transport=self.transport)
@@ -25,7 +26,7 @@ class LocalAI:
         key=(settings.ai_server, settings.model)
         now=time.monotonic()
         if not refresh and self._status_cache_key==key and self._status_cache and now < self._status_cache_until:
-            return self._status_cache
+            return {**self._status_cache,'metrics':dict(self.metrics)}
         try:
             # One OpenAI-compatible request is enough to prove the local server is alive.
             # Caching avoids two extra round trips before every chat response.
@@ -43,6 +44,7 @@ class LocalAI:
         # Cache healthy local servers; disconnected states are checked again immediately so
         # starting/restarting llama.cpp is detected without making the user wait.
         self._status_cache_until=now+(15.0 if result.get('connected') else 0.0)
+        result['metrics']=dict(self.metrics)
         return result
 
     def messages(self, request, profile, settings, sources):
@@ -57,7 +59,8 @@ class LocalAI:
         history=[]
         # Long histories increase prompt-evaluation time on CPU. Keep the most recent
         # turns while preserving enough continuity for tutoring.
-        for message in reversed(request.history[-12:]):
+        history_limit={'Rápido':6,'Equilibrado':12,'Detallado':20}.get(getattr(settings,'performance','Equilibrado'),12)
+        for message in reversed(request.history[-history_limit:]):
             size=estimate(message.content)
             if used+size > budget:
                 break
@@ -84,13 +87,17 @@ class LocalAI:
         yield {'type':'meta','demo':False}
         # Most tutoring turns do not need hundreds of tokens. Smaller decode budgets
         # improve response time on CPU while summaries and explanations still get room.
+        preset=getattr(settings,'performance','Equilibrado')
+        caps={'Rápido':260,'Equilibrado':420,'Detallado':700}
         if request.action in ('hint','quiz_me','next') or request.mode in ('Tutor','Matemáticas'):
-            token_budget=min(settings.max_tokens,320)
+            token_budget=min(settings.max_tokens, min(caps.get(preset,420),320))
         elif request.mode in ('Resumir','Explicar') or request.action in ('summary_learning','step_by_step'):
-            token_budget=min(settings.max_tokens,520)
+            token_budget=min(settings.max_tokens, min(caps.get(preset,420)+100,700))
         else:
-            token_budget=min(settings.max_tokens,420)
+            token_budget=min(settings.max_tokens,caps.get(preset,420))
         payload=dict(model=status['effective_model'],messages=messages,temperature=settings.temperature,max_tokens=token_budget,stream=True)
+        started=time.monotonic(); first_token_at=None; estimated_tokens=0
+        self.metrics['mode']=getattr(settings,'performance','Equilibrado')
         async with self.lock:
             async with self.client() as client:
                 async with client.stream('POST',settings.ai_server+'/v1/chat/completions',json=payload) as response:
@@ -108,6 +115,9 @@ class LocalAI:
                         if not choices:
                             continue
                         piece=choices[0].get('delta',{}).get('content') or ''
+                        if piece and first_token_at is None:
+                            first_token_at=time.monotonic()
+                        estimated_tokens += max(1,(len(piece)+2)//3) if piece else 0
                         pending+=piece
                         total+=len(piece)
                         if total>50000:
@@ -127,3 +137,5 @@ class LocalAI:
                                 return
                     if pending:
                         yield {'type':'delta','text':safe_reply(pending) or pending}
+        finished=time.monotonic(); duration=max(0.001,finished-started)
+        self.metrics.update(time_to_first_token=round((first_token_at-started),3) if first_token_at else None,generation_duration=round(duration,3),estimated_tokens=estimated_tokens,tokens_per_second=round(estimated_tokens/duration,2) if estimated_tokens else None)

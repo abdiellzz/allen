@@ -184,3 +184,23 @@ body{min-width:1024px}
 .v2-cornell-sheet aside span{font-size:13px;color:var(--v2-muted)}
 .v2-cornell-sheet main{display:flex;flex-direction:column;gap:14px}
 .v2-cornell-sheet footer{margin-top:auto;padding-top:14px;border-top:2px solid #d8c3a8;font-size:13px}
+
+.plan-allen-shell,.session-allen{margin:24px 0;padding:26px;border:1px solid var(--v2-line);border-radius:28px;background:#fff;box-shadow:var(--v2-shadow)}
+.plan-allen-days{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:20px}
+.plan-allen-days>article{padding:18px;border:1px solid var(--v2-line);border-radius:20px;background:linear-gradient(145deg,#fffdf8,#fbf3e7)}
+.plan-activity{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:center;padding:11px 0;border-top:1px solid #efe1cf}
+.plan-activity:first-of-type{margin-top:8px}
+.plan-activity>b{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--v2-green-soft);color:var(--v2-green);font-size:12px}
+.plan-activity span{display:grid;gap:3px}.plan-activity small{color:var(--v2-muted)}
+.session-allen progress{width:100%;height:12px;margin:12px 0 22px}
+.session-activity-card{padding:28px;border-radius:24px;background:linear-gradient(145deg,#fff8ed,#fff);border:1px solid var(--v2-line)}
+.session-activity-card h2{font-size:30px;margin:.3rem 0}
+.session-method-note{margin:18px 0;padding:16px 18px;border-left:4px solid var(--v2-green);border-radius:14px;background:var(--v2-green-soft);color:#39594f}
+#study-plan-form .field-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:1180px){.plan-allen-days{grid-template-columns:repeat(2,minmax(0,1fr))}#study-plan-form .field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.study-guide-maker{margin-top:26px}
+.study-guide-maker textarea{width:100%;resize:vertical;min-height:170px}
+.study-guide-result{margin-top:20px}
+.study-guide-result li{margin:.5rem 0;line-height:1.45}
+.study-guide-result.v2-cornell-sheet{min-height:320px}
