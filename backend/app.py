@@ -25,6 +25,10 @@ from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
 from .study_planner import build_plan, cornell_guide, study_guide
+from .learning_events import record_event
+from .learning_engine import recommend_next_action
+from .recommendations import build_recommendation
+from .backup import export_backup, validate_backup, restore_backup
 
 ROOT=Path(__file__).resolve().parent.parent
 
@@ -240,6 +244,8 @@ def create_app(db_path=None, ai=None):
         existing=db.one('SELECT * FROM study_sessions WHERE plan_id=? AND user_id=? AND day=?',(pid,profile_id,today))
         if existing: return existing
         sid=db.execute('INSERT INTO study_sessions(user_id,plan_id,day,status,started) VALUES(?,?,?,?,?)',(profile_id,pid,today,'active',now()))
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(profile_id,'study_session',sid,row['subject'],'','active',now()))
+        record_event(db,profile_id,'lesson_started',row['subject'],'',reference_type='study_session',reference_id=sid)
         return db.one('SELECT * FROM study_sessions WHERE id=?',(sid,))
 
     @app.post('/api/study-sessions/{sid}/event')
@@ -263,12 +269,22 @@ def create_app(db_path=None, ai=None):
         if status=='completed': fields.append('completed=?'); args.append(now())
         args.append(sid)
         db.execute('UPDATE study_sessions SET '+','.join(fields)+' WHERE id=?',tuple(args))
+        plan=db.one("SELECT subject FROM study_plans WHERE id=?",(session['plan_id'],))
+        subject=plan['subject'] if plan else ''
+        if value.kind=='hint': record_event(db,value.profile_id,'hint_used',subject,'',reference_type='study_session',reference_id=sid)
+        elif value.kind=='not_understood': record_event(db,value.profile_id,'explanation_requested',subject,'',reference_type='study_session',reference_id=sid)
+        elif value.kind=='completed':
+            record_event(db,value.profile_id,'study_session_completed',subject,'',reference_type='study_session',reference_id=sid)
+            db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='study_session' AND reference_id=?",(value.profile_id,sid))
+        else:
+            db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'study_session',sid,subject,'',status,now()))
         return db.one('SELECT * FROM study_sessions WHERE id=?',(sid,))
 
 
     @app.get('/api/continuity')
     def continuity(profile_id:int=1):
         user(profile_id)
+        activity=db.one("SELECT * FROM profile_current_activity WHERE user_id=?",(profile_id,))
         adventure=db.one("SELECT * FROM adventure_sessions WHERE user_id=? AND status IN ('active','paused') ORDER BY updated_at DESC LIMIT 1",(profile_id,))
         session=db.one("SELECT ss.*,sp.subject,sp.goal,sp.deadline,sp.plan FROM study_sessions ss JOIN study_plans sp ON sp.id=ss.plan_id WHERE ss.user_id=? AND ss.status IN ('active','paused') ORDER BY COALESCE(ss.last_activity_at,ss.started) DESC LIMIT 1",(profile_id,))
         if session: session['plan']=json.loads(session['plan'])
@@ -276,14 +292,40 @@ def create_app(db_path=None, ai=None):
         if plan:
             plan['topics']=json.loads(plan['topics']); plan['plan']=json.loads(plan['plan'])
         due_cards=db.one("SELECT count(*) n FROM flashcards WHERE user_id=? AND due<=?",(profile_id,date.today().isoformat()))['n']
-        memory=db.memory(profile_id)
-        recommendation=None
-        if adventure: recommendation='Continúa tu aventura desde el punto exacto donde la dejaste.'
-        elif session: recommendation='Retoma tu Sesión Allen antes de empezar algo nuevo.'
-        elif due_cards: recommendation=f'Tienes {due_cards} tarjetas listas para repasar.'
-        elif memory.get('difficult_topics'): recommendation='Podemos reforzar '+memory['difficult_topics'][-1]+'.'
-        elif memory.get('recent_topics'): recommendation='Puedes profundizar en '+memory['recent_topics'][-1]+'.'
-        return dict(adventure=adventure,study_session=session,study_plan=plan,due_cards=due_cards,recommendation=recommendation)
+        recommendation=build_recommendation(db,profile_id)
+        mastery=db.all("SELECT * FROM topic_mastery WHERE user_id=? ORDER BY mastery_score ASC,last_seen DESC LIMIT 8",(profile_id,))
+        return dict(current_activity=activity,adventure=adventure,study_session=session,study_plan=plan,due_cards=due_cards,recommendation=recommendation,mastery=mastery)
+
+    @app.get('/api/mastery')
+    def mastery(profile_id:int=1):
+        user(profile_id)
+        return db.all("SELECT * FROM topic_mastery WHERE user_id=? ORDER BY subject,topic",(profile_id,))
+
+    @app.get('/api/recommendation')
+    def recommendation(profile_id:int=1):
+        user(profile_id)
+        return build_recommendation(db,profile_id)
+
+    @app.get('/api/backup/export')
+    def backup_export(profile_id:int=1):
+        user(profile_id)
+        payload=export_backup(db)
+        return payload
+
+    @app.post('/api/backup/validate')
+    async def backup_validate(request:Request):
+        payload=await request.json()
+        try:return validate_backup(payload)
+        except ValueError as exc:raise HTTPException(422,str(exc))
+
+    @app.post('/api/backup/restore')
+    async def backup_restore(request:Request):
+        payload=await request.json()
+        try:
+            summary=restore_backup(db,payload)
+        except ValueError as exc:
+            raise HTTPException(422,str(exc))
+        return {'ok':True,'summary':summary}
 
     @app.post('/api/adventures/start')
     def start_adventure(value:AdventureStart):
@@ -291,8 +333,13 @@ def create_app(db_path=None, ai=None):
         current=db.one("SELECT * FROM adventure_sessions WHERE user_id=? AND adventure_id=? AND status IN ('active','paused') ORDER BY id DESC LIMIT 1",(value.profile_id,value.adventure_id))
         if current:
             db.execute("UPDATE adventure_sessions SET status='active',updated_at=? WHERE id=?",(now(),current['id']))
+            db.execute("UPDATE adventure_sessions SET status='paused',updated_at=? WHERE user_id=? AND id<>? AND status='active'",(now(),value.profile_id,current['id']))
+            db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'adventure',current['id'],'','', 'active',now()))
             return db.one('SELECT * FROM adventure_sessions WHERE id=?',(current['id'],))
+        db.execute("UPDATE adventure_sessions SET status='paused',updated_at=? WHERE user_id=? AND status='active'",(now(),value.profile_id))
         sid=db.execute("INSERT INTO adventure_sessions(user_id,adventure_id,status,current_step,completed_steps,answers,mistakes,hints_used,started_at,updated_at) VALUES(?,?, 'active',0,0,'[]',0,0,?,?)",(value.profile_id,value.adventure_id,now(),now()))
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'adventure',sid,'','', 'active',now()))
+        record_event(db,value.profile_id,'lesson_started',reference_type='adventure',reference_id=sid)
         return db.one('SELECT * FROM adventure_sessions WHERE id=?',(sid,))
 
     @app.get('/api/adventures/active')
@@ -317,6 +364,17 @@ def create_app(db_path=None, ai=None):
         elif value.event=='abandon': status='abandoned'; completed_at=now()
         db.execute('INSERT INTO adventure_events(user_id,session_id,event,step,answer,correct,created) VALUES(?,?,?,?,?,?,?)',(value.profile_id,sid,value.event,value.step,value.answer,None if value.correct is None else int(value.correct),now()))
         db.execute('UPDATE adventure_sessions SET status=?,current_step=?,completed_steps=?,answers=?,mistakes=?,hints_used=?,updated_at=?,completed_at=? WHERE id=?',(status,current,completed,json.dumps(answers,ensure_ascii=False),mistakes,hints,now(),completed_at,sid))
+        if value.event=='hint':
+            record_event(db,value.profile_id,'hint_used',reference_type='adventure',reference_id=sid)
+        if value.event=='answer':
+            record_event(db,value.profile_id,'question_answered',reference_type='adventure',reference_id=sid,metadata={'correct':value.correct})
+        if value.event=='complete':
+            record_event(db,value.profile_id,'adventure_completed',reference_type='adventure',reference_id=sid)
+            db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='adventure' AND reference_id=?",(value.profile_id,sid))
+        elif value.event=='abandon':
+            db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='adventure' AND reference_id=?",(value.profile_id,sid))
+        else:
+            db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'adventure',sid,'','',status,now()))
         return db.one('SELECT * FROM adventure_sessions WHERE id=?',(sid,))
 
     @app.post('/api/simulations')
@@ -326,6 +384,7 @@ def create_app(db_path=None, ai=None):
         request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=value.question_count,kind='multiple')
         questions=generate(request)
         sid=db.execute('INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at) VALUES(?,?,?,?,NULL,?,?)',(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),value.minutes,now()))
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'simulation',sid,value.subject,value.topics[0] if value.topics else '','active',now()))
         return dict(id=sid,subject=value.subject,topics=value.topics,questions=questions,minutes=value.minutes)
 
     @app.post('/api/simulations/{sid}/submit')
@@ -337,6 +396,11 @@ def create_app(db_path=None, ai=None):
         result=grade(questions,value.answers)
         db.execute('UPDATE simulation_results SET result=?,completed_at=? WHERE id=?',(json.dumps(result,ensure_ascii=False),now(),sid))
         weak=result.get('review',[]) if isinstance(result,dict) else []
+        topics=json.loads(row['topics'])
+        for item in result.get('feedback',[]):
+            record_event(db,value.profile_id,'question_answered',row['subject'],item.get('topic',topics[0] if topics else row['subject']),reference_type='simulation',reference_id=sid,metadata={'correct':item.get('correct'),'difficulty':'Normal'})
+        record_event(db,value.profile_id,'simulation_completed',row['subject'],topics[0] if topics else row['subject'],reference_type='simulation',reference_id=sid,metadata={'score':result.get('score'),'total':result.get('total')})
+        db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='simulation' AND reference_id=?",(value.profile_id,sid))
         return dict(**result,reinforcement=dict(topics=weak,activities=[dict(type='explanation',minutes=10),dict(type='practice',minutes=15),dict(type='flashcards',minutes=5)] if weak else []))
 
     @app.post('/api/guides/cornell')
@@ -527,6 +591,10 @@ def create_app(db_path=None, ai=None):
             config=json.loads(row['config'])
             kind='exercise' if config['count']==1 else 'quiz'
             conn.execute('INSERT OR IGNORE INTO progress(user_id,kind,subject,xp,day,reference) VALUES(?,?,?,?,?,?)',(value.profile_id,kind,config['subject'],10 if kind=='exercise' else 30,date.today().isoformat(),str(qid)))
+        config=json.loads(row['config'])
+        for item in result.get('feedback',[]):
+            record_event(db,value.profile_id,'question_answered',config.get('subject',''),item.get('topic',config.get('topic','')),reference_type='quiz',reference_id=qid,metadata={'correct':item.get('correct'),'difficulty':config.get('difficulty','Normal')})
+        record_event(db,value.profile_id,'quiz_completed',config.get('subject',''),config.get('topic',''),reference_type='quiz',reference_id=qid,metadata={'score':result.get('score'),'total':result.get('total'),'difficulty':config.get('difficulty','Normal')})
         return result
 
     @app.get('/api/quiz/results')
@@ -582,6 +650,7 @@ def create_app(db_path=None, ai=None):
         due=(date.today()+timedelta(days=interval)).isoformat()
         db.execute('UPDATE flashcards SET interval=?,due=?,reviews=reviews+1 WHERE id=?',(interval,due,cid))
         db.award(value.profile_id,'card','Tarjetas',5,f'{cid}:{date.today().isoformat()}')
+        record_event(db,value.profile_id,'flashcard_reviewed','Tarjetas',row['question'][:80],reference_type='flashcard',reference_id=cid,metadata={'rating':value.rating})
         return {'due':due}
 
     @app.delete('/api/flashcards/{cid}')
