@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS student_memory(user_id INTEGER PRIMARY KEY REFERENCES
 CREATE TABLE IF NOT EXISTS saved_answers(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, title TEXT NOT NULL, content TEXT NOT NULL, created TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS conversation_states(conversation_id INTEGER PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS study_plans(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, subject TEXT NOT NULL, goal TEXT NOT NULL, deadline TEXT NOT NULL, minutes_per_day INTEGER NOT NULL, level TEXT NOT NULL, topics TEXT NOT NULL, plan TEXT NOT NULL, created TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS study_sessions(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, plan_id INTEGER REFERENCES study_plans(id) ON DELETE CASCADE, day TEXT NOT NULL, status TEXT NOT NULL, started TEXT, completed TEXT);
+CREATE TABLE IF NOT EXISTS study_sessions(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, plan_id INTEGER REFERENCES study_plans(id) ON DELETE CASCADE, day TEXT NOT NULL, status TEXT NOT NULL, started TEXT, completed TEXT, current_activity_index INTEGER NOT NULL DEFAULT 0, last_activity_at TEXT, activities_completed INTEGER NOT NULL DEFAULT 0, activities_skipped INTEGER NOT NULL DEFAULT 0, difficulties INTEGER NOT NULL DEFAULT 0, hints_used INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS study_session_events(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, session_id INTEGER REFERENCES study_sessions(id) ON DELETE CASCADE, kind TEXT NOT NULL, activity_index INTEGER NOT NULL, note TEXT NOT NULL, created TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS adventure_sessions(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, adventure_id TEXT NOT NULL, status TEXT NOT NULL, current_step INTEGER NOT NULL DEFAULT 0, completed_steps INTEGER NOT NULL DEFAULT 0, answers TEXT NOT NULL DEFAULT '[]', mistakes INTEGER NOT NULL DEFAULT 0, hints_used INTEGER NOT NULL DEFAULT 0, started_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT);
 CREATE TABLE IF NOT EXISTS adventure_events(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, session_id INTEGER REFERENCES adventure_sessions(id) ON DELETE CASCADE, event TEXT NOT NULL, step INTEGER NOT NULL, answer TEXT NOT NULL DEFAULT '', correct INTEGER, created TEXT NOT NULL);
@@ -34,6 +34,17 @@ class Database:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as db:
             db.executescript(SCHEMA)
+            existing={row['name'] for row in db.execute("PRAGMA table_info(study_sessions)").fetchall()}
+            migrations={
+                'current_activity_index':"ALTER TABLE study_sessions ADD COLUMN current_activity_index INTEGER NOT NULL DEFAULT 0",
+                'last_activity_at':"ALTER TABLE study_sessions ADD COLUMN last_activity_at TEXT",
+                'activities_completed':"ALTER TABLE study_sessions ADD COLUMN activities_completed INTEGER NOT NULL DEFAULT 0",
+                'activities_skipped':"ALTER TABLE study_sessions ADD COLUMN activities_skipped INTEGER NOT NULL DEFAULT 0",
+                'difficulties':"ALTER TABLE study_sessions ADD COLUMN difficulties INTEGER NOT NULL DEFAULT 0",
+                'hints_used':"ALTER TABLE study_sessions ADD COLUMN hints_used INTEGER NOT NULL DEFAULT 0",
+            }
+            for column,sql in migrations.items():
+                if column not in existing: db.execute(sql)
             if not db.execute('SELECT 1 FROM users LIMIT 1').fetchone():
                 db.execute("INSERT INTO users VALUES (1,'Explorador',NULL,'Premedia','🐵')")
 
