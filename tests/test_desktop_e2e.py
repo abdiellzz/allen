@@ -64,6 +64,26 @@ def test_desktop_guided_learning_smoke_and_viewports():
                 page.get_by_role("heading",name="Convierte material docente en una ruta de aprendizaje.").wait_for()
                 assert page.locator("#course-file").count()==1
                 assert page.locator("img[src*='allen-teaching-official.svg']").count()>=1
+
+                page.locator("#course-title").fill("Curso E2E")
+                page.locator("#course-subject").fill("Redes")
+                page.locator("#course-file").set_input_files({
+                    "name":"curso.md",
+                    "mimeType":"text/markdown",
+                    "buffer":b"# Redes\nIPv4 identifica interfaces de red. DNS traduce nombres a direcciones IP. DHCP asigna parametros de red.\n# Seguridad\nMFA agrega otra comprobacion de identidad. Los backups permiten recuperar informacion."
+                })
+                page.get_by_role("button",name="Analizar y crear borrador").click()
+                page.get_by_role("heading",name="Curso E2E").last.wait_for()
+                page.get_by_role("button",name="Guardar revisión y aprobar").click()
+                page.get_by_role("button",name="Publicar").wait_for()
+                page.get_by_role("button",name="Publicar").click()
+                page.get_by_text("Publicado").wait_for()
+
+                page.locator('[data-page="Cursos"]').first.click()
+                page.get_by_role("heading",name="Curso E2E").wait_for()
+                page.get_by_role("button",name="Empezar curso").click()
+                page.get_by_text("RUTA DE APRENDIZAJE").wait_for()
+                assert page.locator(".allen-step-rail").count()==1
                 browser.close()
         finally:
             process.terminate()
