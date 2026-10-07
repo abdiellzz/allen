@@ -475,6 +475,9 @@ def create_app(db_path=None, ai=None):
             db.remember(value.profile_id,onboarded=True)
             profile=user(value.profile_id)
         db.prune()
+        active=db.one("SELECT * FROM profile_current_activity WHERE user_id=?",(value.profile_id,))
+        mastery_rows=db.all("SELECT subject,topic,mastery_score,status,next_review FROM topic_mastery WHERE user_id=? ORDER BY last_seen DESC LIMIT 4",(value.profile_id,))
+        profile['learning_context']={'active_journey':active,'mastery':mastery_rows}
         if value.conversation_id:
             row=db.one('SELECT messages FROM conversations WHERE id=? AND user_id=?',(value.conversation_id,value.profile_id))
             if not row:
