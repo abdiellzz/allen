@@ -96,7 +96,8 @@ def system_prompt(request,profile,sources):
     context={'student_name':profile.get('name','Estudiante'),'education_level':profile.get('level','Premedia'),
         'preferred_explanation':memory.get('preferences',[]),'interests':memory.get('interests',[])[:4],
         'recent_topics':memory.get('recent_topics',[])[-3:], 'difficult_topics':memory.get('difficult_topics',[])[-3:],
-        'current_topic':request.subject if request.subject!='General' else 'Conversación libre'}
+        'current_topic':request.subject if request.subject!='General' else 'Conversación libre',
+        'learning_context':profile.get('learning_context',{})}
     prompt='\n'.join([ALLEN_IDENTITY_PROMPT,ALLEN_TEACHING_PROMPT,ALLEN_STUDY_METHOD_PROMPT,ALLEN_SAFETY_PROMPT,ALLEN_PROFILE_CONTEXT+json.dumps(context,ensure_ascii=False),MODES.get(request.mode,''),ACTIONS.get(request.action,'')])
     topic=topic_title(request.message)
     if topic=='Conversación con Allen':
