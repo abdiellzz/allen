@@ -636,7 +636,8 @@ def create_app(db_path=None, ai=None):
         due_cards=db.one("SELECT count(*) n FROM flashcards WHERE user_id=? AND due<=?",(profile_id,date.today().isoformat()))['n']
         recommendation=build_recommendation(db,profile_id)
         mastery=db.all("SELECT * FROM topic_mastery WHERE user_id=? ORDER BY mastery_score ASC,last_seen DESC LIMIT 8",(profile_id,))
-        return dict(current_activity=activity,adventure=adventure,study_session=session,study_plan=plan,due_cards=due_cards,recommendation=recommendation,mastery=mastery)
+        topic_reviews=due_reviews(db,profile_id,5)
+        return dict(current_activity=activity,adventure=adventure,study_session=session,study_plan=plan,due_cards=due_cards,due_topic_reviews=topic_reviews,recommendation=recommendation,mastery=mastery)
 
     @app.get('/api/mastery')
     def mastery(profile_id:int=1):
