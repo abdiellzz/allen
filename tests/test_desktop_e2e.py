@@ -81,7 +81,14 @@ def test_desktop_guided_learning_smoke_and_viewports():
 
                 page.locator('[data-page="Cursos"]').first.click()
                 page.locator("#student-course-list").get_by_role("heading",name="Curso E2E").wait_for()
-                page.get_by_role("button",name="Empezar curso").click()
+                page.get_by_role("button",name="Diagnóstico y empezar").click()
+                page.locator("#diagnostic-form").wait_for()
+                fields=page.locator("#diagnostic-form fieldset")
+                for idx in range(fields.count()):
+                    fields.nth(idx).locator('input[type="radio"]').first.check()
+                page.get_by_role("button",name="Terminar diagnóstico").click()
+                page.get_by_role("button",name="Empezar mi ruta").wait_for()
+                page.get_by_role("button",name="Empezar mi ruta").click()
                 page.locator(".allen-step-rail").wait_for()
                 assert page.locator(".guided-course-shell").count()==1
                 browser.close()
