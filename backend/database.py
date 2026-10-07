@@ -4,6 +4,9 @@ from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+from .migrations import apply_migrations, LATEST_SCHEMA_VERSION
+from .recovery import ensure_pre_migration_snapshot, create_snapshot, list_snapshots, integrity_report, restore_snapshot
+
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, name TEXT NOT NULL, age INTEGER, level TEXT, avatar TEXT);
 CREATE TABLE IF NOT EXISTS settings(id INTEGER PRIMARY KEY CHECK(id=1), value TEXT NOT NULL);
@@ -50,7 +53,6 @@ CREATE INDEX IF NOT EXISTS idx_adventure_user_status ON adventure_sessions(user_
 CREATE INDEX IF NOT EXISTS idx_study_sessions_user_status ON study_sessions(user_id,status,last_activity_at);
 CREATE INDEX IF NOT EXISTS idx_flashcards_user_due ON flashcards(user_id,due);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_study_session_unique_day ON study_sessions(user_id,plan_id,day);
-PRAGMA user_version=8;
 '''
 
 def now():
@@ -60,6 +62,15 @@ class Database:
     def __init__(self, path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        previous_version=0
+        if self.path.exists() and self.path.stat().st_size:
+            try:
+                probe=sqlite3.connect(self.path)
+                previous_version=int(probe.execute('PRAGMA user_version').fetchone()[0])
+                probe.close()
+            except sqlite3.DatabaseError:
+                previous_version=0
+        ensure_pre_migration_snapshot(self.path,previous_version,LATEST_SCHEMA_VERSION)
         with self.connect() as db:
             db.executescript(SCHEMA)
             existing={row['name'] for row in db.execute("PRAGMA table_info(study_sessions)").fetchall()}
@@ -82,6 +93,7 @@ class Database:
             }
             for column,sql in sim_migrations.items():
                 if column not in sim_existing: db.execute(sql)
+            apply_migrations(db)
             if not db.execute('SELECT 1 FROM users LIMIT 1').fetchone():
                 db.execute("INSERT INTO users VALUES (1,'Explorador',NULL,'Premedia','🐵')")
 
@@ -96,6 +108,26 @@ class Database:
                 yield db
         finally:
             db.close()
+
+    def schema_version(self):
+        with self.connect() as db:
+            return int(db.execute('PRAGMA user_version').fetchone()[0])
+
+    def create_snapshot(self,reason='manual'):
+        return create_snapshot(self.path,reason)
+
+    def snapshots(self):
+        return list_snapshots(self.path)
+
+    def integrity(self):
+        return integrity_report(self.path)
+
+    def restore_snapshot(self,name):
+        result=restore_snapshot(self.path,name)
+        with self.connect() as db:
+            db.executescript(SCHEMA)
+            apply_migrations(db)
+        return result
 
     def all(self, sql, args=()):
         with self.connect() as db:
