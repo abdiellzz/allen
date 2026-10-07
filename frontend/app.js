@@ -138,12 +138,71 @@ function showQuiz(){
 }
 function showResult(r){if(!$('#quiz-body'))return;$('#quiz-body').innerHTML=`<section class="panel"><div class="eyebrow">OTRO PASO EN TU CAMINO</div><div class="score">${r.score}<span class="muted"> / ${r.total}</span></div>${AllenMascot("celebrating")}<h2>¡Otro paso en tu aprendizaje!</h2><p>Temas que dominas: ${esc(r.mastered.join(', ')||'Seguimos descubriendo.')}</p><p>Para repasar: ${esc(r.review.join(', ')||'¡Buen trabajo con estos ejercicios!')}</p>${r.feedback.map(f=>`<div class="feedback ${f.correct?'correct':''}"><b>${f.correct?'✓':'↻'} ${esc(f.prompt)}</b><p>Tu respuesta: ${esc(f.given)} · Respuesta: ${esc(f.answer)}</p><p>${esc(f.explanation)}</p></div>`).join('')}<button id="another-quiz">Probar otro reto</button></section>`;$('#another-quiz').onclick=()=>{quiz=null;$('#quiz-body').innerHTML='';$('#quiz-config').requestSubmit();};}
 
-async function libraryPage(){return heading('Tu biblioteca offline','Una mochila de ideas, siempre a mano.')+`<section class="panel"><form id="library-search" class="row"><label class="sr-only" for="library-query">Buscar recursos locales</label><input id="library-query" maxlength="200" placeholder="Busca fracciones, Python, privacidad…"><button class="primary">Buscar</button></form><p class="muted">Contenido guardado en este dispositivo. Puedes añadir paquetes JSON, Markdown y TXT.</p><details class="import-panel"><summary>Añadir mi biblioteca</summary><p>Importa apuntes en TXT o Markdown, o un JSON con title, subject y content. Hasta 90 KB por archivo; 20.000 caracteres por lectura.</p><form id="library-import" class="stack"><label>Archivo de lecturas<input id="library-file" type="file" accept=".json,.md,.txt" required></label><button class="primary">Importar a mi perfil</button></form><div id="library-packs"></div></details><div id="library-results"></div></section>`;}
-async function bindLibrary(){async function search(){const docs=await api('/library?profile_id='+state.profile+'&q='+encodeURIComponent($('#library-query').value));if(!$('#library-results'))return;$('#library-results').innerHTML=docs.length?docs.map((d,i)=>`<article class="library-card"><span class="eyebrow">${esc(d.subject)}</span><h2>${esc(d.title)}</h2><p>${esc(d.content.replace(/[#*`]/g,'').slice(0,170))}…</p><button data-read="${i}">Abrir lectura &nbsp; →</button><div id="reading-${i}" class="reading hidden">${markdown(d.content)}</div></article>`).join(''):'<p class="empty">No encontramos ese tema. Prueba otra palabra.</p>';$('#library-results').onclick=e=>{const b=e.target.closest('[data-read]');if(b){const target=$('#reading-'+b.dataset.read);target.classList.toggle('hidden');b.textContent=target.classList.contains('hidden')?'Abrir lectura →':'Cerrar lectura';}};}
+async function libraryPage(){return heading('Tu biblioteca offline','Explora lecturas locales, filtra por materia y convierte contenido en práctica.')+`
+ <section class="v2-adventure-hero v2-library-hero">
+  <div><span class="eyebrow">BIBLIOTECA LOCAL</span><h2>Ideas que viajan contigo.</h2><p>Busca en tus lecturas incluidas o importa tus propios apuntes. Nada necesita una nube para abrirse.</p></div>
+  <img src="/static/assets/allen-library.svg" alt="Allen junto a su biblioteca offline">
+ </section>
+ <section class="panel">
+  <form id="library-search" class="v2-library-toolbar">
+   <label>Buscar<input id="library-query" maxlength="200" placeholder="Fracciones, Python, privacidad…"></label>
+   <label>Materia<select id="library-subject"><option value="">Todas</option></select></label>
+   <button class="primary">Buscar</button>
+  </form>
+  <p class="muted">Contenido guardado en este dispositivo. Puedes añadir paquetes JSON, Markdown y TXT.</p>
+  <details class="import-panel"><summary>Añadir mi biblioteca</summary><p>Importa apuntes en TXT o Markdown, o un JSON con title, subject y content. Hasta 90 KB por archivo; 20.000 caracteres por lectura.</p><form id="library-import" class="stack"><label>Archivo de lecturas<input id="library-file" type="file" accept=".json,.md,.txt" required></label><button class="primary">Importar a mi perfil</button></form><div id="library-packs"></div></details>
+  <div id="library-results" class="v2-library-grid"></div>
+  <div id="library-reader"></div>
+ </section>`;}
+async function bindLibrary(){
+ let docsCache=[];
+ function subjectOptions(docs){
+  const select=$('#library-subject');if(!select)return;
+  const current=select.value;
+  const subjects=[...new Set(docs.map(d=>d.subject).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  select.innerHTML='<option value="">Todas</option>'+subjects.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+  if(subjects.includes(current))select.value=current;
+ }
+ function indexFor(content){
+  const headings=String(content||'').split('\n').filter(line=>/^#{1,3}\s+/.test(line)).map(line=>line.replace(/^#{1,3}\s+/,'').trim()).slice(0,8);
+  return headings.length?headings:['Lectura completa'];
+ }
+ function openReader(doc){
+  const reader=$('#library-reader');if(!reader)return;
+  const headings=indexFor(doc.content);
+  const minutes=Math.max(1,Math.ceil(String(doc.content||'').split(/\s+/).length/180));
+  reader.innerHTML=`<section class="v2-reading-shell">
+   <aside class="v2-reading-index"><span class="eyebrow">ÍNDICE</span>${headings.map((h,i)=>`<button type="button" data-reader-anchor="${i}">${esc(h)}</button>`).join('')}<hr><button type="button" id="reader-focus">Modo concentración</button><div class="row"><button type="button" data-reader-size="-1">A−</button><button type="button" data-reader-size="1">A+</button></div></aside>
+   <article class="v2-reading-main" id="reader-main"><div class="row spaced"><div><span class="eyebrow">${esc(doc.subject||'Lectura')}</span><h1>${esc(doc.title)}</h1></div><span class="pill">≈ ${minutes} min</span></div><progress value="1" max="1" aria-label="Lectura abierta"></progress><div class="reading">${markdown(doc.content)}</div></article>
+   <aside class="v2-reading-aside"><img src="${libraryVisual(doc.subject)}" alt="" style="width:100%;border-radius:14px"><h3>Aprende haciendo</h3><button type="button" id="reader-ask">Preguntar a Allen</button><button type="button" id="reader-quiz">Hazme preguntas</button><button type="button" data-page="Tarjetas">Crear tarjeta</button></aside>
+  </section>`;
+  let size=1;
+  $('#reader-focus').onclick=()=>{$('.v2-reading-main').classList.toggle('focus');document.querySelector('.v2-reading-index').classList.toggle('hidden');document.querySelector('.v2-reading-aside').classList.toggle('hidden');};
+  reader.querySelectorAll('[data-reader-size]').forEach(b=>b.onclick=()=>{size=Math.max(.85,Math.min(1.35,size+Number(b.dataset.readerSize)*.1));$('#reader-main').style.fontSize=size+'em';});
+  $('#reader-ask').onclick=()=>{pendingPrompt='Estoy leyendo «'+doc.title+'». Ayúdame a entender esta idea de la lectura: '+String(doc.content).replace(/[#*\`]/g,'').slice(0,1200);go('Preguntar');};
+  $('#reader-quiz').onclick=()=>{pendingPrompt='Estoy estudiando «'+doc.title+'». Hazme 3 preguntas para comprobar que entendí esta lectura. No me des las respuestas hasta que conteste. Contexto: '+String(doc.content).replace(/[#*\`]/g,'').slice(0,1800);go('Preguntar');};
+  reader.scrollIntoView({behavior:'smooth',block:'start'});
+ }
+ async function search(){
+  docsCache=await api('/library?profile_id='+state.profile+'&q='+encodeURIComponent($('#library-query').value));
+  subjectOptions(docsCache);
+  const subject=$('#library-subject')?.value||'';
+  const docs=subject?docsCache.filter(d=>d.subject===subject):docsCache;
+  if(!$('#library-results'))return;
+  $('#library-results').innerHTML=docs.length?docs.map((d,i)=>{
+   const clean=d.content.replace(/[#*\`]/g,'').replace(/\s+/g,' ').trim();
+   const minutes=Math.max(1,Math.ceil(clean.split(/\s+/).length/180));
+   return `<article class="v2-library-card"><img src="${libraryVisual(d.subject)}" alt=""><div class="v2-library-copy"><span class="eyebrow">${esc(d.subject||'LECTURA')}</span><h2>${esc(d.title)}</h2><p>${esc(clean.slice(0,150))}${clean.length>150?'…':''}</p><div class="row spaced"><small>≈ ${minutes} min</small><button data-read="${i}">Leer</button></div></div></article>`;
+  }).join(''):'<p class="empty">No encontramos ese tema. Prueba otra palabra o cambia el filtro.</p>';
+  $('#library-results').onclick=e=>{const b=e.target.closest('[data-read]');if(b){const visible=subject?docsCache.filter(d=>d.subject===subject):docsCache;openReader(visible[Number(b.dataset.read)]);}};
+ }
  $('#library-search').onsubmit=e=>{e.preventDefault();guarded(search);};
+ $('#library-subject').onchange=()=>guarded(search);
  async function packs(){const rows=await api('/library/packs?profile_id='+state.profile);$('#library-packs').innerHTML=rows.map(r=>`<div class="row spaced library-card"><span>${esc(r.title)}</span><button data-delete-pack="${r.id}">Eliminar biblioteca</button></div>`).join('');}
  $('#library-import').onsubmit=e=>{e.preventDefault();guarded(async()=>{const file=$('#library-file').files[0];if(!file||file.size>90000)throw new Error('Elige un archivo de hasta 90 KB.');const result=await api('/library/import','POST',{profile_id:state.profile,filename:file.name,content:await file.text()});toast(result.count+' lecturas importadas.');$('#library-import').reset();await packs();await search();});};
- $('#library-packs').onclick=e=>{const b=e.target.closest('[data-delete-pack]');if(b&&confirm('¿Eliminar esta biblioteca importada?'))guarded(async()=>{await api('/library/packs/'+b.dataset.deletePack+'?profile_id='+state.profile,'DELETE');await packs();await search();});};await packs();await search();}
+ $('#library-packs').onclick=e=>{const b=e.target.closest('[data-delete-pack]');if(b&&confirm('¿Eliminar esta biblioteca importada?'))guarded(async()=>{await api('/library/packs/'+b.dataset.deletePack+'?profile_id='+state.profile,'DELETE');await packs();await search();});};
+ await packs();await search();
+}
 
 async function cardsPage(){return heading('Un poquito cada día','Tus tarjetas vuelven cuando es momento de repasarlas.')+`<div class="field-grid"><section class="panel"><h2>Crear una tarjeta</h2><p class="muted">Convierte tus apuntes en una pregunta y su respuesta. También puedes generar propuestas desde un tema, texto o apuntes con tu modelo local.</p><form id="card-form" class="stack"><label>Pregunta<input id="card-question" maxlength="500" required></label><label>Respuesta<textarea id="card-answer" maxlength="2000" required></textarea></label><button class="primary">Guardar tarjeta</button></form></section><section class="panel"><h2>Tu repaso de hoy</h2><div id="card-study"></div></section></div><section class="panel"><h2>Mis tarjetas</h2><div id="card-list"></div></section><section class="panel"><h2>Generar con mi IA local</h2><p class="muted">Revisa las tarjetas propuestas antes de guardarlas. Esta herramienta necesita el modelo local.</p><form id="card-generate" class="stack"><div class="field-grid">${field("Origen","card-source-kind",["Tema","Texto","Apuntes"])}<label>Cantidad<input id="card-count" type="number" min="1" max="10" value="5" required></label></div><label>Tema o contenido<textarea id="card-source" maxlength="8000" required></textarea></label><div><button class="primary" id="generate-cards-button">Generar propuestas</button></div></form><div id="card-proposals"></div></section>`;}
 async function bindCards(){const cards=await api('/flashcards?profile_id='+state.profile);const d=new Date(),today=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;const due=cards.filter(c=>c.due<=today);let index=0;
