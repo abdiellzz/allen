@@ -51,5 +51,6 @@ def test_continuity_recommendation_prefers_active_adventure():
         c.post('/api/adventures/start',json={'profile_id':1,'adventure_id':'ai-lab'})
         data=c.get('/api/continuity?profile_id=1').json()
         assert data['adventure']['adventure_id']=='ai-lab'
-        assert 'aventura' in data['recommendation'].lower()
+        assert data['recommendation']['kind']=='continue'
+        assert 'aventura' in data['recommendation']['activity']['activity_type']
         c.close()
