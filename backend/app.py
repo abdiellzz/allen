@@ -20,7 +20,7 @@ from .ai import LocalAI
 from .database import Database, now
 from .education import catalog, generate, grade
 from .library import Library
-from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest
+from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate
 from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
@@ -249,9 +249,94 @@ def create_app(db_path=None, ai=None):
         if not session: raise HTTPException(404,'No encontramos esa sesión.')
         db.execute('INSERT INTO study_session_events(user_id,session_id,kind,activity_index,note,created) VALUES(?,?,?,?,?,?)',
             (value.profile_id,sid,value.kind,value.activity_index,value.note,now()))
-        if value.kind in ('completed','skipped'):
-            db.execute('UPDATE study_sessions SET status=?,completed=? WHERE id=?',('completed' if value.kind=='completed' else 'skipped',now(),sid))
-        return {'ok':True}
+        fields=['current_activity_index=?','last_activity_at=?']; args=[value.activity_index,now()]
+        status=session['status']
+        completed=session.get('activities_completed',0); skipped=session.get('activities_skipped',0); difficulties=session.get('difficulties',0); hints=session.get('hints_used',0)
+        if value.kind=='completed': completed+=1; status='completed'
+        elif value.kind=='skipped': skipped+=1
+        elif value.kind=='not_understood': difficulties+=1
+        elif value.kind=='hint': hints+=1
+        if status!='completed' and value.kind not in ('completed',): status='active'
+        fields += ['activities_completed=?','activities_skipped=?','difficulties=?','hints_used=?','status=?']
+        args += [completed,skipped,difficulties,hints,status]
+        if status=='completed': fields.append('completed=?'); args.append(now())
+        args.append(sid)
+        db.execute('UPDATE study_sessions SET '+','.join(fields)+' WHERE id=?',tuple(args))
+        return db.one('SELECT * FROM study_sessions WHERE id=?',(sid,))
+
+
+    @app.get('/api/continuity')
+    def continuity(profile_id:int=1):
+        user(profile_id)
+        adventure=db.one("SELECT * FROM adventure_sessions WHERE user_id=? AND status IN ('active','paused') ORDER BY updated_at DESC LIMIT 1",(profile_id,))
+        session=db.one("SELECT ss.*,sp.subject,sp.goal,sp.deadline,sp.plan FROM study_sessions ss JOIN study_plans sp ON sp.id=ss.plan_id WHERE ss.user_id=? AND ss.status='active' ORDER BY COALESCE(ss.last_activity_at,ss.started) DESC LIMIT 1",(profile_id,))
+        if session: session['plan']=json.loads(session['plan'])
+        plan=db.one("SELECT * FROM study_plans WHERE user_id=? ORDER BY id DESC LIMIT 1",(profile_id,))
+        if plan:
+            plan['topics']=json.loads(plan['topics']); plan['plan']=json.loads(plan['plan'])
+        due_cards=db.one("SELECT count(*) n FROM flashcards WHERE user_id=? AND due<=?",(profile_id,date.today().isoformat()))['n']
+        memory=db.memory(profile_id)
+        recommendation=None
+        if adventure: recommendation='Continúa tu aventura desde el punto exacto donde la dejaste.'
+        elif session: recommendation='Retoma tu Sesión Allen antes de empezar algo nuevo.'
+        elif due_cards: recommendation=f'Tienes {due_cards} tarjetas listas para repasar.'
+        elif memory.get('difficult_topics'): recommendation='Podemos reforzar '+memory['difficult_topics'][-1]+'.'
+        elif memory.get('recent_topics'): recommendation='Puedes profundizar en '+memory['recent_topics'][-1]+'.'
+        return dict(adventure=adventure,study_session=session,study_plan=plan,due_cards=due_cards,recommendation=recommendation)
+
+    @app.post('/api/adventures/start')
+    def start_adventure(value:AdventureStart):
+        user(value.profile_id)
+        current=db.one("SELECT * FROM adventure_sessions WHERE user_id=? AND adventure_id=? AND status IN ('active','paused') ORDER BY id DESC LIMIT 1",(value.profile_id,value.adventure_id))
+        if current:
+            db.execute("UPDATE adventure_sessions SET status='active',updated_at=? WHERE id=?",(now(),current['id']))
+            return db.one('SELECT * FROM adventure_sessions WHERE id=?',(current['id'],))
+        sid=db.execute("INSERT INTO adventure_sessions(user_id,adventure_id,status,current_step,completed_steps,answers,mistakes,hints_used,started_at,updated_at) VALUES(?,?, 'active',0,0,'[]',0,0,?,?)",(value.profile_id,value.adventure_id,now(),now()))
+        return db.one('SELECT * FROM adventure_sessions WHERE id=?',(sid,))
+
+    @app.get('/api/adventures/active')
+    def active_adventure(profile_id:int=1):
+        user(profile_id)
+        return db.one("SELECT * FROM adventure_sessions WHERE user_id=? AND status IN ('active','paused') ORDER BY updated_at DESC LIMIT 1",(profile_id,))
+
+    @app.post('/api/adventures/{sid}/event')
+    def adventure_event(sid:int,value:AdventureEvent):
+        user(value.profile_id)
+        row=db.one('SELECT * FROM adventure_sessions WHERE id=? AND user_id=?',(sid,value.profile_id))
+        if not row: raise HTTPException(404,'No encontramos esa aventura.')
+        answers=json.loads(row['answers'] or '[]'); mistakes=row['mistakes']; hints=row['hints_used']; status=row['status']; completed=row['completed_steps']; current=row['current_step']; completed_at=row['completed_at']
+        if value.event=='answer':
+            answers.append(dict(step=value.step,answer=value.answer,correct=value.correct))
+            if value.correct is False: mistakes+=1
+        elif value.event=='hint': hints+=1
+        elif value.event=='advance': current=max(current,value.step); completed=max(completed,value.step)
+        elif value.event=='pause': status='paused'
+        elif value.event=='resume': status='active'
+        elif value.event=='complete': status='completed'; completed_at=now()
+        elif value.event=='abandon': status='abandoned'; completed_at=now()
+        db.execute('INSERT INTO adventure_events(user_id,session_id,event,step,answer,correct,created) VALUES(?,?,?,?,?,?,?)',(value.profile_id,sid,value.event,value.step,value.answer,None if value.correct is None else int(value.correct),now()))
+        db.execute('UPDATE adventure_sessions SET status=?,current_step=?,completed_steps=?,answers=?,mistakes=?,hints_used=?,updated_at=?,completed_at=? WHERE id=?',(status,current,completed,json.dumps(answers,ensure_ascii=False),mistakes,hints,now(),completed_at,sid))
+        return db.one('SELECT * FROM adventure_sessions WHERE id=?',(sid,))
+
+    @app.post('/api/simulations')
+    def create_simulation(value:SimulationCreate):
+        user(value.profile_id)
+        topic=value.topics[0]
+        request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=value.question_count,kind='multiple')
+        questions=generate(request)
+        sid=db.execute('INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at) VALUES(?,?,?,?,NULL,?,?)',(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),value.minutes,now()))
+        return dict(id=sid,subject=value.subject,topics=value.topics,questions=questions,minutes=value.minutes)
+
+    @app.post('/api/simulations/{sid}/submit')
+    def submit_simulation(sid:int,value:Submission):
+        user(value.profile_id)
+        row=db.one('SELECT * FROM simulation_results WHERE id=? AND user_id=?',(sid,value.profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese simulacro.')
+        questions=json.loads(row['questions'])
+        result=grade(questions,value.answers)
+        db.execute('UPDATE simulation_results SET result=?,completed_at=? WHERE id=?',(json.dumps(result,ensure_ascii=False),now(),sid))
+        weak=result.get('review',[]) if isinstance(result,dict) else []
+        return dict(**result,reinforcement=dict(topics=weak,activities=[dict(type='explanation',minutes=10),dict(type='practice',minutes=15),dict(type='flashcards',minutes=5)] if weak else []))
 
     @app.post('/api/guides/cornell')
     def cornell(value:GuideRequest):
