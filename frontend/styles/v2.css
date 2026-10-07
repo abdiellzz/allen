@@ -373,3 +373,7 @@ body{min-width:1024px}
 .reliability-panel .row{align-items:center}
 .recovery-status{margin-top:14px;padding:12px 14px;border-radius:14px;background:#f7f1e8;border:1px solid var(--v2-line)}
 @media(max-width:1180px){.version-diff-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Desktop reliability: navigation must remain reachable on shorter laptop displays. */
+.sidebar{overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;overscroll-behavior:contain}
+.sidebar-bottom{flex-shrink:0}
