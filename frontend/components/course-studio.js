@@ -17,12 +17,28 @@ export function teacherStudioPage(){
   </form>
   <details class="import-panel"><summary>Importar un Course Pack de Allen</summary><p>Los .allenpack se importan como borrador y deben revisarse antes de publicarse en este dispositivo.</p><input id="course-pack-file" type="file" accept=".allenpack,application/json"><button id="course-pack-import" type="button">Importar Course Pack</button></details>
  </section>
+ <section id="teacher-analytics"></section>
  <section id="teacher-course-list"></section>
  <section id="teacher-course-review"></section>`;
 }
 
 function coverage(c={}){
  return `<div class="course-coverage"><span><b>${c.units||0}</b> unidades</span><span><b>${c.topics||0}</b> temas</span><span><b>${c.questions||0}</b> preguntas</span><span><b>${c.flashcards||0}</b> tarjetas</span><span class="${c.topics_without_questions?'warn':''}"><b>${c.topics_without_questions||0}</b> sin preguntas</span></div>`;
+}
+function teacherAnalyticsView(data){
+ const summary=data?.summary||{};
+ const courses=data?.courses||[];
+ return `<section class="teacher-analytics panel"><div class="row spaced"><div><span class="eyebrow">OBSERVABILIDAD EDUCATIVA LOCAL</span><h2>Qué está pasando en tus cursos</h2></div><span class="pill">${summary.completion_rate||0}% finalización</span></div>
+  <div class="analytics-kpis"><article><b>${summary.courses||0}</b><span>Cursos</span></article><article><b>${summary.enrollments||0}</b><span>Inscripciones locales</span></article><article><b>${summary.completion_rate||0}%</b><span>Completados</span></article></div>
+  <div class="analytics-course-list">${courses.map(c=>`<article><div class="row spaced"><strong>${esc(c.title)}</strong><span>${c.quality_score}% calidad</span></div><small>${c.help_requests} “No entendí” · ${c.question_bank?.questions||0} preguntas · ${c.quality_issues} observaciones</small>${(c.weak_topics||[]).length?`<p>Temas a reforzar: ${c.weak_topics.map(x=>esc(x.topic)+' ('+x.mastery+'%)').join(', ')}</p>`:''}</article>`).join('')}</div>
+ </section>`;
+}
+function qualityView(q,graph){
+ if(!q)return '';
+ return `<section class="course-quality panel"><div class="row spaced"><div><span class="eyebrow">COURSE QUALITY</span><h2>${q.score}/100</h2></div><span class="pill ${q.blocking_issues?'warn':'green'}">${q.blocking_issues} bloqueos</span></div>
+ <p>${q.passed}/${q.checks} checks superados · ${graph?.nodes?.length||0} conceptos · ${graph?.edges?.length||0} relaciones curriculares.</p>
+ ${q.issues.length?`<div class="quality-issues">${q.issues.slice(0,12).map(i=>`<article class="${i.severity}"><b>${esc(i.location||'Curso')}</b><span>${esc(i.message)}</span></article>`).join('')}</div>`:'<p class="success-copy">No encontramos problemas importantes antes de publicar.</p>'}
+ </section>`;
 }
 function courseList(rows){
  if(!rows.length)return '<section class="panel empty"><h2>Aún no hay cursos</h2><p>Importa un documento para crear el primer borrador.</p></section>';
@@ -43,9 +59,9 @@ function reviewView(row){
 }
 
 export function bindTeacherStudio(root,{api,profileId,toast}){
- const form=root.querySelector('#teacher-import-form'),list=root.querySelector('#teacher-course-list'),review=root.querySelector('#teacher-course-review');
+ const form=root.querySelector('#teacher-import-form'),list=root.querySelector('#teacher-course-list'),review=root.querySelector('#teacher-course-review'),analytics=root.querySelector('#teacher-analytics');
  let current=null;
- async function refresh(){const rows=await api('/teacher/courses?profile_id='+profileId);list.innerHTML=courseList(rows);}
+ async function refresh(){const [rows,stats]=await Promise.all([api('/teacher/courses?profile_id='+profileId),api('/teacher/analytics?profile_id='+profileId)]);list.innerHTML=courseList(rows);analytics.innerHTML=teacherAnalyticsView(stats);}
  form.onsubmit=async e=>{e.preventDefault();const button=form.querySelector('button.primary');const original=button.textContent;button.disabled=true;button.textContent='Allen está organizando el material…';try{
    const file=root.querySelector('#course-file').files[0];if(!file)throw new Error('Selecciona un archivo.');
    if(file.size>8_000_000)throw new Error('El archivo supera 8 MB.');
@@ -53,7 +69,7 @@ export function bindTeacherStudio(root,{api,profileId,toast}){
    const data=await api('/teacher/import','POST',{profile_id:profileId,title:root.querySelector('#course-title').value.trim(),subject:root.querySelector('#course-subject').value.trim(),level:root.querySelector('#course-level').value,filename:file.name,mime:file.type||mimeFor(file.name),content_base64:base64});
    toast('Borrador creado. Ahora revísalo antes de publicar.');form.reset();await refresh();await openReview(data.course_id);
   }catch(err){toast(err.message);}finally{button.disabled=false;button.textContent=original;}};
- async function openReview(id){current=await api('/teacher/courses/'+id+'?profile_id='+profileId);review.innerHTML=reviewView(current);review.scrollIntoView({behavior:'smooth',block:'start'});}
+ async function openReview(id){const [row,quality,graph]=await Promise.all([api('/teacher/courses/'+id+'?profile_id='+profileId),api('/teacher/courses/'+id+'/quality?profile_id='+profileId),api('/teacher/courses/'+id+'/graph?profile_id='+profileId)]);current=row;review.innerHTML=qualityView(quality,graph)+reviewView(current);review.scrollIntoView({behavior:'smooth',block:'start'});}
  list.onclick=e=>{const r=e.target.closest('[data-review-course]'),p=e.target.closest('[data-publish-course]'),x=e.target.closest('[data-export-pack]');if(r)openReview(r.dataset.reviewCourse).catch(err=>toast(err.message));if(p)publish(Number(p.dataset.publishCourse));if(x)exportPack(Number(x.dataset.exportPack));};
  async function publish(id){try{await api('/teacher/courses/'+id+'/publish','POST',{profile_id:profileId});toast('Curso publicado para este dispositivo.');await refresh();}catch(err){toast(err.message);}}
  async function exportPack(id){try{const pack=await api('/teacher/courses/'+id+'/pack?profile_id='+profileId);const blob=new Blob([JSON.stringify(pack,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(pack.course?.title||'curso-allen').replace(/[^a-z0-9áéíóúñ_-]+/gi,'-')+'.allenpack';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Course Pack exportado.');}catch(err){toast(err.message);}}
@@ -62,7 +78,7 @@ export function bindTeacherStudio(root,{api,profileId,toast}){
   if(e.target.id!=='approve-course'||!current)return;
   review.querySelectorAll('[data-objective]').forEach(input=>{const [u,t]=input.dataset.objective.split(':').map(Number);current.structure.units[u].topics[t].objective=input.value.trim();});
   review.querySelectorAll('[data-question]').forEach(input=>{const [u,t,q]=input.dataset.question.split(':').map(Number);current.structure.units[u].topics[t].questions[q].prompt=input.value.trim();});
-  try{await api('/teacher/courses/'+current.id+'/review','PUT',{profile_id:profileId,structure:current.structure});toast('Revisión guardada. Ya puedes publicar el curso.');review.innerHTML='';await refresh();}catch(err){toast(err.message);}
+  try{const result=await api('/teacher/courses/'+current.id+'/review','PUT',{profile_id:profileId,structure:current.structure});toast('Revisión guardada. Calidad: '+result.quality.score+'/100.');review.innerHTML='';await refresh();await openReview(current.id);}catch(err){toast(err.message);}
  };
  const packInput=root.querySelector('#course-pack-file'),packButton=root.querySelector('#course-pack-import');
  if(packButton)packButton.onclick=async()=>{try{const file=packInput.files[0];if(!file)throw new Error('Selecciona un archivo .allenpack.');if(file.size>3_000_000)throw new Error('El Course Pack es demasiado grande.');const pack=JSON.parse(await file.text());const result=await api('/teacher/packs/import','POST',{profile_id:profileId,pack});toast('Course Pack importado como borrador. Revísalo antes de publicar.');await refresh();await openReview(result.course_id);}catch(err){toast(err.message);}};
@@ -78,7 +94,7 @@ export function coursesPage(){
 }
 function studentCards(rows){
  if(!rows.length)return '<section class="panel empty"><h2>No hay cursos publicados todavía</h2><p>Un profesor puede crear uno desde Teacher Studio.</p></section>';
- return `<div class="student-course-grid">${rows.map(r=>{const completed=r.enrollment?.status==='completed';return `<article class="student-course-card ${completed?'completed':''}"><img src="${completed?'/static/assets/allen-trophy-official.svg':'/static/assets/allen-course-official.svg'}" alt=""><span class="eyebrow">${esc(r.subject)} · ${esc(r.level)}</span><div class="row spaced"><h2>${esc(r.title)}</h2>${completed?'<span class="pill green">Completado</span>':''}</div>${coverage(r.coverage)}<button class="${completed?'':'primary'}" data-course-action="${r.enrollment?'continue':'enroll'}" data-course-id="${r.id}">${completed?'Revisar ruta':r.enrollment?'Continuar ruta':'Empezar curso'}</button></article>`}).join('')}</div>`;
+ return `<div class="student-course-grid">${rows.map(r=>{const completed=r.enrollment?.status==='completed';return `<article class="student-course-card ${completed?'completed':''}"><img src="${completed?'/static/assets/allen-trophy-official.svg':'/static/assets/allen-course-official.svg'}" alt=""><span class="eyebrow">${esc(r.subject)} · ${esc(r.level)}</span><div class="row spaced"><h2>${esc(r.title)}</h2>${completed?'<span class="pill green">Completado</span>':''}</div>${coverage(r.coverage)}<button class="${completed?'':'primary'}" data-course-action="${r.enrollment?'continue':'enroll'}" data-course-id="${r.id}">${completed?'Revisar ruta':r.enrollment?'Continuar ruta':'Diagnóstico y empezar'}</button></article>`}).join('')}</div>`;
 }
 function stepBody(topic,step){
  const type=step.type;
@@ -103,6 +119,13 @@ export function bindCourses(root,{api,profileId,toast,go}){
  let rowsCache=[];
  async function refresh(){rowsCache=await api('/courses?profile_id='+profileId);list.innerHTML=studentCards(rowsCache);return rowsCache;}
  async function open(id){const data=await api('/courses/'+id+'/route?profile_id='+profileId);route.innerHTML=routeView(data);route.scrollIntoView({behavior:'smooth',block:'start'});}
+ async function openDiagnostic(id){
+  const data=await api('/courses/'+id+'/diagnostic?profile_id='+profileId);
+  route.innerHTML=`<section class="diagnostic-shell"><div class="row spaced"><div><span class="eyebrow">DIAGNÓSTICO INICIAL</span><h1>${esc(data.course.title)}</h1><p>Allen usa estas respuestas para no hacerte repetir temas que ya dominas.</p></div><img src="/static/assets/allen-thinking-official.svg" alt="Allen preparando el diagnóstico"></div>
+  <form id="diagnostic-form">${data.questions.map((q,i)=>`<fieldset><legend>${i+1}. ${esc(q.prompt)}</legend>${q.options.map(o=>`<label class="answer-option"><input type="radio" name="diag-${i}" value="${esc(o)}" required><span>${esc(o)}</span></label>`).join('')}</fieldset>`).join('')}<button class="primary">Terminar diagnóstico</button></form></section>`;
+  route.scrollIntoView({behavior:'smooth',block:'start'});
+  route.querySelector('#diagnostic-form').onsubmit=async e=>{e.preventDefault();try{const answers=data.questions.map((_,i)=>route.querySelector(`input[name="diag-${i}"]:checked`)?.value||'');const result=await api('/courses/'+id+'/diagnostic/submit','POST',{profile_id:profileId,answers});route.innerHTML=`<section class="diagnostic-result panel"><span class="eyebrow">TU PUNTO DE PARTIDA</span><h2>Ruta personalizada lista</h2><p>${result.skipped_topics.length?('Ya dominas: '+result.skipped_topics.map(esc).join(', ')+'.'): 'Empezaremos desde la base para construirla bien.'}</p><button class="primary" id="start-personalized-route">Empezar mi ruta</button></section>`;route.querySelector('#start-personalized-route').onclick=()=>open(id);toast('Diagnóstico guardado. Allen ajustó tu punto de inicio.');}catch(err){toast(err.message);}};
+ }
  async function openExam(id){
   const data=await api('/courses/'+id+'/exam?profile_id='+profileId);
   route.innerHTML=`<section class="course-exam-shell" data-course-exam="${id}">
@@ -122,7 +145,7 @@ export function bindCourses(root,{api,profileId,toast,go}){
    await refresh();
   }catch(err){toast(err.message);}};
  }
- list.onclick=async e=>{const b=e.target.closest('[data-course-id]');if(!b)return;const id=Number(b.dataset.courseId);try{if(b.dataset.courseAction==='enroll')await api('/courses/'+id+'/enroll','POST',{profile_id:profileId});await open(id);await refresh();}catch(err){toast(err.message);}};
+ list.onclick=async e=>{const b=e.target.closest('[data-course-id]');if(!b)return;const id=Number(b.dataset.courseId);try{if(b.dataset.courseAction==='enroll'){await api('/courses/'+id+'/enroll','POST',{profile_id:profileId});await openDiagnostic(id);}else await open(id);await refresh();}catch(err){toast(err.message);}};
  route.onclick=async e=>{
   const shell=e.target.closest('[data-course-id]');if(!shell)return;const cid=Number(shell.dataset.courseId),u=Number(shell.dataset.unit),t=Number(shell.dataset.topic),st=Number(shell.dataset.step);
   const data=await api('/courses/'+cid+'/route?profile_id='+profileId),unit=data.course.structure.units[u],topic=unit.topics[t],steps=topic.route||[];
