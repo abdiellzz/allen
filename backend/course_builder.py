@@ -141,11 +141,35 @@ def build_course(title:str,subject:str,level:str,pages:list[dict],source_text:st
                 ]
             })
         units.append({"title":heading,"topics":topics})
+    flat_topics=[t for u in units for t in u["topics"]]
+    final_exam=[]
+    for idx,topic in enumerate(flat_topics[:10]):
+        correct=topic.get("source_excerpt","")[:220]
+        distractors=[]
+        for other in flat_topics:
+            candidate=other.get("source_excerpt","")[:220]
+            if other is not topic and candidate and candidate!=correct and candidate not in distractors:
+                distractors.append(candidate)
+            if len(distractors)>=3: break
+        while len(distractors)<2:
+            distractors.append("Esta afirmación no aparece sustentada en el material del curso.")
+        options=[correct]+distractors[:3]
+        # Rotate deterministically so the correct answer is not always first.
+        shift=idx%len(options)
+        options=options[shift:]+options[:shift]
+        final_exam.append({
+            "topic":topic["title"],
+            "prompt":f"¿Cuál afirmación describe mejor {topic['title']} según el material del curso?",
+            "options":options,
+            "correct":correct,
+            "source":topic.get("source",{}),
+        })
     coverage={
         "units":len(units),
         "topics":sum(len(u["topics"]) for u in units),
         "questions":sum(len(t["questions"]) for u in units for t in u["topics"]),
         "flashcards":sum(len(t["flashcards"]) for u in units for t in u["topics"]),
+        "exam_questions":len(final_exam),
         "topics_without_questions":sum(1 for u in units for t in u["topics"] if not t["questions"]),
     }
     return {
@@ -157,6 +181,7 @@ def build_course(title:str,subject:str,level:str,pages:list[dict],source_text:st
         "generated_at":datetime.now(timezone.utc).isoformat(),
         "keywords":keywords,
         "units":units,
+        "final_exam":final_exam,
         "coverage":coverage,
         "method":"Allen: Descubre → Recupera → Explica → Mezcla → Representa → Revisa",
     }
