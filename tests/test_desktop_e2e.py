@@ -60,7 +60,7 @@ def test_desktop_guided_learning_smoke_and_viewports():
                 page.get_by_role("heading",name="Aprende con una ruta, no con páginas sueltas.").wait_for()
                 assert page.locator("img[src*='allen-course-official.svg']").count()>=1
 
-                page.get_by_role("button",name="Profesor").click()
+                page.locator('[data-workspace-mode="teacher"]').click()
                 page.locator('[data-page="Teacher Studio"]').first.click()
                 page.get_by_role("heading",name="Diseña, revisa y mejora cursos con trazabilidad.").wait_for()
                 assert page.locator("#course-file").count()==1
@@ -93,7 +93,7 @@ def test_desktop_guided_learning_smoke_and_viewports():
                 page.get_by_role("button",name="Publicar").click()
                 page.get_by_text("Publicado",exact=True).wait_for()
 
-                page.get_by_role("button",name="Estudiante").click()
+                page.locator('[data-workspace-mode="student"]').click()
                 page.locator('[data-page="Cursos"]').first.click()
                 page.locator("#student-course-list").get_by_role("heading",name="Curso E2E").wait_for()
                 page.get_by_role("button",name="Diagnóstico y empezar").click()
