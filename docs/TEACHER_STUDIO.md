@@ -98,3 +98,49 @@ archivo → páginas/secciones → chunks con origen → curriculum graph → re
 ```
 
 No crear una arquitectura distinta por formato.
+
+
+## Cómo usar Teacher Studio
+
+### Crear y publicar un curso
+
+1. Abre **Teacher Studio**.
+2. Completa título, materia y nivel.
+3. Importa un PDF con texto extraíble, TXT o Markdown.
+4. Espera a que ALLEN construya el borrador.
+5. Revisa unidades, temas, objetivos, preguntas, fuentes y examen.
+6. Revisa **Course Quality** y corrige problemas bloqueantes.
+7. Pulsa **Guardar revisión y aprobar**.
+8. Pulsa **Publicar** cuando el curso quede listo.
+
+La publicación nunca debe saltarse la revisión docente.
+
+### Actualizar un curso existente
+
+1. Localiza el curso en Teacher Studio.
+2. Pulsa **Nueva versión**.
+3. Selecciona el archivo actualizado.
+4. ALLEN crea un snapshot antes del cambio.
+5. Revisa el **Course Diff**:
+   - nuevos;
+   - modificados;
+   - sin cambios;
+   - eliminados;
+   - progreso preservable.
+6. La nueva versión queda como `draft`.
+7. Revisa y aprueba otra vez.
+8. Publícala.
+
+Los temas sin cambios conservan progreso; los modificados pueden pasar a `reviewing` sin borrar la evidencia anterior.
+
+### Exportar un Course Pack
+
+Cuando un curso está publicado, usa **Exportar .allenpack**. El archivo puede moverse a otro equipo con ALLEN.
+
+Al importarlo en otro dispositivo vuelve a `draft` y necesita Teacher Review antes de publicarse.
+
+### Consultar el historial
+
+Teacher Studio muestra `v1`, `v2`, etc. Cada entrada conserva estructura, estado, fecha y diff respecto a la versión anterior.
+
+Para el recorrido completo de la interfaz consulta [USAGE_GUIDE.md](USAGE_GUIDE.md).
