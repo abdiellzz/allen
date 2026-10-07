@@ -38,5 +38,10 @@ def restore_backup(db,payload):
                 values=[row[c] for c in cols]
                 q=",".join("?" for _ in cols)
                 con.execute(f"INSERT INTO {table}({','.join(cols)}) VALUES({q})",values)
+        settings=payload.get("settings")
+        if isinstance(settings,dict):
+            from .schemas import Settings
+            safe=Settings.model_validate(settings)
+            con.execute("INSERT OR REPLACE INTO settings(id,value) VALUES(1,?)",(safe.model_dump_json(),))
         con.execute("PRAGMA foreign_keys=ON")
     return validate_backup(payload)
