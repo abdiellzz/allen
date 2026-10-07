@@ -53,7 +53,7 @@ function questionBankView(rows=[]){
 }
 function courseList(rows){
  if(!rows.length)return '<section class="panel empty"><h2>Aún no hay cursos</h2><p>Importa un documento para crear el primer borrador.</p></section>';
- return `<section class="teacher-course-grid">${rows.map(r=>`<article class="teacher-course-card v3-teacher-course"><div class="row spaced"><span class="eyebrow">${esc(r.subject)} · ${esc(r.level)}</span><span class="pill status-${esc(r.status)}">${esc(r.status)}</span></div><h2>${esc(r.title)}</h2>${coverage(r.coverage)}<div class="teacher-course-actions"><button data-review-course="${r.id}">Abrir revisión</button><button data-version-course="${r.id}">Nueva versión</button>${r.status==='reviewed'?`<button class="primary" data-publish-course="${r.id}">Publicar</button>`:''}${r.status==='published'?`<button data-export-pack="${r.id}">Exportar .allenpack</button>`:''}</div></article>`).join('')}</section>`;
+ return `<section class="teacher-course-grid">${rows.map(r=>`<article class="teacher-course-card v3-teacher-course"><div class="row spaced"><span class="eyebrow">${esc(r.subject)} · ${esc(r.level)}</span><span class="pill status-${esc(r.status)}">${esc(r.status)}</span></div><h2>${esc(r.title)}</h2>${coverage(r.coverage)}<div class="teacher-course-actions"><button data-review-course="${r.id}">Abrir revisión</button><button data-version-course="${r.id}">Nueva versión</button>${r.status==='reviewed'?`<button class="primary" data-publish-course="${r.id}">Publicar</button>`:''}${r.status==='published'?`<span class="pill green">Publicado</span><button data-export-pack="${r.id}">Exportar .allenpack</button>`:''}</div></article>`).join('')}</section>`;
 }
 function versionHistoryView(rows=[]){
  if(!rows.length)return '';
