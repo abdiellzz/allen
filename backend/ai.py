@@ -84,7 +84,8 @@ class LocalAI:
             yield {'type':'delta','text':text}
             return
         messages=self.messages(request,profile,settings,sources)
-        yield {'type':'meta','demo':False}
+        queued=self.lock.locked()
+        yield {'type':'meta','demo':False,'queue_state':'queued' if queued else 'running'}
         # Most tutoring turns do not need hundreds of tokens. Smaller decode budgets
         # improve response time on CPU while summaries and explanations still get room.
         preset=getattr(settings,'performance','Equilibrado')
@@ -101,6 +102,8 @@ class LocalAI:
         self.metrics['queue_state']='queued'
         async with self.lock:
             self.metrics['queue_state']='running'
+            if queued:
+                yield {'type':'meta','demo':False,'queue_state':'running'}
             async with self.client() as client:
                 async with client.stream('POST',settings.ai_server+'/v1/chat/completions',json=payload) as response:
                     response.raise_for_status()
