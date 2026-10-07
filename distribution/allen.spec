@@ -1,18 +1,20 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from pathlib import Path
 from PyInstaller.utils.hooks import collect_submodules
 
+ROOT = Path.cwd().resolve()
 hiddenimports = collect_submodules("uvicorn")
 
 a = Analysis(
-    ["distribution/allen_launcher.py"],
-    pathex=["."],
+    [str(ROOT / "distribution" / "allen_launcher.py")],
+    pathex=[str(ROOT)],
     binaries=[],
     datas=[
-        ("frontend", "frontend"),
-        ("data/library", "data/library"),
-        ("config", "config"),
-        ("VERSION", "."),
+        (str(ROOT / "frontend"), "frontend"),
+        (str(ROOT / "data" / "library"), "data/library"),
+        (str(ROOT / "config"), "config"),
+        (str(ROOT / "VERSION"), "."),
     ],
     hiddenimports=hiddenimports,
     hookspath=[],
