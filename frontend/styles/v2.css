@@ -690,3 +690,20 @@ html[data-theme="dark"] .skeleton-grid i{background:linear-gradient(90deg,#20242
  .v3-home-hero h1{font-size:32px}
  .learning-journey-track{margin-right:-8px}
 }
+
+
+/* mobile overflow containment */
+html,body{max-width:100%;overflow-x:clip}
+.layout,.workspace,main,.topbar,.top-actions,.welcome,.panel,.v3-home-hero,.v4-progress-grid{min-width:0;max-width:100%}
+.top-actions>*{min-width:0}
+@media(max-width:640px){
+ .sidebar nav{max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-inline:contain}
+ .nav-group{flex:0 0 auto}
+ .workspace-mode{flex:0 0 190px;min-width:190px}
+ .profile-picker select{width:128px;max-width:128px}
+ .top-actions{display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:center}
+ .top-actions .profile-picker{justify-self:end}
+ .home-question input{width:100%;min-width:0}
+ .course-coverage,.quality-breakdown,.mastery-evidence-grid{min-width:0}
+ img,svg{max-width:100%}
+}
