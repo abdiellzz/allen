@@ -114,3 +114,38 @@ El dashboard local muestra por curso:
 - hotspots de solicitudes de ayuda.
 
 No se envían datos fuera del dispositivo.
+
+
+## Cómo usar Learning Intelligence
+
+### Diagnóstico inicial
+
+Desde **Cursos**, abre un curso publicado y comienza el diagnóstico. ALLEN clasifica la evidencia por tema como `strong`, `developing` o `weak` y recomienda dónde iniciar.
+
+El diagnóstico no sustituye una calificación oficial y no borra evidencia previa.
+
+### Leer Evidence of Mastery
+
+En Inicio y vistas de progreso, el porcentaje de mastery debe leerse junto con su evidencia: intentos, aciertos, errores, pistas, prácticas, quizzes, examen y próxima revisión.
+
+El objetivo es poder responder “¿por qué tengo este porcentaje?” sin depender de una explicación opaca de IA.
+
+### Usar el repaso espaciado
+
+Cuando `next_review` vence, Inicio puede recomendar repasar el tema antes de avanzar. Completar nueva práctica añade evidencia y permite actualizar la planificación posterior.
+
+### Revisar Course Quality
+
+En Teacher Studio, usa el desglose del score para identificar fuentes faltantes, objetivos poco medibles, preguntas ambiguas o duplicadas, temas sin evaluación y problemas del examen final.
+
+Los bloqueos deben corregirse antes de publicar.
+
+### Revisar Question Bank
+
+Desde Teacher Studio consulta las preguntas normalizadas del curso. Las tasas extremas de acierto con suficiente uso son señales para revisar redacción, distractores o dificultad; no prueban por sí solas que la pregunta sea incorrecta.
+
+### Usar Teacher Analytics
+
+Teacher Analytics sirve para observar calidad, inscripciones, finalizaciones, “No entendí”, temas débiles, hotspots y estado del banco de preguntas. Los datos permanecen locales.
+
+Para instrucciones paso a paso de todas las áreas consulta [USAGE_GUIDE.md](USAGE_GUIDE.md).

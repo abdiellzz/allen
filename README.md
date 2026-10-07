@@ -6,6 +6,12 @@ Abre **http://127.0.0.1:8787/fair** para una experiencia con retos, microleccion
 
 Compañero educativo local en español, con una mascota original SVG y sin cuentas ni APIs de pago. Trabaja sobre el MVP original, conservado como referencia en `legacy/`. La interfaz nueva no requiere Node, compilación, fuentes externas ni CDN.
 
+## Guía completa de uso
+
+Para aprender a utilizar cada módulo desde la interfaz —perfiles, Tutor, Plan Allen, Aventuras, Quizzes, Flashcards, Simulacro, Cursos, diagnóstico, mastery, Teacher Studio, Course Quality, Curriculum Graph, Question Bank, Analytics, versionado, Course Diff, backups y Recovery— consulta **[docs/USAGE_GUIDE.md](docs/USAGE_GUIDE.md)**.
+
+La guía separa el flujo del estudiante, el flujo docente y las funciones de mantenimiento local para que no sea necesario conocer el código para usar ALLEN.
+
 ## Empezar en Windows
 
 1. Instala **Python 3.11 o superior** desde https://www.python.org/downloads/windows/ y marca **Add Python to PATH**. Se verificó con Python 3.13.

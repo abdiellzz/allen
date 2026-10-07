@@ -79,6 +79,19 @@ def test_desktop_guided_learning_smoke_and_viewports():
                 page.get_by_role("button",name="Publicar").click()
                 page.get_by_text("Publicado",exact=True).wait_for()
 
+                with page.expect_file_chooser() as chooser_info:
+                    page.get_by_role("button",name="Nueva versión").click()
+                chooser_info.value.set_files({
+                    "name":"curso-v2.md",
+                    "mimeType":"text/markdown",
+                    "buffer":b"# Redes\nIPv4 identifica interfaces de red. DNS traduce nombres a direcciones IP y usa cache. DHCP asigna parametros de red.\n# Seguridad\nMFA agrega otra comprobacion de identidad. Los backups permiten recuperar informacion.\n# Monitoreo\nLos registros ayudan a observar eventos y diagnosticar problemas."
+                })
+                page.get_by_text("v2 lista para revisión").wait_for()
+                page.get_by_role("button",name="Guardar revisión y aprobar").click()
+                page.get_by_role("button",name="Publicar").wait_for()
+                page.get_by_role("button",name="Publicar").click()
+                page.get_by_text("Publicado",exact=True).wait_for()
+
                 page.locator('[data-page="Cursos"]').first.click()
                 page.locator("#student-course-list").get_by_role("heading",name="Curso E2E").wait_for()
                 page.get_by_role("button",name="Diagnóstico y empezar").click()
@@ -91,6 +104,11 @@ def test_desktop_guided_learning_smoke_and_viewports():
                 page.get_by_role("button",name="Empezar mi ruta").click()
                 page.locator(".allen-step-rail").wait_for()
                 assert page.locator(".guided-course-shell").count()==1
+
+                page.locator('[data-page="Configuración"]').first.click()
+                page.get_by_text("RECOVERY LOCAL").wait_for()
+                page.get_by_role("button",name="Diagnosticar base").click()
+                page.get_by_text("Base íntegra").wait_for()
                 browser.close()
         finally:
             process.terminate()

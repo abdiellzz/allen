@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json
 FORMAT="allen-backup"; VERSION=1
-TABLES=("users","progress","quiz_results","flashcards","learning_sessions","library_packs","student_memory","saved_answers","study_plans","study_sessions","study_session_events","adventure_sessions","adventure_events","simulation_results","topic_mastery","learning_events","profile_current_activity","teacher_documents","courses","course_enrollments","course_exam_results","course_exam_sessions","curriculum_edges","question_bank","course_quality_reviews","diagnostic_results")
+TABLES=("users","progress","quiz_results","flashcards","learning_sessions","library_packs","student_memory","saved_answers","study_plans","study_sessions","study_session_events","adventure_sessions","adventure_events","simulation_results","topic_mastery","learning_events","profile_current_activity","teacher_documents","courses","course_enrollments","course_exam_results","course_exam_sessions","curriculum_edges","question_bank","course_quality_reviews","diagnostic_results","course_versions")
 
 def export_backup(db):
     data={"format":FORMAT,"version":VERSION,"tables":{}}
@@ -61,6 +61,13 @@ def restore_backup(db,payload):
                 report=evaluate_course(structure)
                 db.execute("INSERT INTO course_quality_reviews(course_id,score,blocking_issues,report_json,created_at) VALUES(?,?,?,?,datetime('now'))",
                            (course["id"],report["score"],report["blocking_issues"],json.dumps(report,ensure_ascii=False)))
+            except Exception:
+                continue
+    if "course_versions" not in tables:
+        from .course_versioning import seed_initial_version
+        for course in db.all("SELECT id,source_document_id,structure_json,status FROM courses"):
+            try:
+                seed_initial_version(db,course["id"],course["source_document_id"],json.loads(course["structure_json"]),course["status"])
             except Exception:
                 continue
     return validate_backup(payload)

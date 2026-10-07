@@ -10,6 +10,7 @@ on:
       - feature/allen-product-polish
       - feature/allen-guided-learning-studio
       - feature/allen-learning-intelligence
+      - feature/allen-reliability-core
   pull_request:
 jobs:
   python:
