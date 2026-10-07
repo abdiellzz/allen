@@ -54,4 +54,4 @@ def evaluate_course(structure):
             "status":"ready" if blocking==0 and score>=80 else "review"}
 
 def publication_allowed(report):
-    return report["blocking_issues"]==0 and report["score"]>=70
+    return report["blocking_issues"]==0 and report["score"]>=80
