@@ -78,7 +78,7 @@ export function coursesPage(){
 }
 function studentCards(rows){
  if(!rows.length)return '<section class="panel empty"><h2>No hay cursos publicados todavía</h2><p>Un profesor puede crear uno desde Teacher Studio.</p></section>';
- return `<div class="student-course-grid">${rows.map(r=>`<article class="student-course-card"><img src="/static/assets/allen-course-official.svg" alt=""><span class="eyebrow">${esc(r.subject)} · ${esc(r.level)}</span><h2>${esc(r.title)}</h2>${coverage(r.coverage)}<button class="primary" data-course-action="${r.enrollment?'continue':'enroll'}" data-course-id="${r.id}">${r.enrollment?'Continuar ruta':'Empezar curso'}</button></article>`).join('')}</div>`;
+ return `<div class="student-course-grid">${rows.map(r=>{const completed=r.enrollment?.status==='completed';return `<article class="student-course-card ${completed?'completed':''}"><img src="${completed?'/static/assets/allen-trophy-official.svg':'/static/assets/allen-course-official.svg'}" alt=""><span class="eyebrow">${esc(r.subject)} · ${esc(r.level)}</span><div class="row spaced"><h2>${esc(r.title)}</h2>${completed?'<span class="pill green">Completado</span>':''}</div>${coverage(r.coverage)}<button class="${completed?'':'primary'}" data-course-action="${r.enrollment?'continue':'enroll'}" data-course-id="${r.id}">${completed?'Revisar ruta':r.enrollment?'Continuar ruta':'Empezar curso'}</button></article>`}).join('')}</div>`;
 }
 function stepBody(topic,step){
  const type=step.type;
@@ -100,7 +100,8 @@ function routeView(data){
 }
 export function bindCourses(root,{api,profileId,toast,go}){
  const list=root.querySelector('#student-course-list'),route=root.querySelector('#student-course-route');
- async function refresh(){const rows=await api('/courses?profile_id='+profileId);list.innerHTML=studentCards(rows);}
+ let rowsCache=[];
+ async function refresh(){rowsCache=await api('/courses?profile_id='+profileId);list.innerHTML=studentCards(rowsCache);return rowsCache;}
  async function open(id){const data=await api('/courses/'+id+'/route?profile_id='+profileId);route.innerHTML=routeView(data);route.scrollIntoView({behavior:'smooth',block:'start'});}
  async function openExam(id){
   const data=await api('/courses/'+id+'/exam?profile_id='+profileId);
@@ -137,5 +138,5 @@ export function bindCourses(root,{api,profileId,toast,go}){
   if(ns>=steps.length){ns=0;nt++;if(nt>=unit.topics.length){nt=0;nu++;if(nu>=data.course.structure.units.length){finishedRoute=true;}}}
   try{if(finishedRoute){await openExam(cid);toast('Ruta completada. Ahora toca comprobar lo aprendido.');return;}await api('/courses/'+cid+'/progress','POST',{profile_id:profileId,unit_index:nu,topic_index:nt,step_index:ns,status:'active'});await open(cid);await refresh();}catch(err){toast(err.message);}
  };
- refresh().catch(e=>toast(e.message));
+ refresh().then(async rows=>{try{const continuity=await api('/continuity?profile_id='+profileId);if(continuity.current_activity?.activity_type==='course'){const row=rows.find(r=>r.enrollment?.id===continuity.current_activity.reference_id);if(row&&row.enrollment.status!=='completed')await open(row.id);}}catch{}}).catch(e=>toast(e.message));
 }
