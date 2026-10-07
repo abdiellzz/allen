@@ -30,7 +30,7 @@ function teacherAnalyticsView(data){
  const courses=data?.courses||[];
  return `<section class="teacher-analytics panel"><div class="row spaced"><div><span class="eyebrow">OBSERVABILIDAD EDUCATIVA LOCAL</span><h2>Qué está pasando en tus cursos</h2></div><span class="pill">${summary.completion_rate||0}% finalización</span></div>
   <div class="analytics-kpis"><article><b>${summary.courses||0}</b><span>Cursos</span></article><article><b>${summary.enrollments||0}</b><span>Inscripciones locales</span></article><article><b>${summary.completion_rate||0}%</b><span>Completados</span></article></div>
-  <div class="analytics-course-list">${courses.map(c=>`<article><div class="row spaced"><strong>${esc(c.title)}</strong><span>${c.quality_score}% calidad</span></div><small>${c.help_requests} “No entendí” · ${c.question_bank?.questions||0} preguntas · ${c.quality_issues} observaciones</small>${(c.weak_topics||[]).length?`<p>Temas a reforzar: ${c.weak_topics.map(x=>esc(x.topic)+' ('+x.mastery+'%)').join(', ')}</p>`:''}</article>`).join('')}</div>
+  <div class="analytics-course-list">${courses.map(c=>`<article><div class="row spaced"><strong>${esc(c.title)}</strong><span>${c.quality_score}% calidad</span></div><small>${c.help_requests} “No entendí” · ${c.question_bank?.questions||0} preguntas · ${c.quality_issues} observaciones</small>${(c.weak_topics||[]).length?`<p>Temas a reforzar: ${c.weak_topics.map(x=>esc(x.topic)+' ('+x.mastery+'%)').join(', ')}</p>`:''}${(c.help_hotspots||[]).length?`<p>Más ayuda solicitada: ${c.help_hotspots.map(x=>esc(x.topic)+' ('+x.requests+')').join(', ')}</p>`:''}${(c.active_positions||[]).length?`<p>Actividad actual: ${c.active_positions.map(x=>'U'+(x.unit_index+1)+' T'+(x.topic_index+1)+' ('+x.learners+')').join(', ')}</p>`:''}</article>`).join('')}</div>
  </section>`;
 }
 function qualityView(q,graph){
@@ -159,6 +159,12 @@ export function bindCourses(root,{api,profileId,toast,go}){
   if(e.target.id!=='course-next')return;
   let nu=u,nt=t,ns=st+1,finishedRoute=false;
   if(ns>=steps.length){ns=0;nt++;if(nt>=unit.topics.length){nt=0;nu++;if(nu>=data.course.structure.units.length){finishedRoute=true;}}}
+  const skip=new Set(data.diagnostic_skip_topics||[]);
+  while(!finishedRoute&&ns===0){
+   const nextUnit=data.course.structure.units[nu],nextTopic=nextUnit?.topics?.[nt];
+   if(!nextTopic||!skip.has(nextTopic.title))break;
+   nt++;if(nt>=nextUnit.topics.length){nt=0;nu++;if(nu>=data.course.structure.units.length)finishedRoute=true;}
+  }
   try{if(finishedRoute){await openExam(cid);toast('Ruta completada. Ahora toca comprobar lo aprendido.');return;}await api('/courses/'+cid+'/progress','POST',{profile_id:profileId,unit_index:nu,topic_index:nt,step_index:ns,status:'active'});await open(cid);await refresh();}catch(err){toast(err.message);}
  };
  refresh().then(async rows=>{try{const continuity=await api('/continuity?profile_id='+profileId);if(continuity.current_activity?.activity_type==='course'){const row=rows.find(r=>r.enrollment?.id===continuity.current_activity.reference_id);if(row&&row.enrollment.status!=='completed')await open(row.id);}}catch{}}).catch(e=>toast(e.message));
