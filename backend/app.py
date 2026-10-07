@@ -20,7 +20,7 @@ from .ai import LocalAI
 from .database import Database, now
 from .education import catalog, generate, grade
 from .library import Library
-from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport, CourseHelp, CourseExamProgress
+from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport, CourseHelp, CourseExamProgress, CourseVersionImport, RecoveryRestore
 from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
@@ -34,6 +34,7 @@ from .curriculum_graph import build_graph, persist_graph, prerequisite_chain
 from .course_quality import evaluate_course, publication_allowed
 from .question_bank import sync_course_questions, stats_for_course
 from .learning_intelligence import mastery_evidence, due_reviews, diagnostic_questions, score_diagnostic, recommended_start
+from .course_versioning import compare_versions, seed_initial_version, apply_version, history as course_version_history
 
 ROOT=Path(__file__).resolve().parent.parent
 
@@ -70,7 +71,7 @@ def create_app(db_path=None, ai=None):
         if request.method in ('POST','PUT','DELETE','PATCH'):
             if not secrets.compare_digest(request.headers.get('x-allen-token',''),token):
                 return JSONResponse({'error':'Recarga Allen para continuar.'},403)
-            max_body=12_500_000 if request.url.path=='/api/teacher/import' else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 5_500_000 if request.url.path.startswith('/api/backup/') else 200000
+            max_body=12_500_000 if request.url.path=='/api/teacher/import' or request.url.path.endswith('/versions') else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 5_500_000 if request.url.path.startswith('/api/backup/') else 200000
             try:
                 if int(request.headers.get('content-length','0'))>max_body:
                     return JSONResponse({'error':'El archivo o texto es demasiado largo.'},413)
@@ -299,7 +300,8 @@ def create_app(db_path=None, ai=None):
             (value.profile_id,value.title,value.filename,value.mime,extracted['page_count'],extracted['text'],json.dumps(extracted['pages'],ensure_ascii=False),now()))
         cid=db.execute("INSERT INTO courses(owner_profile_id,source_document_id,title,subject,level,status,version,structure_json,created_at,updated_at) VALUES(?,?,?,?,?,'draft',1,?,?,?)",
             (value.profile_id,doc_id,value.title,value.subject,value.level,json.dumps(structure,ensure_ascii=False),now(),now()))
-        return {'course_id':cid,'document_id':doc_id,'structure':structure}
+        seed_initial_version(db,cid,doc_id,structure,'draft')
+        return {'course_id':cid,'document_id':doc_id,'structure':structure,'version':1}
 
     @app.post('/api/teacher/packs/import')
     def import_course_pack(value:CoursePackImport):
@@ -316,7 +318,33 @@ def create_app(db_path=None, ai=None):
         structure['status']='draft'
         cid=db.execute("INSERT INTO courses(owner_profile_id,source_document_id,title,subject,level,status,version,structure_json,created_at,updated_at) VALUES(?,?,?, ?,?,'draft',1,?,?,?)",
             (value.profile_id,None,title,subject,level,json.dumps(structure,ensure_ascii=False),now(),now()))
-        return {'course_id':cid,'status':'draft'}
+        seed_initial_version(db,cid,None,structure,'draft')
+        return {'course_id':cid,'status':'draft','version':1}
+
+    @app.get('/api/teacher/courses/{cid}/versions')
+    def teacher_course_versions(cid:int,profile_id:int=1):
+        user(profile_id)
+        row=db.one("SELECT id FROM courses WHERE id=? AND owner_profile_id=?",(cid,profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese curso.')
+        return course_version_history(db,cid)
+
+    @app.post('/api/teacher/courses/{cid}/versions')
+    def create_course_version(cid:int,value:CourseVersionImport):
+        user(value.profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND owner_profile_id=?",(cid,value.profile_id))
+        if not course: raise HTTPException(404,'No encontramos ese curso.')
+        try:
+            extracted=decode_source(value.filename,value.mime,value.content_base64)
+            new_structure=build_course(course['title'],course['subject'],course['level'],extracted['pages'],extracted['text'])
+        except ValueError as exc:
+            raise HTTPException(422,str(exc))
+        old_structure=json.loads(course['structure_json'])
+        diff=compare_versions(old_structure,new_structure)
+        db.create_snapshot(f"before-course-v{course['version']+1}")
+        doc_id=db.execute('INSERT INTO teacher_documents(user_id,title,filename,mime,page_count,source_text,pages_json,created_at) VALUES(?,?,?,?,?,?,?,?)',
+            (value.profile_id,course['title'],value.filename,value.mime,extracted['page_count'],extracted['text'],json.dumps(extracted['pages'],ensure_ascii=False),now()))
+        version=apply_version(db,course,doc_id,new_structure,diff)
+        return {'course_id':cid,'version':version,'status':'draft','diff':diff,'structure':new_structure}
 
     @app.get('/api/teacher/courses')
     def teacher_courses(profile_id:int=1):
@@ -353,6 +381,9 @@ def create_app(db_path=None, ai=None):
         db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
         db.execute("INSERT INTO course_quality_reviews(course_id,score,blocking_issues,report_json,created_at) VALUES(?,?,?,?,?)",(cid,quality['score'],quality['blocking_issues'],json.dumps(quality,ensure_ascii=False),now()))
         db.execute("UPDATE courses SET status='reviewed',structure_json=?,updated_at=? WHERE id=?",(json.dumps(value.structure,ensure_ascii=False),now(),cid))
+        current=db.one("SELECT version FROM courses WHERE id=?",(cid,))
+        if current:
+            db.execute("UPDATE course_versions SET structure_json=?,status='reviewed' WHERE course_id=? AND version_number=?",(json.dumps(value.structure,ensure_ascii=False),cid,current['version']))
         return {'ok':True,'quality':quality,'graph':{'nodes':len(graph['nodes']),'edges':len(graph['edges'])},'question_bank':synced}
 
     @app.post('/api/teacher/courses/{cid}/publish')
@@ -371,8 +402,10 @@ def create_app(db_path=None, ai=None):
         persist_graph(db,cid,structure)
         sync_course_questions(db,cid,structure)
         db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
-        db.execute("UPDATE courses SET status='published',published_at=?,updated_at=? WHERE id=?",(now(),now(),cid))
-        return {'ok':True,'course_id':cid,'quality':quality}
+        published_at=now()
+        db.execute("UPDATE courses SET status='published',published_at=?,updated_at=? WHERE id=?",(published_at,published_at,cid))
+        db.execute("UPDATE course_versions SET status='published',published_at=? WHERE course_id=? AND version_number=?",(published_at,cid,row['version']))
+        return {'ok':True,'course_id':cid,'quality':quality,'version':row['version']}
 
     @app.get('/api/teacher/courses/{cid}/pack')
     def export_course_pack(cid:int,profile_id:int=1):
@@ -689,10 +722,36 @@ def create_app(db_path=None, ai=None):
     async def backup_restore(request:Request):
         payload=await request.json()
         try:
+            safety=db.create_snapshot('before-backup-restore')
             summary=restore_backup(db,payload)
         except ValueError as exc:
             raise HTTPException(422,str(exc))
-        return {'ok':True,'summary':summary}
+        return {'ok':True,'summary':summary,'safety_snapshot':safety}
+
+    @app.get('/api/system/integrity')
+    def system_integrity():
+        report=db.integrity()
+        report['snapshots']=db.snapshots()
+        report['schema_version']=db.schema_version()
+        return report
+
+    @app.get('/api/system/recovery/snapshots')
+    def recovery_snapshots():
+        return db.snapshots()
+
+    @app.post('/api/system/recovery/snapshot')
+    def recovery_snapshot():
+        name=db.create_snapshot('manual')
+        return {'ok':bool(name),'snapshot':name,'snapshots':db.snapshots()}
+
+    @app.post('/api/system/recovery/restore')
+    def recovery_restore(value:RecoveryRestore):
+        try:
+            result=db.restore_snapshot(value.snapshot)
+        except ValueError as exc:
+            raise HTTPException(422,str(exc))
+        return {'ok':True,**result}
+
 
     @app.post('/api/adventures/start')
     def start_adventure(value:AdventureStart):
