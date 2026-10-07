@@ -95,7 +95,7 @@ function routeView(data){
   ${allenGuide(step.type==='review'?'progress':'guide',`Estamos en ${topic.title}. ${step.label}: concéntrate solo en este paso.`)}
   <div class="row spaced"><div><span class="eyebrow">${esc(c.title)} · ${esc(unit.title)}</span><h1>${esc(topic.title)}</h1></div><span class="pill">Tema ${e.topic_index+1}/${unit.topics.length}</span></div>
   ${learningStepRail(e.step_index,steps.map(x=>x.label))}
-  <article class="guided-learning-card">${stepBody(topic,step)}<div class="row guided-actions"><button id="course-help">No entendí</button><button id="course-next" class="primary">${e.step_index>=steps.length-1?'Terminar tema':'Continuar'}</button></div></article>
+  <article class="guided-learning-card">${stepBody(topic,step)}<div id="course-help-panel"></div><div class="row guided-actions"><button id="course-help">No entendí</button><button id="course-next" class="primary">${e.step_index>=steps.length-1?'Terminar tema':'Continuar'}</button></div></article>
  </section>`;
 }
 export function bindCourses(root,{api,profileId,toast,go}){
@@ -122,7 +122,13 @@ export function bindCourses(root,{api,profileId,toast,go}){
  route.onclick=async e=>{
   const shell=e.target.closest('[data-course-id]');if(!shell)return;const cid=Number(shell.dataset.courseId),u=Number(shell.dataset.unit),t=Number(shell.dataset.topic),st=Number(shell.dataset.step);
   const data=await api('/courses/'+cid+'/route?profile_id='+profileId),unit=data.course.structure.units[u],topic=unit.topics[t],steps=topic.route||[];
-  if(e.target.id==='course-help'){try{sessionStorage.setItem('allen-course-help',JSON.stringify({course:data.course.title,topic:topic.title,excerpt:topic.source_excerpt}));}catch{}go('Tutor');toast('Allen te lo explicará de otra manera.');return;}
+  if(e.target.id==='course-help'){try{
+   const help=await api('/courses/'+cid+'/help','POST',{profile_id:profileId,unit_index:u,topic_index:t});
+   const panel=route.querySelector('#course-help-panel');
+   panel.innerHTML=`${allenGuide(help.level>=4?'teaching':'guide',help.title+': '+help.text)}<div class="course-help-source"><small>Fuente: página ${help.source?.page||'—'}</small>${help.level>=3?'<button id="course-help-tutor">Hablar con Allen sobre esto</button>':''}</div>`;
+   const tutor=panel.querySelector('#course-help-tutor');if(tutor)tutor.onclick=()=>{try{sessionStorage.setItem('allen-course-help',JSON.stringify({course:data.course.title,topic:topic.title,excerpt:topic.source_excerpt}));}catch{}go('Tutor');};
+   toast(help.level<4?'Allen cambió la forma de explicarlo.':'Probemos una mini práctica.');
+  }catch(err){toast(err.message);}return;}
   if(e.target.id!=='course-next')return;
   let nu=u,nt=t,ns=st+1,finishedRoute=false;
   if(ns>=steps.length){ns=0;nt++;if(nt>=unit.topics.length){nt=0;nu++;if(nu>=data.course.structure.units.length){finishedRoute=true;}}}
