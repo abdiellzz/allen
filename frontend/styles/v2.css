@@ -155,3 +155,16 @@ body{min-width:1024px}
 #quiz-body .score{font-size:72px;line-height:1;color:var(--v2-orange);font-weight:900}
 #quiz-body .feedback{margin:12px 0;border-radius:16px;border:1px solid var(--v2-line);background:#fffaf3}
 #quiz-body .feedback.correct{background:#eef7f3;border-color:#c4d9d1}
+
+.v2-progress-insights{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:24px 0}
+.v2-progress-insights>article{padding:22px;border:1px solid var(--v2-line);border-radius:24px;background:#fff}
+.v2-progress-insights h2{font-size:24px;margin:.3rem 0 1rem}
+.v2-subject-bar{margin:13px 0}
+.v2-subject-bar>.row{font-size:14px}
+.v2-subject-bar>div:last-child{height:10px;border-radius:999px;background:#efe2d2;overflow:hidden;margin-top:7px}
+.v2-subject-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--v2-orange),#e39a62)}
+.v2-week-chart{height:180px;display:grid;grid-template-columns:repeat(7,1fr);gap:10px;align-items:end;margin-top:16px}
+.v2-week-day{display:grid;grid-template-rows:1fr auto;gap:8px;height:100%;text-align:center}
+.v2-week-day>div{height:140px;border-radius:14px;background:#f5ecdf;display:flex;align-items:flex-end;justify-content:center;padding:6px}
+.v2-week-day i{width:70%;min-height:6px;border-radius:9px;background:linear-gradient(180deg,#7c9e93,var(--v2-green))}
+.v2-week-day span{font-size:12px;font-weight:800;color:var(--v2-muted)}
