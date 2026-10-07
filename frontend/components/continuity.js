@@ -28,7 +28,13 @@ export function recommendationPanel(c){
 export function masteryPanel(c){
  const rows=c?.mastery||[];
  if(!rows.length)return '';
- return '<section class="mastery-panel"><div class="section-head"><div><span class="eyebrow">QUÉ ESTÁS DOMINANDO</span><h2>Tu progreso por tema</h2></div></div><div class="mastery-grid">'+rows.slice(0,6).map(row=>'<article><div class="row spaced"><strong>'+esc(row.topic)+'</strong><span>'+row.mastery_score+'%</span></div><small>'+esc(row.subject)+' · '+esc(String(row.status||'').replaceAll('_',' '))+'</small><div class="mastery-track"><i style="width:'+Math.max(3,row.mastery_score)+'%"></i></div></article>').join('')+'</div></section>';
+ return '<section class="mastery-panel"><div class="section-head"><div><span class="eyebrow">EVIDENCIA DE DOMINIO</span><h2>No solo cuánto: por qué.</h2></div></div><div class="mastery-grid">'+rows.slice(0,6).map(row=>'<article><div class="row spaced"><strong>'+esc(row.topic)+'</strong><span>'+row.mastery_score+'%</span></div><small>'+esc(row.subject)+' · '+esc(String(row.status||'').replaceAll('_',' '))+'</small><div class="mastery-track"><i style="width:'+Math.max(3,row.mastery_score)+'%"></i></div><p class="mastery-evidence">'+(row.attempts?esc(row.correct_answers+'/'+row.attempts+' respuestas correctas'):'Sin evaluación formal todavía')+' · '+esc(row.practice_count+' prácticas')+' · '+esc(row.hints_used+' pistas')+'</p></article>').join('')+'</div></section>';
+}
+
+export function reviewPanel(c){
+ const rows=c?.due_topic_reviews||[];
+ if(!rows.length)return '';
+ return '<section class="review-due-panel"><div class="row spaced"><div><span class="eyebrow">REPASO ESPACIADO</span><h2>Hoy conviene recordar '+rows.length+' '+(rows.length===1?'tema':'temas')+'.</h2></div><img src="/static/assets/allen-checklist-official.svg" alt="Allen preparando tu repaso"></div><div class="review-due-list">'+rows.map(r=>'<article><div><strong>'+esc(r.topic)+'</strong><small>'+esc(r.subject)+' · dominio '+r.mastery_score+'%</small></div><span>'+esc(r.next_review||'hoy')+'</span></article>').join('')+'</div><button data-page="Practicar" class="primary">Practicar ahora</button></section>';
 }
 
 export function detectExamIntent(text){
