@@ -7,6 +7,7 @@ on:
       - feature/allen-offline-v2
       - feature/allen-study-planner
       - feature/allen-learning-continuity
+      - feature/allen-product-polish
   pull_request:
 jobs:
   python:
