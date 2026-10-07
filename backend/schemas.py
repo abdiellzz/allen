@@ -183,3 +183,9 @@ class SimulationCreate(Strict):
     question_count: int = Field(5,ge=3,le=10)
     minutes: int = Field(20,ge=5,le=120)
     level: Literal['Primaria','Premedia','Media','Universidad / Técnico'] = 'Premedia'
+
+
+class SimulationProgress(Strict):
+    profile_id: int = Field(ge=1)
+    answers: list[str] = Field(default_factory=list,max_length=10)
+    status: Literal['active','paused','interrupted'] = 'active'
