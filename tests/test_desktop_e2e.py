@@ -50,11 +50,24 @@ def test_desktop_guided_learning_smoke_and_viewports():
                 page.get_by_role("heading",name="¿Qué quieres descubrir hoy?").wait_for()
                 assert page.locator(".brand-mascot").count()==1
 
-                for width,height in ((1366,768),(1440,900),(1920,1080)):
+                for width,height in ((1366,768),(1440,900),(1920,1080),(900,800),(640,900),(390,844)):
                     page.set_viewport_size({"width":width,"height":height})
-                    page.wait_for_timeout(80)
+                    page.wait_for_timeout(100)
                     overflow=page.evaluate("document.documentElement.scrollWidth-window.innerWidth")
                     assert overflow <= 2
+
+                page.set_viewport_size({"width":1366,"height":768})
+                page.keyboard.press("Control+K")
+                page.locator("#command-palette:not([hidden])").wait_for()
+                page.locator("#command-input").fill("progreso")
+                page.get_by_role("option").first.wait_for()
+                page.keyboard.press("Escape")
+                assert page.locator("#command-palette").get_attribute("hidden") is not None
+
+                theme_before=page.evaluate("document.documentElement.dataset.theme")
+                page.locator("#theme-toggle").click()
+                theme_after=page.evaluate("document.documentElement.dataset.theme")
+                assert theme_after != theme_before
 
                 page.locator('[data-page="Cursos"]').first.click()
                 page.get_by_role("heading",name="Aprende con una ruta, no con páginas sueltas.").wait_for()
