@@ -4,6 +4,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import os
 import secrets
+import sys
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
@@ -37,10 +38,10 @@ from .learning_intelligence import mastery_evidence, due_reviews, diagnostic_que
 from .course_versioning import compare_versions, seed_initial_version, apply_version, history as course_version_history
 from .version import ALLEN_VERSION
 
-ROOT=Path(__file__).resolve().parent.parent
+ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))
 
 def create_app(db_path=None, ai=None):
-    local_root=Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'
+    local_root=Path(os.environ.get('ALLEN_DATA_ROOT') or (Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'))
     db=Database(db_path or os.environ.get('ALLEN_DB_PATH',local_root/'allen.sqlite3'))
     library=Library(ROOT/'data/library')
     engine=ai or LocalAI()

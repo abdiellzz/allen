@@ -1,0 +1,61 @@
+name: windows-distribution
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "data/library/**"
+      - "config/**"
+      - "distribution/**"
+      - "requirements*.txt"
+      - "VERSION"
+      - ".github/workflows/windows-distribution.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "data/library/**"
+      - "config/**"
+      - "distribution/**"
+      - "requirements*.txt"
+      - "VERSION"
+      - ".github/workflows/windows-distribution.yml"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install Inno Setup
+        shell: powershell
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build portable and installer
+        shell: powershell
+        run: .\distribution\build_windows.ps1
+
+      - name: Upload portable
+        uses: actions/upload-artifact@v4
+        with:
+          name: allen-portable
+          path: artifacts/*-Portable-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: allen-installer
+          path: artifacts/*-Setup-Windows-x64.exe
+          if-no-files-found: error
+          retention-days: 30

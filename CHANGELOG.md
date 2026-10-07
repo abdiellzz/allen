@@ -2,6 +2,18 @@
 
 Todos los cambios relevantes de ALLEN se documentan aquí.
 
+## [1.1.0] — 2026-10-07
+
+### Distribución Windows
+- Nuevo ejecutable empaquetado con runtime propio mediante PyInstaller.
+- Nuevo paquete Portable para Windows x64; los datos viven en `ALLEN-Data` junto a la aplicación.
+- Nuevo instalador por usuario con Inno Setup, accesos directos y desinstalador.
+- El instalador conserva perfiles, progreso y backups en `%LOCALAPPDATA%\ALLEN` al desinstalar.
+- Launcher gráfico con acciones para abrir y cerrar ALLEN sin depender de una consola.
+- Nuevo workflow de GitHub Actions que construye y publica ambos artefactos.
+- Self-test del ejecutable empaquetado antes de generar los paquetes.
+
+
 ## [1.0.0] — 2026-10-07
 
 Primera versión estable de ALLEN.
