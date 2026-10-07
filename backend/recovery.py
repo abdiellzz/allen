@@ -83,4 +83,5 @@ def restore_snapshot(db_path,name):
         source.backup(dest)
     finally:
         dest.close();source.close()
+    _rotate(path)
     return {"restored":name,"safety_snapshot":safety,"integrity":integrity_report(path)}
