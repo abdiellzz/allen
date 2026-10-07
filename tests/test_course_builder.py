@@ -155,3 +155,25 @@ def test_course_exam_answers_resume_after_reload():
         resumed=c.get(f"/api/courses/{cid}/exam?profile_id=1").json()
         assert resumed["answers"][0]==first
         c.close()
+
+
+def test_course_mastery_uses_practice_evidence_not_page_visits():
+    with tempfile.TemporaryDirectory() as tmp:
+        c=client_for(Path(tmp)/"allen.sqlite3")
+        material="# Redes\nIPv4 identifica interfaces. DNS traduce nombres a direcciones IP. DHCP asigna parámetros automáticamente."
+        payload={"profile_id":1,"title":"Mastery curso","subject":"Redes","level":"Premedia","filename":"m.md","mime":"text/markdown","content_base64":base64.b64encode(material.encode()).decode()}
+        cid=c.post("/api/teacher/import",json=payload).json()["course_id"]
+        row=c.get(f"/api/teacher/courses/{cid}?profile_id=1").json()
+        c.put(f"/api/teacher/courses/{cid}/review",json={"profile_id":1,"structure":row["structure"]})
+        c.post(f"/api/teacher/courses/{cid}/publish",json={"profile_id":1})
+        c.post(f"/api/courses/{cid}/enroll",json={"profile_id":1})
+        # discover -> example should not create mastery evidence
+        c.post(f"/api/courses/{cid}/progress",json={"profile_id":1,"unit_index":0,"topic_index":0,"step_index":1,"status":"active"})
+        assert c.get("/api/mastery?profile_id=1").json()==[]
+        # advance example -> retrieval still no practice evidence yet
+        c.post(f"/api/courses/{cid}/progress",json={"profile_id":1,"unit_index":0,"topic_index":0,"step_index":2,"status":"active"})
+        assert c.get("/api/mastery?profile_id=1").json()==[]
+        # completing retrieval creates evidence
+        c.post(f"/api/courses/{cid}/progress",json={"profile_id":1,"unit_index":0,"topic_index":0,"step_index":3,"status":"active"})
+        assert c.get("/api/mastery?profile_id=1").json()
+        c.close()
