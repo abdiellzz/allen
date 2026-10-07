@@ -19,7 +19,10 @@ CREATE TABLE IF NOT EXISTS conversation_states(conversation_id INTEGER PRIMARY K
 CREATE TABLE IF NOT EXISTS study_plans(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, subject TEXT NOT NULL, goal TEXT NOT NULL, deadline TEXT NOT NULL, minutes_per_day INTEGER NOT NULL, level TEXT NOT NULL, topics TEXT NOT NULL, plan TEXT NOT NULL, created TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS study_sessions(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, plan_id INTEGER REFERENCES study_plans(id) ON DELETE CASCADE, day TEXT NOT NULL, status TEXT NOT NULL, started TEXT, completed TEXT);
 CREATE TABLE IF NOT EXISTS study_session_events(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, session_id INTEGER REFERENCES study_sessions(id) ON DELETE CASCADE, kind TEXT NOT NULL, activity_index INTEGER NOT NULL, note TEXT NOT NULL, created TEXT NOT NULL);
-PRAGMA user_version=4;
+CREATE TABLE IF NOT EXISTS adventure_sessions(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, adventure_id TEXT NOT NULL, status TEXT NOT NULL, current_step INTEGER NOT NULL DEFAULT 0, completed_steps INTEGER NOT NULL DEFAULT 0, answers TEXT NOT NULL DEFAULT '[]', mistakes INTEGER NOT NULL DEFAULT 0, hints_used INTEGER NOT NULL DEFAULT 0, started_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT);
+CREATE TABLE IF NOT EXISTS adventure_events(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, session_id INTEGER REFERENCES adventure_sessions(id) ON DELETE CASCADE, event TEXT NOT NULL, step INTEGER NOT NULL, answer TEXT NOT NULL DEFAULT '', correct INTEGER, created TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS simulation_results(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, subject TEXT NOT NULL, topics TEXT NOT NULL, questions TEXT NOT NULL, result TEXT, minutes INTEGER NOT NULL, started_at TEXT NOT NULL, completed_at TEXT);
+PRAGMA user_version=5;
 '''
 
 def now():
@@ -99,10 +102,17 @@ class Database:
         for offset in range(6,-1,-1):
             current = date.today() - timedelta(days=offset)
             week.append(dict(day=current.isoformat(), seconds=daily.get(current.isoformat(),0)))
+        adventures_done=self.one("SELECT count(*) n FROM adventure_sessions WHERE user_id=? AND status='completed'",(user,))['n']
+        adventure_active=self.one("SELECT count(*) n FROM adventure_sessions WHERE user_id=? AND status IN ('active','paused')",(user,))['n']
+        study_plans=self.one('SELECT count(*) n FROM study_plans WHERE user_id=?',(user,))['n']
+        study_active=self.one("SELECT count(*) n FROM study_sessions WHERE user_id=? AND status='active'",(user,))['n']
+        simulations=self.one('SELECT count(*) n FROM simulation_results WHERE user_id=? AND result IS NOT NULL',(user,))['n']
         return dict(xp=xp, streak=streak, level=['Explorador','Curioso','Aprendiz','Investigador','Inventor'][min(xp//100,4)],
                     lessons=sum(e['kind']=='exercise' for e in events), quizzes=sum(e['kind']=='quiz' for e in events),
                     cards=self.one('SELECT count(*) n FROM flashcards WHERE user_id=? AND interval>=3', (user,))['n'],
-                    minutes=sum(s['seconds'] for s in sessions)//60, subjects=sessions, week=week)
+                    minutes=sum(s['seconds'] for s in sessions)//60, subjects=sessions, week=week,
+                    adventures_completed=adventures_done, adventures_active=adventure_active,
+                    study_plans=study_plans, study_sessions_active=study_active, simulations=simulations)
 
     def erase_profile(self, user):
         with self.connect() as db:
