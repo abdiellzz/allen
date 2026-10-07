@@ -499,6 +499,17 @@ def create_app(db_path=None, ai=None):
         if value.topic_index>=len(topics): raise HTTPException(422,'Tema fuera de rango.')
         route=topics[value.topic_index].get('route',[])
         if value.step_index>=max(1,len(route)): raise HTTPException(422,'Paso fuera de rango.')
+        # Evaluate evidence from the step the student just completed, not the destination step.
+        previous_topic=''
+        previous_step_type=''
+        try:
+            previous=units[row['unit_index']]['topics'][row['topic_index']]
+            previous_topic=previous.get('title','')
+            previous_route=previous.get('route',[])
+            if previous_route and row['step_index']<len(previous_route):
+                previous_step_type=previous_route[row['step_index']].get('type','')
+        except (IndexError,KeyError,TypeError):
+            pass
         completed_at=now() if value.status=='completed' else None
         db.execute("UPDATE course_enrollments SET unit_index=?,topic_index=?,step_index=?,status=?,updated_at=?,completed_at=? WHERE course_id=? AND user_id=?",
             (value.unit_index,value.topic_index,value.step_index,value.status,now(),completed_at,cid,value.profile_id))
@@ -506,9 +517,9 @@ def create_app(db_path=None, ai=None):
         db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",
             (value.profile_id,'course',row['id'],row['subject'],topic,value.status,now()))
         if value.status=='completed':
-            record_event(db,value.profile_id,'lesson_completed',row['subject'],topic,reference_type='course',reference_id=cid)
-        else:
-            record_event(db,value.profile_id,'topic_practiced',row['subject'],topic,reference_type='course',reference_id=cid)
+            record_event(db,value.profile_id,'lesson_completed',row['subject'],previous_topic or topic,reference_type='course',reference_id=cid)
+        elif previous_step_type in ('retrieval','practice','quiz','review'):
+            record_event(db,value.profile_id,'topic_practiced',row['subject'],previous_topic or topic,reference_type='course',reference_id=cid,metadata={'step_type':previous_step_type})
         return {'ok':True}
 
     @app.get('/api/continuity')
