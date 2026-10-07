@@ -81,7 +81,7 @@ function methodText(type){
 export async function bindPlanAllen(root,{api,profileId,profile,go,toast}){
  const form=root.querySelector('#study-plan-form'),current=root.querySelector('#study-plan-current'),stage=root.querySelector('#study-session-stage');
  const level=root.querySelector('#plan-level'); if(level&&profile?.level)level.value=profile.level;
- try{const prefill=JSON.parse(sessionStorage.getItem('allen-plan-prefill')||'null');if(prefill){if(prefill.subject)root.querySelector('#plan-subject').value=prefill.subject;root.querySelector('#plan-goal').value='Prepararme para examen';sessionStorage.removeItem('allen-plan-prefill');}}catch{}
+ try{const prefill=JSON.parse(sessionStorage.getItem('allen-plan-prefill')||'null');if(prefill){if(prefill.subject)root.querySelector('#plan-subject').value=prefill.subject;if(Array.isArray(prefill.topics))root.querySelector('#plan-topics').value=prefill.topics.join(', ');root.querySelector('#plan-goal').value=prefill.goal||'Prepararme para examen';sessionStorage.removeItem('allen-plan-prefill');}}catch{}
  const deadline=root.querySelector('#plan-deadline');if(deadline){const d=new Date();d.setDate(d.getDate()+7);deadline.value=d.toISOString().slice(0,10);deadline.min=new Date().toISOString().slice(0,10);}
  async function refresh(){
   const plans=await api('/study-plans?profile_id='+profileId);
@@ -107,15 +107,29 @@ export async function bindPlanAllen(root,{api,profileId,profile,go,toast}){
  function renderSimulation(sim){
   stopTimer();
   const saved=Array.isArray(sim.answers)?sim.answers:[];
-  simulationStage.innerHTML=`<section class="simulation-shell" data-sim-id="${sim.id}"><div class="row spaced"><div><span class="eyebrow">SIMULACRO EN CURSO</span><h2>${esc(sim.subject)}</h2></div><div class="simulation-meta"><strong>${sim.questions.length} preguntas</strong><span id="sim-timer">${sim.minutes>0?sim.minutes+':00':'Sin límite de tiempo'}</span></div></div><progress value="${saved.filter(Boolean).length}" max="${sim.questions.length}" aria-label="Progreso del simulacro"></progress><form id="simulation-answers">${sim.questions.map((q,i)=>`<fieldset><legend>${i+1}. ${esc(q.prompt)}</legend>${(q.options||[]).map(o=>`<label class="answer-option"><input type="radio" name="sim-${i}" value="${esc(o)}" ${saved[i]===o?'checked':''} required><span>${esc(o)}</span></label>`).join('')}</fieldset>`).join('')}<button class="primary">Entregar simulacro</button></form></section>`;
+  let seconds=sim.minutes>0?(Number.isFinite(Number(sim.remaining_seconds))&&Number(sim.remaining_seconds)>0?Number(sim.remaining_seconds):sim.minutes*60):0;
+  const formatTime=value=>{const m=Math.max(0,Math.floor(value/60)),sec=Math.max(0,value%60);return m+':'+String(sec).padStart(2,'0');};
+  simulationStage.innerHTML=`<section class="simulation-shell" data-sim-id="${sim.id}"><div class="row spaced"><div><span class="eyebrow">SIMULACRO EN CURSO</span><h2>${esc(sim.subject)}</h2></div><div class="simulation-meta"><strong>${sim.questions.length} preguntas</strong><span id="sim-timer">${sim.minutes>0?formatTime(seconds):'Sin límite de tiempo'}</span></div></div><progress value="${saved.filter(Boolean).length}" max="${sim.questions.length}" aria-label="Progreso del simulacro"></progress><form id="simulation-answers">${sim.questions.map((q,i)=>`<fieldset><legend>${i+1}. ${esc(q.prompt)}</legend>${(q.options||[]).map(o=>`<label class="answer-option"><input type="radio" name="sim-${i}" value="${esc(o)}" ${saved[i]===o?'checked':''} required><span>${esc(o)}</span></label>`).join('')}</fieldset>`).join('')}<button class="primary">Entregar simulacro</button></form></section>`;
   const formEl=simulationStage.querySelector('#simulation-answers');
-  formEl.addEventListener('change',async()=>{const answers=sim.questions.map((_,i)=>simulationStage.querySelector(`input[name="sim-${i}"]:checked`)?.value||'');simulationStage.querySelector('progress').value=answers.filter(Boolean).length;await api('/simulations/'+sim.id+'/progress','POST',{profile_id:profileId,answers,status:'active'}).catch(()=>{});});
+  const collectAnswers=()=>sim.questions.map((_,i)=>simulationStage.querySelector(`input[name="sim-${i}"]:checked`)?.value||'');
+  const persist=async(status='active')=>api('/simulations/'+sim.id+'/progress','POST',{profile_id:profileId,answers:collectAnswers(),status,remaining_seconds:sim.minutes>0?seconds:null}).catch(()=>{});
+  formEl.addEventListener('change',async()=>{const answers=collectAnswers();simulationStage.querySelector('progress').value=answers.filter(Boolean).length;await persist('active');});
   if(sim.minutes>0){
-   let seconds=sim.minutes*60;
    const timer=simulationStage.querySelector('#sim-timer');
-   simulationTimer=setInterval(async()=>{seconds--;const m=Math.max(0,Math.floor(seconds/60)),sec=Math.max(0,seconds%60);if(timer)timer.textContent=m+':'+String(sec).padStart(2,'0');if(seconds<=0){stopTimer();const answers=sim.questions.map((_,i)=>simulationStage.querySelector(`input[name="sim-${i}"]:checked`)?.value||'');await api('/simulations/'+sim.id+'/progress','POST',{profile_id:profileId,answers,status:'interrupted'}).catch(()=>{});toast('Terminó el tiempo. Puedes completar las respuestas y entregar cuando estés listo.');}},1000);
+   let ticks=0;
+   simulationTimer=setInterval(async()=>{
+    seconds=Math.max(0,seconds-1);ticks++;
+    if(timer)timer.textContent=formatTime(seconds);
+    if(seconds===0){
+      stopTimer();
+      await persist('interrupted');
+      toast('Terminó el tiempo. Tus respuestas y el tiempo quedaron guardados.');
+      return;
+    }
+    if(ticks%10===0)await persist('active');
+   },1000);
   }
-  formEl.onsubmit=async ev=>{ev.preventDefault();stopTimer();const answers=sim.questions.map((_,i)=>simulationStage.querySelector(`input[name="sim-${i}"]:checked`)?.value||'');const result=await api('/simulations/'+sim.id+'/submit','POST',{profile_id:profileId,answers});const total=result.total||sim.questions.length,score=result.score||0,pct=Math.round(score/Math.max(1,total)*100);simulationStage.innerHTML=`<section class="simulation-result" data-result-sim="${sim.id}"><img src="/static/assets/allen-complete.svg" alt=""><div><span class="eyebrow">RESULTADO</span><h2>${score}/${total} · ${pct}%</h2><p><b>Fuerte:</b> ${esc((result.mastered||[]).join(', ')||'en construcción')}</p><p><b>Reforzar:</b> ${esc((result.review||[]).join(', ')||'ninguno destacado')}</p><div class="row"><button class="primary" id="create-reinforcement">Crear Plan de Refuerzo</button><button data-page="Progreso">Ver progreso</button></div></div></section>`;const reinforce=simulationStage.querySelector('#create-reinforcement');reinforce.onclick=async()=>{const created=await api('/simulations/'+sim.id+'/reinforcement?profile_id='+profileId,'POST',{});if(created.plan_id){toast('Plan de refuerzo creado.');await refresh();current.scrollIntoView({behavior:'smooth',block:'start'});}else toast(created.message||'No necesitas un refuerzo adicional ahora.');};};
+  formEl.onsubmit=async ev=>{ev.preventDefault();stopTimer();const answers=collectAnswers();const result=await api('/simulations/'+sim.id+'/submit','POST',{profile_id:profileId,answers});const total=result.total||sim.questions.length,score=result.score||0,pct=Math.round(score/Math.max(1,total)*100);simulationStage.innerHTML=`<section class="simulation-result" data-result-sim="${sim.id}"><img src="/static/assets/allen-celebrate-official.svg" alt="Allen celebrando"><div><span class="eyebrow">RESULTADO</span><h2>${score}/${total} · ${pct}%</h2><p><b>Fuerte:</b> ${esc((result.mastered||[]).join(', ')||'en construcción')}</p><p><b>Reforzar:</b> ${esc((result.review||[]).join(', ')||'ninguno destacado')}</p><div class="row"><button class="primary" id="create-reinforcement">Crear Plan de Refuerzo</button><button data-page="Progreso">Ver progreso</button></div></div></section>`;const reinforce=simulationStage.querySelector('#create-reinforcement');reinforce.onclick=async()=>{const created=await api('/simulations/'+sim.id+'/reinforcement?profile_id='+profileId,'POST',{});if(created.plan_id){toast('Plan de refuerzo creado.');await refresh();current.scrollIntoView({behavior:'smooth',block:'start'});}else toast(created.message||'No necesitas un refuerzo adicional ahora.');};};
  }
  simulationForm.onsubmit=async e=>{e.preventDefault();try{
   const timed=root.querySelector('#sim-timed').value==='true';

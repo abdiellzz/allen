@@ -21,10 +21,20 @@ CREATE TABLE IF NOT EXISTS study_sessions(id INTEGER PRIMARY KEY, user_id INTEGE
 CREATE TABLE IF NOT EXISTS study_session_events(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, session_id INTEGER REFERENCES study_sessions(id) ON DELETE CASCADE, kind TEXT NOT NULL, activity_index INTEGER NOT NULL, note TEXT NOT NULL, created TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS adventure_sessions(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, adventure_id TEXT NOT NULL, status TEXT NOT NULL, current_step INTEGER NOT NULL DEFAULT 0, completed_steps INTEGER NOT NULL DEFAULT 0, answers TEXT NOT NULL DEFAULT '[]', mistakes INTEGER NOT NULL DEFAULT 0, hints_used INTEGER NOT NULL DEFAULT 0, started_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT);
 CREATE TABLE IF NOT EXISTS adventure_events(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, session_id INTEGER REFERENCES adventure_sessions(id) ON DELETE CASCADE, event TEXT NOT NULL, step INTEGER NOT NULL, answer TEXT NOT NULL DEFAULT '', correct INTEGER, created TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS simulation_results(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, subject TEXT NOT NULL, topics TEXT NOT NULL, questions TEXT NOT NULL, result TEXT, minutes INTEGER NOT NULL, started_at TEXT NOT NULL, completed_at TEXT, status TEXT NOT NULL DEFAULT 'active', answers TEXT NOT NULL DEFAULT '[]', updated_at TEXT);
+CREATE TABLE IF NOT EXISTS simulation_results(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, subject TEXT NOT NULL, topics TEXT NOT NULL, questions TEXT NOT NULL, result TEXT, minutes INTEGER NOT NULL, started_at TEXT NOT NULL, completed_at TEXT, status TEXT NOT NULL DEFAULT 'active', answers TEXT NOT NULL DEFAULT '[]', updated_at TEXT, remaining_seconds INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS topic_mastery(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, subject TEXT NOT NULL, topic TEXT NOT NULL, mastery_score INTEGER NOT NULL DEFAULT 0, confidence INTEGER NOT NULL DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0, correct_answers INTEGER NOT NULL DEFAULT 0, incorrect_answers INTEGER NOT NULL DEFAULT 0, hints_used INTEGER NOT NULL DEFAULT 0, explanations_requested INTEGER NOT NULL DEFAULT 0, practice_count INTEGER NOT NULL DEFAULT 0, quiz_count INTEGER NOT NULL DEFAULT 0, last_seen TEXT, next_review TEXT, difficulty TEXT NOT NULL DEFAULT 'Normal', status TEXT NOT NULL DEFAULT 'new', UNIQUE(user_id,subject,topic));
 CREATE TABLE IF NOT EXISTS learning_events(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, event_type TEXT NOT NULL, subject TEXT NOT NULL DEFAULT '', topic TEXT NOT NULL DEFAULT '', reference_type TEXT NOT NULL DEFAULT '', reference_id INTEGER, metadata_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS profile_current_activity(user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, activity_type TEXT NOT NULL, reference_id INTEGER, subject TEXT NOT NULL DEFAULT '', topic TEXT NOT NULL DEFAULT '', status TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS teacher_documents(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, title TEXT NOT NULL, filename TEXT NOT NULL, mime TEXT NOT NULL, page_count INTEGER NOT NULL, source_text TEXT NOT NULL, pages_json TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS courses(id INTEGER PRIMARY KEY, owner_profile_id INTEGER REFERENCES users(id) ON DELETE CASCADE, source_document_id INTEGER REFERENCES teacher_documents(id) ON DELETE SET NULL, title TEXT NOT NULL, subject TEXT NOT NULL, level TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft', version INTEGER NOT NULL DEFAULT 1, structure_json TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, published_at TEXT);
+CREATE TABLE IF NOT EXISTS course_enrollments(id INTEGER PRIMARY KEY, course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, status TEXT NOT NULL DEFAULT 'active', unit_index INTEGER NOT NULL DEFAULT 0, topic_index INTEGER NOT NULL DEFAULT 0, step_index INTEGER NOT NULL DEFAULT 0, started_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT, UNIQUE(course_id,user_id));
+CREATE TABLE IF NOT EXISTS course_exam_results(id INTEGER PRIMARY KEY, course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, answers_json TEXT NOT NULL, result_json TEXT NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS course_exam_sessions(id INTEGER PRIMARY KEY, course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, answers_json TEXT NOT NULL DEFAULT '[]', status TEXT NOT NULL DEFAULT 'active', started_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(course_id,user_id));
+CREATE INDEX IF NOT EXISTS idx_course_exam_session_user ON course_exam_sessions(user_id,status,updated_at);
+CREATE INDEX IF NOT EXISTS idx_course_exam_user ON course_exam_results(user_id,course_id,created_at);
+CREATE INDEX IF NOT EXISTS idx_courses_status_subject ON courses(status,subject,updated_at);
+CREATE INDEX IF NOT EXISTS idx_course_enrollment_user ON course_enrollments(user_id,status,updated_at);
+CREATE INDEX IF NOT EXISTS idx_teacher_docs_user ON teacher_documents(user_id,created_at);
 CREATE INDEX IF NOT EXISTS idx_mastery_user_status ON topic_mastery(user_id,status,mastery_score);
 CREATE INDEX IF NOT EXISTS idx_mastery_review ON topic_mastery(user_id,next_review);
 CREATE INDEX IF NOT EXISTS idx_learning_events_user_created ON learning_events(user_id,created_at);
@@ -32,7 +42,7 @@ CREATE INDEX IF NOT EXISTS idx_adventure_user_status ON adventure_sessions(user_
 CREATE INDEX IF NOT EXISTS idx_study_sessions_user_status ON study_sessions(user_id,status,last_activity_at);
 CREATE INDEX IF NOT EXISTS idx_flashcards_user_due ON flashcards(user_id,due);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_study_session_unique_day ON study_sessions(user_id,plan_id,day);
-PRAGMA user_version=6;
+PRAGMA user_version=7;
 '''
 
 def now():
@@ -60,6 +70,7 @@ class Database:
                 'status':"ALTER TABLE simulation_results ADD COLUMN status TEXT NOT NULL DEFAULT 'active'",
                 'answers':"ALTER TABLE simulation_results ADD COLUMN answers TEXT NOT NULL DEFAULT '[]'",
                 'updated_at':"ALTER TABLE simulation_results ADD COLUMN updated_at TEXT",
+                'remaining_seconds':"ALTER TABLE simulation_results ADD COLUMN remaining_seconds INTEGER NOT NULL DEFAULT 0",
             }
             for column,sql in sim_migrations.items():
                 if column not in sim_existing: db.execute(sql)

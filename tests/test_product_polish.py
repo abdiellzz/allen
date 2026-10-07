@@ -70,3 +70,15 @@ def test_backup_validate_restore_roundtrip():
         assert restored.status_code==200
         assert c.get('/api/flashcards?profile_id=1').json()
         c.close()
+
+
+def test_simulation_remaining_time_persists():
+    with tempfile.TemporaryDirectory() as tmp:
+        path=Path(tmp)/'allen.sqlite3'
+        c=make_client(path)
+        sim=c.post('/api/simulations',json={'profile_id':1,'subject':'Redes','topics':['IPv4 y CIDR'],'question_count':3,'minutes':20,'timed':True,'level':'Premedia'}).json()
+        saved=c.post(f"/api/simulations/{sim['id']}/progress",json={'profile_id':1,'answers':['','',''],'status':'active','remaining_seconds':713})
+        assert saved.status_code==200
+        active=c.get('/api/simulations/active?profile_id=1').json()
+        assert active['remaining_seconds']==713
+        c.close()

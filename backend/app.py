@@ -20,7 +20,7 @@ from .ai import LocalAI
 from .database import Database, now
 from .education import catalog, generate, grade
 from .library import Library
-from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress
+from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport, CourseHelp, CourseExamProgress
 from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
@@ -29,6 +29,7 @@ from .learning_events import record_event
 from .learning_engine import recommend_next_action
 from .recommendations import build_recommendation
 from .backup import export_backup, validate_backup, restore_backup
+from .course_builder import decode_source, build_course, course_pack, validate_course_structure
 
 ROOT=Path(__file__).resolve().parent.parent
 
@@ -65,14 +66,15 @@ def create_app(db_path=None, ai=None):
         if request.method in ('POST','PUT','DELETE','PATCH'):
             if not secrets.compare_digest(request.headers.get('x-allen-token',''),token):
                 return JSONResponse({'error':'Recarga Allen para continuar.'},403)
+            max_body=12_500_000 if request.url.path=='/api/teacher/import' else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 5_500_000 if request.url.path.startswith('/api/backup/') else 200000
             try:
-                if int(request.headers.get('content-length','0'))>200000:
-                    return JSONResponse({'error':'El texto es demasiado largo.'},413)
+                if int(request.headers.get('content-length','0'))>max_body:
+                    return JSONResponse({'error':'El archivo o texto es demasiado largo.'},413)
             except ValueError:
                 return JSONResponse({'error':'Solicitud no válida.'},400)
             body=await request.body()
-            if len(body)>200000:
-                return JSONResponse({'error':'El texto es demasiado largo.'},413)
+            if len(body)>max_body:
+                return JSONResponse({'error':'El archivo o texto es demasiado largo.'},413)
         response=await call_next(request)
         response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
         response.headers['X-Content-Type-Options']='nosniff'
@@ -281,6 +283,245 @@ def create_app(db_path=None, ai=None):
         return db.one('SELECT * FROM study_sessions WHERE id=?',(sid,))
 
 
+    @app.post('/api/teacher/import')
+    def teacher_import(value:TeacherImport):
+        user(value.profile_id)
+        try:
+            extracted=decode_source(value.filename,value.mime,value.content_base64)
+            structure=build_course(value.title,value.subject,value.level,extracted['pages'],extracted['text'])
+        except ValueError as exc:
+            raise HTTPException(422,str(exc))
+        doc_id=db.execute('INSERT INTO teacher_documents(user_id,title,filename,mime,page_count,source_text,pages_json,created_at) VALUES(?,?,?,?,?,?,?,?)',
+            (value.profile_id,value.title,value.filename,value.mime,extracted['page_count'],extracted['text'],json.dumps(extracted['pages'],ensure_ascii=False),now()))
+        cid=db.execute("INSERT INTO courses(owner_profile_id,source_document_id,title,subject,level,status,version,structure_json,created_at,updated_at) VALUES(?,?,?,?,?,'draft',1,?,?,?)",
+            (value.profile_id,doc_id,value.title,value.subject,value.level,json.dumps(structure,ensure_ascii=False),now(),now()))
+        return {'course_id':cid,'document_id':doc_id,'structure':structure}
+
+    @app.post('/api/teacher/packs/import')
+    def import_course_pack(value:CoursePackImport):
+        user(value.profile_id)
+        pack=value.pack
+        if pack.get('format')!='allen-course-pack' or pack.get('version')!=1:
+            raise HTTPException(422,'Course Pack no compatible.')
+        structure=pack.get('course')
+        try: validate_course_structure(structure)
+        except ValueError as exc: raise HTTPException(422,str(exc))
+        title=str(structure.get('title') or 'Curso importado')[:140]
+        subject=str(structure.get('subject') or 'General')[:80]
+        level=str(structure.get('level') or 'Premedia')
+        structure['status']='draft'
+        cid=db.execute("INSERT INTO courses(owner_profile_id,source_document_id,title,subject,level,status,version,structure_json,created_at,updated_at) VALUES(?,?,?, ?,?,'draft',1,?,?,?)",
+            (value.profile_id,None,title,subject,level,json.dumps(structure,ensure_ascii=False),now(),now()))
+        return {'course_id':cid,'status':'draft'}
+
+    @app.get('/api/teacher/courses')
+    def teacher_courses(profile_id:int=1):
+        user(profile_id)
+        rows=db.all("SELECT id,title,subject,level,status,version,created_at,updated_at,published_at,structure_json FROM courses WHERE owner_profile_id=? ORDER BY updated_at DESC",(profile_id,))
+        for row in rows:
+            structure=json.loads(row.pop('structure_json'))
+            row['coverage']=structure.get('coverage',{})
+        return rows
+
+    @app.get('/api/teacher/courses/{cid}')
+    def teacher_course(cid:int,profile_id:int=1):
+        user(profile_id)
+        row=db.one("SELECT * FROM courses WHERE id=? AND owner_profile_id=?",(cid,profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese curso.')
+        row['structure']=json.loads(row.pop('structure_json'))
+        if row.get('source_document_id'):
+            doc=db.one("SELECT id,title,filename,mime,page_count,created_at FROM teacher_documents WHERE id=? AND user_id=?",(row['source_document_id'],profile_id))
+        else: doc=None
+        row['document']=doc
+        return row
+
+    @app.put('/api/teacher/courses/{cid}/review')
+    def review_course(cid:int,value:CourseReview):
+        user(value.profile_id)
+        row=db.one("SELECT id FROM courses WHERE id=? AND owner_profile_id=?",(cid,value.profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese curso.')
+        try: validate_course_structure(value.structure)
+        except ValueError as exc: raise HTTPException(422,str(exc))
+        value.structure['status']='reviewed'
+        db.execute("UPDATE courses SET status='reviewed',structure_json=?,updated_at=? WHERE id=?",(json.dumps(value.structure,ensure_ascii=False),now(),cid))
+        return {'ok':True}
+
+    @app.post('/api/teacher/courses/{cid}/publish')
+    def publish_course(cid:int,value:CoursePublish):
+        user(value.profile_id)
+        row=db.one("SELECT * FROM courses WHERE id=? AND owner_profile_id=?",(cid,value.profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese curso.')
+        structure=json.loads(row['structure_json'])
+        try: validate_course_structure(structure)
+        except ValueError as exc: raise HTTPException(422,str(exc))
+        if row['status']=='draft':
+            raise HTTPException(409,'Revisa y aprueba el curso antes de publicarlo.')
+        db.execute("UPDATE courses SET status='published',published_at=?,updated_at=? WHERE id=?",(now(),now(),cid))
+        return {'ok':True,'course_id':cid}
+
+    @app.get('/api/teacher/courses/{cid}/pack')
+    def export_course_pack(cid:int,profile_id:int=1):
+        user(profile_id)
+        row=db.one("SELECT * FROM courses WHERE id=? AND owner_profile_id=?",(cid,profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese curso.')
+        doc=db.one("SELECT title,filename,page_count FROM teacher_documents WHERE id=?",(row['source_document_id'],)) if row['source_document_id'] else {}
+        return course_pack(json.loads(row['structure_json']),doc or {})
+
+    @app.get('/api/courses')
+    def available_courses(profile_id:int=1):
+        user(profile_id)
+        rows=db.all("SELECT id,title,subject,level,version,structure_json FROM courses WHERE status='published' ORDER BY updated_at DESC LIMIT 100")
+        enrolled={r['course_id']:r for r in db.all("SELECT * FROM course_enrollments WHERE user_id=?",(profile_id,))}
+        out=[]
+        for row in rows:
+            structure=json.loads(row.pop('structure_json'))
+            out.append({**row,'coverage':structure.get('coverage',{}),'enrollment':enrolled.get(row['id'])})
+        return out
+
+    @app.post('/api/courses/{cid}/enroll')
+    def enroll_course(cid:int,value:CourseEnroll):
+        user(value.profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        existing=db.one("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        if existing:return existing
+        eid=db.execute("INSERT INTO course_enrollments(course_id,user_id,status,unit_index,topic_index,step_index,started_at,updated_at) VALUES(?,?, 'active',0,0,0,?,?)",(cid,value.profile_id,now(),now()))
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'course',eid,course['subject'],'','active',now()))
+        return db.one("SELECT * FROM course_enrollments WHERE id=?",(eid,))
+
+    @app.get('/api/courses/{cid}/route')
+    def course_route(cid:int,profile_id:int=1):
+        user(profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        enrollment=db.one("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,profile_id))
+        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+        return {'course':{'id':cid,'title':course['title'],'subject':course['subject'],'level':course['level'],'structure':json.loads(course['structure_json'])},'enrollment':enrollment}
+
+    @app.get('/api/courses/{cid}/exam')
+    def course_exam(cid:int,profile_id:int=1):
+        user(profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        enrollment=db.one("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,profile_id))
+        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+        structure=json.loads(course['structure_json'])
+        questions=structure.get('final_exam',[])
+        if not questions: raise HTTPException(409,'Este curso todavía no tiene examen final.')
+        safe=[{'topic':q.get('topic',''),'prompt':q.get('prompt',''),'options':q.get('options',[]),'source':q.get('source',{})} for q in questions]
+        session=db.one("SELECT * FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,profile_id))
+        if not session:
+            sid=db.execute("INSERT INTO course_exam_sessions(course_id,user_id,answers_json,status,started_at,updated_at) VALUES(?,?,?,'active',?,?)",(cid,profile_id,json.dumps(['']*len(questions)),now(),now()))
+            session=db.one("SELECT * FROM course_exam_sessions WHERE id=?",(sid,))
+        answers=json.loads(session['answers_json'] or '[]')
+        return {'course':{'id':cid,'title':course['title'],'subject':course['subject']},'questions':safe,'answers':answers,'exam_session_id':session['id']}
+
+    @app.post('/api/courses/{cid}/exam/progress')
+    def save_course_exam_progress(cid:int,value:CourseExamProgress):
+        user(value.profile_id)
+        course=db.one("SELECT id FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        enrollment=db.one("SELECT id FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+        existing=db.one("SELECT id FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        payload=json.dumps(value.answers,ensure_ascii=False)
+        if existing:
+            db.execute("UPDATE course_exam_sessions SET answers_json=?,status=?,updated_at=? WHERE id=?",(payload,value.status,now(),existing['id']))
+        else:
+            db.execute("INSERT INTO course_exam_sessions(course_id,user_id,answers_json,status,started_at,updated_at) VALUES(?,?,?,?,?,?)",(cid,value.profile_id,payload,value.status,now(),now()))
+        return {'ok':True}
+
+    @app.post('/api/courses/{cid}/exam/submit')
+    def submit_course_exam(cid:int,value:Submission):
+        user(value.profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        enrollment=db.one("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+        structure=json.loads(course['structure_json'])
+        questions=structure.get('final_exam',[])
+        if len(value.answers)!=len(questions): raise HTTPException(422,'Responde todas las preguntas del examen.')
+        feedback=[];score=0
+        for q,answer in zip(questions,value.answers):
+            correct=answer==q.get('correct')
+            score+=int(correct)
+            feedback.append({'topic':q.get('topic',''),'correct':correct,'answer':answer,'correct_answer':q.get('correct',''),'source':q.get('source',{})})
+            record_event(db,value.profile_id,'question_answered',course['subject'],q.get('topic',''),reference_type='course_exam',reference_id=cid,metadata={'correct':correct,'difficulty':'Normal'})
+        total=len(questions)
+        weak=list(dict.fromkeys(x['topic'] for x in feedback if not x['correct']))
+        strong=list(dict.fromkeys(x['topic'] for x in feedback if x['correct']))
+        result={'score':score,'total':total,'percentage':round(score/max(1,total)*100),'strong_topics':strong,'weak_topics':weak,'feedback':feedback}
+        db.execute("INSERT INTO course_exam_results(course_id,user_id,answers_json,result_json,created_at) VALUES(?,?,?,?,?)",(cid,value.profile_id,json.dumps(value.answers,ensure_ascii=False),json.dumps(result,ensure_ascii=False),now()))
+        db.execute("DELETE FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        db.execute("UPDATE course_enrollments SET status='completed',completed_at=?,updated_at=? WHERE course_id=? AND user_id=?",(now(),now(),cid,value.profile_id))
+        db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
+        record_event(db,value.profile_id,'quiz_completed',course['subject'],'Examen final',reference_type='course_exam',reference_id=cid,metadata={'score':score,'total':total,'difficulty':'Normal'})
+        return result
+
+    @app.post('/api/courses/{cid}/help')
+    def course_help(cid:int,value:CourseHelp):
+        user(value.profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        enrollment=db.one("SELECT id FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+        structure=json.loads(course['structure_json'])
+        try:
+            topic=structure['units'][value.unit_index]['topics'][value.topic_index]
+        except (IndexError,KeyError,TypeError):
+            raise HTTPException(422,'Tema fuera de rango.')
+        count=db.one("SELECT count(*) n FROM learning_events WHERE user_id=? AND event_type='explanation_requested' AND reference_type='course' AND reference_id=? AND topic=?",(value.profile_id,cid,topic['title']))['n']
+        level=min(4,count+1)
+        record_event(db,value.profile_id,'explanation_requested',course['subject'],topic['title'],reference_type='course',reference_id=cid,metadata={'help_level':level})
+        if level==1:
+            title='Vamos más simple'
+            text=topic.get('objective','').replace('Explicar y aplicar','La idea que queremos entender es')
+        elif level==2:
+            title='Miremos un ejemplo concreto'
+            text=topic.get('source_excerpt','')[:500]
+        elif level==3:
+            title='Conectemos las piezas'
+            text='Lee el fragmento y dime qué palabras o relaciones reconoces: '+topic.get('source_excerpt','')[:420]
+        else:
+            title='Probemos con una mini práctica'
+            text=(topic.get('questions') or [{'prompt':'Explícalo con tus propias palabras.'}])[0].get('prompt','Explícalo con tus propias palabras.')
+        return {'level':level,'title':title,'text':text,'topic':topic['title'],'source':topic.get('source',{})}
+
+    @app.post('/api/courses/{cid}/progress')
+    def update_course_progress(cid:int,value:CourseProgress):
+        user(value.profile_id)
+        row=db.one("SELECT ce.*,c.subject,c.structure_json FROM course_enrollments ce JOIN courses c ON c.id=ce.course_id WHERE ce.course_id=? AND ce.user_id=?",(cid,value.profile_id))
+        if not row: raise HTTPException(404,'No encontramos tu progreso en este curso.')
+        structure=json.loads(row['structure_json'])
+        units=structure.get('units',[])
+        if value.unit_index>=len(units): raise HTTPException(422,'Unidad fuera de rango.')
+        topics=units[value.unit_index].get('topics',[])
+        if value.topic_index>=len(topics): raise HTTPException(422,'Tema fuera de rango.')
+        route=topics[value.topic_index].get('route',[])
+        if value.step_index>=max(1,len(route)): raise HTTPException(422,'Paso fuera de rango.')
+        # Evaluate evidence from the step the student just completed, not the destination step.
+        previous_topic=''
+        previous_step_type=''
+        try:
+            previous=units[row['unit_index']]['topics'][row['topic_index']]
+            previous_topic=previous.get('title','')
+            previous_route=previous.get('route',[])
+            if previous_route and row['step_index']<len(previous_route):
+                previous_step_type=previous_route[row['step_index']].get('type','')
+        except (IndexError,KeyError,TypeError):
+            pass
+        completed_at=now() if value.status=='completed' else None
+        db.execute("UPDATE course_enrollments SET unit_index=?,topic_index=?,step_index=?,status=?,updated_at=?,completed_at=? WHERE course_id=? AND user_id=?",
+            (value.unit_index,value.topic_index,value.step_index,value.status,now(),completed_at,cid,value.profile_id))
+        topic=topics[value.topic_index].get('title','')
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",
+            (value.profile_id,'course',row['id'],row['subject'],topic,value.status,now()))
+        if value.status=='completed':
+            record_event(db,value.profile_id,'lesson_completed',row['subject'],previous_topic or topic,reference_type='course',reference_id=cid)
+        elif previous_step_type in ('retrieval','practice','quiz','review'):
+            record_event(db,value.profile_id,'topic_practiced',row['subject'],previous_topic or topic,reference_type='course',reference_id=cid,metadata={'step_type':previous_step_type})
+        return {'ok':True}
+
     @app.get('/api/continuity')
     def continuity(profile_id:int=1):
         user(profile_id)
@@ -383,7 +624,7 @@ def create_app(db_path=None, ai=None):
         topic=value.topics[0]
         request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=value.question_count,kind='multiple')
         questions=generate(request)
-        sid=db.execute("INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at,status,answers,updated_at) VALUES(?,?,?,?,NULL,?,?,'active','[]',?)",(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),(value.minutes if value.timed else 0),now(),now()))
+        sid=db.execute("INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at,status,answers,updated_at,remaining_seconds) VALUES(?,?,?,?,NULL,?,?,'active','[]',?,?)",(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),(value.minutes if value.timed else 0),now(),now(),(value.minutes*60 if value.timed else 0)))
         db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'simulation',sid,value.subject,value.topics[0] if value.topics else '','active',now()))
         return dict(id=sid,subject=value.subject,topics=value.topics,questions=questions,minutes=(value.minutes if value.timed else 0),timed=value.timed)
 
@@ -400,7 +641,7 @@ def create_app(db_path=None, ai=None):
         user(value.profile_id)
         row=db.one('SELECT id FROM simulation_results WHERE id=? AND user_id=?',(sid,value.profile_id))
         if not row:raise HTTPException(404,'No encontramos ese simulacro.')
-        db.execute('UPDATE simulation_results SET answers=?,status=?,updated_at=? WHERE id=?',(json.dumps(value.answers,ensure_ascii=False),value.status,now(),sid))
+        db.execute('UPDATE simulation_results SET answers=?,status=?,updated_at=?,remaining_seconds=COALESCE(?,remaining_seconds) WHERE id=?',(json.dumps(value.answers,ensure_ascii=False),value.status,now(),value.remaining_seconds,sid))
         db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) SELECT user_id,'simulation',id,subject,'',?,? FROM simulation_results WHERE id=?",(value.status,now(),sid))
         return {'ok':True}
 

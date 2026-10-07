@@ -1,6 +1,10 @@
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 export function continuityPanel(c){
+ if(c?.current_activity?.activity_type==='course'&&['active','paused'].includes(c.current_activity.status)){
+  const topicText=c.current_activity.topic?('Tema: '+esc(c.current_activity.topic)+'. '):'';
+  return `<section class="continuity-card primary-continuity"><img src="/static/assets/allen-course-official.svg" alt=""><div><span class="eyebrow">CONTINÚA DONDE LO DEJASTE</span><h2>${esc(c.current_activity.subject||'Tu curso')}</h2><p>${topicText}Allen guardó tu ruta en este dispositivo.</p><button class="primary" data-page="Cursos">Continuar curso</button></div></section>`;
+ }
  if(c.adventure){
   return `<section class="continuity-card primary-continuity"><img src="/static/assets/allen-resume.svg" alt=""><div><span class="eyebrow">CONTINÚA DONDE LO DEJASTE</span><h2>Aventura en curso</h2><p>Paso ${(c.adventure.current_step||0)+1}. Tu progreso está guardado en este dispositivo.</p><button class="primary" data-page="Aventura">Continuar aventura</button></div></section>`;
  }

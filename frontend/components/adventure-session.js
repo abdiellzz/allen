@@ -28,7 +28,7 @@ export async function adventureContinuityPage(api,profileId){
  const active=await api('/adventures/active?profile_id='+profileId);
  const activeMission=active&&missions.find(m=>m.id===active.adventure_id);
  return `<div class="v2-page-heading"><div><span class="eyebrow">APRENDE HACIENDO</span><h1>Aventura con Allen</h1><p>Tu progreso se guarda en este dispositivo. Puedes cerrar ALLEN y continuar después.</p></div></div>
- ${activeMission?`<section class="continuity-hero"><img src="/static/assets/allen-resume.svg" alt="Allen listo para continuar"><div><span class="eyebrow">CONTINÚA TU AVENTURA</span><h2>${esc(activeMission.title)}</h2><p>Paso ${(active.current_step||0)+1} de ${activeMission.steps.length}. No se termina hasta que tú lo decidas.</p><button class="primary" data-resume-active>Continuar aventura</button></div></section>`:''}
+ ${activeMission?`<section class="continuity-hero"><img src="/static/assets/allen-guide.svg" alt="Allen listo para continuar"><div><span class="eyebrow">CONTINÚA TU AVENTURA</span><h2>${esc(activeMission.title)}</h2><p>Paso ${(active.current_step||0)+1} de ${activeMission.steps.length}. No se termina hasta que tú lo decidas.</p><button class="primary" data-resume-active>Continuar aventura</button></div></section>`:''}
  <section class="v2-mission-grid">${missions.map(m=>card(m,active)).join('')}</section>
  <div id="persistent-adventure-stage">${activeMission?stage(activeMission,active):''}</div>`;
 }
@@ -59,14 +59,14 @@ export function bindAdventureContinuity(root,profileId,{api,toast,refresh=()=>{}
     stageRoot.innerHTML=stage(mission,updated);
    }else{
     const updated=await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:mission.steps.length,event:'complete',answer:'',correct:null});
-    stageRoot.innerHTML=`<section class="adventure-complete"><img src="/static/assets/allen-celebration.svg" alt="Allen celebrando"><div><span class="eyebrow">AVENTURA COMPLETADA</span><h2>${esc(mission.title)}</h2><p>Completaste ${mission.steps.length} pasos. Errores registrados: ${updated.mistakes}. Pistas usadas: ${updated.hints_used}.</p><button data-page="Progreso">Ver mi progreso</button></div></section>`;toast('Aventura completada y guardada.');
+    stageRoot.innerHTML=`<section class="adventure-complete"><img src="/static/assets/allen-celebrate-official.svg" alt="Allen celebrando"><div><span class="eyebrow">AVENTURA COMPLETADA</span><h2>${esc(mission.title)}</h2><p>Completaste ${mission.steps.length} pasos. Errores registrados: ${updated.mistakes}. Pistas usadas: ${updated.hints_used}.</p><button data-page="Progreso">Ver mi progreso</button></div></section>`;toast('Aventura completada y guardada.');
    }
    return;
   }
   if(e.target.closest('[data-finish-adventure]')){
    if(!confirm('¿Quieres terminar esta aventura? Tu progreso se guardará como finalizado.'))return;
    const updated=await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:index,event:'complete',answer:'',correct:null});
-   stageRoot.innerHTML=`<section class="adventure-complete"><img src="/static/assets/allen-complete.svg" alt="Allen celebrando"><div><h2>Aventura finalizada</h2><p>Tu progreso quedó guardado. Completaste ${updated.completed_steps} pasos y puedes volver cuando quieras.</p><button data-page="Inicio">Volver al inicio</button></div></section>`;toast('Aventura finalizada.');
+   stageRoot.innerHTML=`<section class="adventure-complete"><img src="/static/assets/allen-celebrate-official.svg" alt="Allen celebrando"><div><h2>Aventura finalizada</h2><p>Tu progreso quedó guardado. Completaste ${updated.completed_steps} pasos y puedes volver cuando quieras.</p><button data-page="Inicio">Volver al inicio</button></div></section>`;toast('Aventura finalizada.');
   }
  });
 }
