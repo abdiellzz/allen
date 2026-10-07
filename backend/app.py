@@ -427,8 +427,11 @@ def create_app(db_path=None, ai=None):
             weak=db.all("""SELECT tm.topic,ROUND(AVG(tm.mastery_score),1) mastery,COUNT(*) learners
                 FROM topic_mastery tm JOIN course_enrollments ce ON ce.user_id=tm.user_id
                 WHERE ce.course_id=? AND tm.subject=? GROUP BY tm.topic ORDER BY mastery ASC LIMIT 5""",(course['id'],course['subject']))
+            active_positions=db.all("SELECT unit_index,topic_index,COUNT(*) learners FROM course_enrollments WHERE course_id=? AND status='active' GROUP BY unit_index,topic_index ORDER BY learners DESC LIMIT 5",(course['id'],))
+            help_hotspots=db.all("SELECT topic,COUNT(*) requests FROM learning_events WHERE reference_type='course' AND reference_id=? AND event_type='explanation_requested' GROUP BY topic ORDER BY requests DESC LIMIT 5",(course['id'],))
             out.append({**course,'quality_score':quality['score'],'quality_issues':len(quality['issues']),'enrollments':enrollments,
-                        'completions':completions,'help_requests':helps,'question_bank':question_stats,'weak_topics':weak})
+                        'completions':completions,'help_requests':helps,'question_bank':question_stats,'weak_topics':weak,
+                        'active_positions':active_positions,'help_hotspots':help_hotspots})
         total_enroll=sum(x['enrollments'] for x in out); total_complete=sum(x['completions'] for x in out)
         return {'courses':out,'summary':{'courses':len(out),'enrollments':total_enroll,'completion_rate':round(total_complete/max(1,total_enroll)*100)}}
 
@@ -507,7 +510,15 @@ def create_app(db_path=None, ai=None):
         if not course: raise HTTPException(404,'Ese curso no está publicado.')
         enrollment=db.one("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,profile_id))
         if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
-        return {'course':{'id':cid,'title':course['title'],'subject':course['subject'],'level':course['level'],'structure':json.loads(course['structure_json'])},'enrollment':enrollment}
+        diagnostic=db.one("SELECT result_json FROM diagnostic_results WHERE course_id=? AND user_id=? ORDER BY id DESC LIMIT 1",(cid,profile_id))
+        skip_topics=[]
+        if diagnostic:
+            try:
+                result=json.loads(diagnostic['result_json'])
+                skip_topics=[topic for topic,data in result.get('topics',{}).items() if data.get('percentage',0)>=80]
+            except Exception:
+                pass
+        return {'course':{'id':cid,'title':course['title'],'subject':course['subject'],'level':course['level'],'structure':json.loads(course['structure_json'])},'enrollment':enrollment,'diagnostic_skip_topics':skip_topics}
 
     @app.get('/api/courses/{cid}/exam')
     def course_exam(cid:int,profile_id:int=1):
