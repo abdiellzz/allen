@@ -48,14 +48,17 @@ class LocalAI:
     def messages(self, request, profile, settings, sources):
         system = system_prompt(request, profile, sources)
         budget = settings.context_size-settings.max_tokens-256
-        used = len(system.encode('utf-8'))+len(request.message.encode('utf-8'))
+        # context_size is measured in tokens, not bytes. Use a conservative local
+        # estimate so Spanish prompts are not rejected merely for containing UTF-8 text.
+        estimate=lambda text:max(1,(len(text)+2)//3)
+        used = estimate(system)+estimate(request.message)
         if used > budget:
             raise ValueError('El texto es largo para el contexto configurado. Divídelo en partes o aumenta el contexto en Configuración y en llama.cpp.')
         history=[]
         # Long histories increase prompt-evaluation time on CPU. Keep the most recent
         # turns while preserving enough continuity for tutoring.
         for message in reversed(request.history[-12:]):
-            size=len(message.content.encode('utf-8'))
+            size=estimate(message.content)
             if used+size > budget:
                 break
             history.insert(0,message.model_dump())
