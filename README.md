@@ -21,6 +21,24 @@ Descarga el repositorio como ZIP, extrae la carpeta y ejecuta `install_allen.bat
 
 El instalador no descarga modelos ni ejecutables de IA. Para activar respuestas abiertas, instala una versión confiable de llama.cpp, coloca un modelo GGUF con licencia adecuada y crea `%LOCALAPPDATA%\ALLEN\local_model.json` siguiendo `config/local_model.example.json`. Sin ese paso, ALLEN funciona en modo demo con sus actividades locales.
 
+
+## Allen como guía y Teacher Studio
+
+ALLEN trata a la mascota oficial como parte de la experiencia educativa, no solo como decoración. El mismo mono naranja se reutiliza en bienvenida, explicaciones, continuidad, progreso, cursos y celebraciones, con variantes de pose que conservan su diseño base.
+
+La sección **Cursos** permite al estudiante seguir una ruta persistente creada desde material docente. Cada tema usa el flujo Allen: **Descubre → Ejemplo → Recupera → Practica → Comprueba → Revisa**, conserva la página de origen y puede retomarse después de cerrar la aplicación.
+
+**Teacher Studio** funciona localmente y permite:
+
+- importar PDF, TXT y Markdown (hasta 8 MB; PDF hasta 250 páginas en esta versión);
+- extraer texto y referencias de página sin servicios externos;
+- crear un borrador con unidades, temas, objetivos, preguntas, flashcards y una ruta de estudio;
+- revisar objetivos y preguntas antes de publicar;
+- publicar el curso solo después de una revisión explícita;
+- exportar un `.allenpack` portable e importarlo en otro ALLEN como borrador que debe revisarse de nuevo.
+
+El constructor determinista no finge que un texto generado es automáticamente contenido oficial. El documento importado y sus referencias locales siguen siendo la base del curso; el docente mantiene la última decisión sobre lo que se publica.
+
 ## Alcance de plataforma
 
 ALLEN Offline v2 está diseñado primero para **Windows en escritorio y laptop**. La experiencia principal se valida para resoluciones de escritorio como 1366×768, 1440×900 y 1920×1080.

@@ -20,11 +20,16 @@ from .ai import LocalAI
 from .database import Database, now
 from .education import catalog, generate, grade
 from .library import Library
-from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate
+from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport, CourseHelp, CourseExamProgress
 from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
 from .study_planner import build_plan, cornell_guide, study_guide
+from .learning_events import record_event
+from .learning_engine import recommend_next_action
+from .recommendations import build_recommendation
+from .backup import export_backup, validate_backup, restore_backup
+from .course_builder import decode_source, build_course, course_pack, validate_course_structure
 
 ROOT=Path(__file__).resolve().parent.parent
 
@@ -61,14 +66,15 @@ def create_app(db_path=None, ai=None):
         if request.method in ('POST','PUT','DELETE','PATCH'):
             if not secrets.compare_digest(request.headers.get('x-allen-token',''),token):
                 return JSONResponse({'error':'Recarga Allen para continuar.'},403)
+            max_body=12_500_000 if request.url.path=='/api/teacher/import' else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 5_500_000 if request.url.path.startswith('/api/backup/') else 200000
             try:
-                if int(request.headers.get('content-length','0'))>200000:
-                    return JSONResponse({'error':'El texto es demasiado largo.'},413)
+                if int(request.headers.get('content-length','0'))>max_body:
+                    return JSONResponse({'error':'El archivo o texto es demasiado largo.'},413)
             except ValueError:
                 return JSONResponse({'error':'Solicitud no válida.'},400)
             body=await request.body()
-            if len(body)>200000:
-                return JSONResponse({'error':'El texto es demasiado largo.'},413)
+            if len(body)>max_body:
+                return JSONResponse({'error':'El archivo o texto es demasiado largo.'},413)
         response=await call_next(request)
         response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
         response.headers['X-Content-Type-Options']='nosniff'
@@ -240,6 +246,8 @@ def create_app(db_path=None, ai=None):
         existing=db.one('SELECT * FROM study_sessions WHERE plan_id=? AND user_id=? AND day=?',(pid,profile_id,today))
         if existing: return existing
         sid=db.execute('INSERT INTO study_sessions(user_id,plan_id,day,status,started) VALUES(?,?,?,?,?)',(profile_id,pid,today,'active',now()))
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(profile_id,'study_session',sid,row['subject'],'','active',now()))
+        record_event(db,profile_id,'lesson_started',row['subject'],'',reference_type='study_session',reference_id=sid)
         return db.one('SELECT * FROM study_sessions WHERE id=?',(sid,))
 
     @app.post('/api/study-sessions/{sid}/event')
@@ -263,12 +271,261 @@ def create_app(db_path=None, ai=None):
         if status=='completed': fields.append('completed=?'); args.append(now())
         args.append(sid)
         db.execute('UPDATE study_sessions SET '+','.join(fields)+' WHERE id=?',tuple(args))
+        plan=db.one("SELECT subject FROM study_plans WHERE id=?",(session['plan_id'],))
+        subject=plan['subject'] if plan else ''
+        if value.kind=='hint': record_event(db,value.profile_id,'hint_used',subject,'',reference_type='study_session',reference_id=sid)
+        elif value.kind=='not_understood': record_event(db,value.profile_id,'explanation_requested',subject,'',reference_type='study_session',reference_id=sid)
+        elif value.kind=='completed':
+            record_event(db,value.profile_id,'study_session_completed',subject,'',reference_type='study_session',reference_id=sid)
+            db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='study_session' AND reference_id=?",(value.profile_id,sid))
+        else:
+            db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'study_session',sid,subject,'',status,now()))
         return db.one('SELECT * FROM study_sessions WHERE id=?',(sid,))
 
+
+    @app.post('/api/teacher/import')
+    def teacher_import(value:TeacherImport):
+        user(value.profile_id)
+        try:
+            extracted=decode_source(value.filename,value.mime,value.content_base64)
+            structure=build_course(value.title,value.subject,value.level,extracted['pages'],extracted['text'])
+        except ValueError as exc:
+            raise HTTPException(422,str(exc))
+        doc_id=db.execute('INSERT INTO teacher_documents(user_id,title,filename,mime,page_count,source_text,pages_json,created_at) VALUES(?,?,?,?,?,?,?,?)',
+            (value.profile_id,value.title,value.filename,value.mime,extracted['page_count'],extracted['text'],json.dumps(extracted['pages'],ensure_ascii=False),now()))
+        cid=db.execute("INSERT INTO courses(owner_profile_id,source_document_id,title,subject,level,status,version,structure_json,created_at,updated_at) VALUES(?,?,?,?,?,'draft',1,?,?,?)",
+            (value.profile_id,doc_id,value.title,value.subject,value.level,json.dumps(structure,ensure_ascii=False),now(),now()))
+        return {'course_id':cid,'document_id':doc_id,'structure':structure}
+
+    @app.post('/api/teacher/packs/import')
+    def import_course_pack(value:CoursePackImport):
+        user(value.profile_id)
+        pack=value.pack
+        if pack.get('format')!='allen-course-pack' or pack.get('version')!=1:
+            raise HTTPException(422,'Course Pack no compatible.')
+        structure=pack.get('course')
+        try: validate_course_structure(structure)
+        except ValueError as exc: raise HTTPException(422,str(exc))
+        title=str(structure.get('title') or 'Curso importado')[:140]
+        subject=str(structure.get('subject') or 'General')[:80]
+        level=str(structure.get('level') or 'Premedia')
+        structure['status']='draft'
+        cid=db.execute("INSERT INTO courses(owner_profile_id,source_document_id,title,subject,level,status,version,structure_json,created_at,updated_at) VALUES(?,?,?, ?,?,'draft',1,?,?,?)",
+            (value.profile_id,None,title,subject,level,json.dumps(structure,ensure_ascii=False),now(),now()))
+        return {'course_id':cid,'status':'draft'}
+
+    @app.get('/api/teacher/courses')
+    def teacher_courses(profile_id:int=1):
+        user(profile_id)
+        rows=db.all("SELECT id,title,subject,level,status,version,created_at,updated_at,published_at,structure_json FROM courses WHERE owner_profile_id=? ORDER BY updated_at DESC",(profile_id,))
+        for row in rows:
+            structure=json.loads(row.pop('structure_json'))
+            row['coverage']=structure.get('coverage',{})
+        return rows
+
+    @app.get('/api/teacher/courses/{cid}')
+    def teacher_course(cid:int,profile_id:int=1):
+        user(profile_id)
+        row=db.one("SELECT * FROM courses WHERE id=? AND owner_profile_id=?",(cid,profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese curso.')
+        row['structure']=json.loads(row.pop('structure_json'))
+        if row.get('source_document_id'):
+            doc=db.one("SELECT id,title,filename,mime,page_count,created_at FROM teacher_documents WHERE id=? AND user_id=?",(row['source_document_id'],profile_id))
+        else: doc=None
+        row['document']=doc
+        return row
+
+    @app.put('/api/teacher/courses/{cid}/review')
+    def review_course(cid:int,value:CourseReview):
+        user(value.profile_id)
+        row=db.one("SELECT id FROM courses WHERE id=? AND owner_profile_id=?",(cid,value.profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese curso.')
+        try: validate_course_structure(value.structure)
+        except ValueError as exc: raise HTTPException(422,str(exc))
+        value.structure['status']='reviewed'
+        db.execute("UPDATE courses SET status='reviewed',structure_json=?,updated_at=? WHERE id=?",(json.dumps(value.structure,ensure_ascii=False),now(),cid))
+        return {'ok':True}
+
+    @app.post('/api/teacher/courses/{cid}/publish')
+    def publish_course(cid:int,value:CoursePublish):
+        user(value.profile_id)
+        row=db.one("SELECT * FROM courses WHERE id=? AND owner_profile_id=?",(cid,value.profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese curso.')
+        structure=json.loads(row['structure_json'])
+        try: validate_course_structure(structure)
+        except ValueError as exc: raise HTTPException(422,str(exc))
+        if row['status']=='draft':
+            raise HTTPException(409,'Revisa y aprueba el curso antes de publicarlo.')
+        db.execute("UPDATE courses SET status='published',published_at=?,updated_at=? WHERE id=?",(now(),now(),cid))
+        return {'ok':True,'course_id':cid}
+
+    @app.get('/api/teacher/courses/{cid}/pack')
+    def export_course_pack(cid:int,profile_id:int=1):
+        user(profile_id)
+        row=db.one("SELECT * FROM courses WHERE id=? AND owner_profile_id=?",(cid,profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese curso.')
+        doc=db.one("SELECT title,filename,page_count FROM teacher_documents WHERE id=?",(row['source_document_id'],)) if row['source_document_id'] else {}
+        return course_pack(json.loads(row['structure_json']),doc or {})
+
+    @app.get('/api/courses')
+    def available_courses(profile_id:int=1):
+        user(profile_id)
+        rows=db.all("SELECT id,title,subject,level,version,structure_json FROM courses WHERE status='published' ORDER BY updated_at DESC LIMIT 100")
+        enrolled={r['course_id']:r for r in db.all("SELECT * FROM course_enrollments WHERE user_id=?",(profile_id,))}
+        out=[]
+        for row in rows:
+            structure=json.loads(row.pop('structure_json'))
+            out.append({**row,'coverage':structure.get('coverage',{}),'enrollment':enrolled.get(row['id'])})
+        return out
+
+    @app.post('/api/courses/{cid}/enroll')
+    def enroll_course(cid:int,value:CourseEnroll):
+        user(value.profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        existing=db.one("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        if existing:return existing
+        eid=db.execute("INSERT INTO course_enrollments(course_id,user_id,status,unit_index,topic_index,step_index,started_at,updated_at) VALUES(?,?, 'active',0,0,0,?,?)",(cid,value.profile_id,now(),now()))
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'course',eid,course['subject'],'','active',now()))
+        return db.one("SELECT * FROM course_enrollments WHERE id=?",(eid,))
+
+    @app.get('/api/courses/{cid}/route')
+    def course_route(cid:int,profile_id:int=1):
+        user(profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        enrollment=db.one("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,profile_id))
+        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+        return {'course':{'id':cid,'title':course['title'],'subject':course['subject'],'level':course['level'],'structure':json.loads(course['structure_json'])},'enrollment':enrollment}
+
+    @app.get('/api/courses/{cid}/exam')
+    def course_exam(cid:int,profile_id:int=1):
+        user(profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        enrollment=db.one("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,profile_id))
+        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+        structure=json.loads(course['structure_json'])
+        questions=structure.get('final_exam',[])
+        if not questions: raise HTTPException(409,'Este curso todavía no tiene examen final.')
+        safe=[{'topic':q.get('topic',''),'prompt':q.get('prompt',''),'options':q.get('options',[]),'source':q.get('source',{})} for q in questions]
+        session=db.one("SELECT * FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,profile_id))
+        if not session:
+            sid=db.execute("INSERT INTO course_exam_sessions(course_id,user_id,answers_json,status,started_at,updated_at) VALUES(?,?,?,'active',?,?)",(cid,profile_id,json.dumps(['']*len(questions)),now(),now()))
+            session=db.one("SELECT * FROM course_exam_sessions WHERE id=?",(sid,))
+        answers=json.loads(session['answers_json'] or '[]')
+        return {'course':{'id':cid,'title':course['title'],'subject':course['subject']},'questions':safe,'answers':answers,'exam_session_id':session['id']}
+
+    @app.post('/api/courses/{cid}/exam/progress')
+    def save_course_exam_progress(cid:int,value:CourseExamProgress):
+        user(value.profile_id)
+        course=db.one("SELECT id FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        enrollment=db.one("SELECT id FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+        existing=db.one("SELECT id FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        payload=json.dumps(value.answers,ensure_ascii=False)
+        if existing:
+            db.execute("UPDATE course_exam_sessions SET answers_json=?,status=?,updated_at=? WHERE id=?",(payload,value.status,now(),existing['id']))
+        else:
+            db.execute("INSERT INTO course_exam_sessions(course_id,user_id,answers_json,status,started_at,updated_at) VALUES(?,?,?,?,?,?)",(cid,value.profile_id,payload,value.status,now(),now()))
+        return {'ok':True}
+
+    @app.post('/api/courses/{cid}/exam/submit')
+    def submit_course_exam(cid:int,value:Submission):
+        user(value.profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        enrollment=db.one("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+        structure=json.loads(course['structure_json'])
+        questions=structure.get('final_exam',[])
+        if len(value.answers)!=len(questions): raise HTTPException(422,'Responde todas las preguntas del examen.')
+        feedback=[];score=0
+        for q,answer in zip(questions,value.answers):
+            correct=answer==q.get('correct')
+            score+=int(correct)
+            feedback.append({'topic':q.get('topic',''),'correct':correct,'answer':answer,'correct_answer':q.get('correct',''),'source':q.get('source',{})})
+            record_event(db,value.profile_id,'question_answered',course['subject'],q.get('topic',''),reference_type='course_exam',reference_id=cid,metadata={'correct':correct,'difficulty':'Normal'})
+        total=len(questions)
+        weak=list(dict.fromkeys(x['topic'] for x in feedback if not x['correct']))
+        strong=list(dict.fromkeys(x['topic'] for x in feedback if x['correct']))
+        result={'score':score,'total':total,'percentage':round(score/max(1,total)*100),'strong_topics':strong,'weak_topics':weak,'feedback':feedback}
+        db.execute("INSERT INTO course_exam_results(course_id,user_id,answers_json,result_json,created_at) VALUES(?,?,?,?,?)",(cid,value.profile_id,json.dumps(value.answers,ensure_ascii=False),json.dumps(result,ensure_ascii=False),now()))
+        db.execute("DELETE FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        db.execute("UPDATE course_enrollments SET status='completed',completed_at=?,updated_at=? WHERE course_id=? AND user_id=?",(now(),now(),cid,value.profile_id))
+        db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
+        record_event(db,value.profile_id,'quiz_completed',course['subject'],'Examen final',reference_type='course_exam',reference_id=cid,metadata={'score':score,'total':total,'difficulty':'Normal'})
+        return result
+
+    @app.post('/api/courses/{cid}/help')
+    def course_help(cid:int,value:CourseHelp):
+        user(value.profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        enrollment=db.one("SELECT id FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+        structure=json.loads(course['structure_json'])
+        try:
+            topic=structure['units'][value.unit_index]['topics'][value.topic_index]
+        except (IndexError,KeyError,TypeError):
+            raise HTTPException(422,'Tema fuera de rango.')
+        count=db.one("SELECT count(*) n FROM learning_events WHERE user_id=? AND event_type='explanation_requested' AND reference_type='course' AND reference_id=? AND topic=?",(value.profile_id,cid,topic['title']))['n']
+        level=min(4,count+1)
+        record_event(db,value.profile_id,'explanation_requested',course['subject'],topic['title'],reference_type='course',reference_id=cid,metadata={'help_level':level})
+        if level==1:
+            title='Vamos más simple'
+            text=topic.get('objective','').replace('Explicar y aplicar','La idea que queremos entender es')
+        elif level==2:
+            title='Miremos un ejemplo concreto'
+            text=topic.get('source_excerpt','')[:500]
+        elif level==3:
+            title='Conectemos las piezas'
+            text='Lee el fragmento y dime qué palabras o relaciones reconoces: '+topic.get('source_excerpt','')[:420]
+        else:
+            title='Probemos con una mini práctica'
+            text=(topic.get('questions') or [{'prompt':'Explícalo con tus propias palabras.'}])[0].get('prompt','Explícalo con tus propias palabras.')
+        return {'level':level,'title':title,'text':text,'topic':topic['title'],'source':topic.get('source',{})}
+
+    @app.post('/api/courses/{cid}/progress')
+    def update_course_progress(cid:int,value:CourseProgress):
+        user(value.profile_id)
+        row=db.one("SELECT ce.*,c.subject,c.structure_json FROM course_enrollments ce JOIN courses c ON c.id=ce.course_id WHERE ce.course_id=? AND ce.user_id=?",(cid,value.profile_id))
+        if not row: raise HTTPException(404,'No encontramos tu progreso en este curso.')
+        structure=json.loads(row['structure_json'])
+        units=structure.get('units',[])
+        if value.unit_index>=len(units): raise HTTPException(422,'Unidad fuera de rango.')
+        topics=units[value.unit_index].get('topics',[])
+        if value.topic_index>=len(topics): raise HTTPException(422,'Tema fuera de rango.')
+        route=topics[value.topic_index].get('route',[])
+        if value.step_index>=max(1,len(route)): raise HTTPException(422,'Paso fuera de rango.')
+        # Evaluate evidence from the step the student just completed, not the destination step.
+        previous_topic=''
+        previous_step_type=''
+        try:
+            previous=units[row['unit_index']]['topics'][row['topic_index']]
+            previous_topic=previous.get('title','')
+            previous_route=previous.get('route',[])
+            if previous_route and row['step_index']<len(previous_route):
+                previous_step_type=previous_route[row['step_index']].get('type','')
+        except (IndexError,KeyError,TypeError):
+            pass
+        completed_at=now() if value.status=='completed' else None
+        db.execute("UPDATE course_enrollments SET unit_index=?,topic_index=?,step_index=?,status=?,updated_at=?,completed_at=? WHERE course_id=? AND user_id=?",
+            (value.unit_index,value.topic_index,value.step_index,value.status,now(),completed_at,cid,value.profile_id))
+        topic=topics[value.topic_index].get('title','')
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",
+            (value.profile_id,'course',row['id'],row['subject'],topic,value.status,now()))
+        if value.status=='completed':
+            record_event(db,value.profile_id,'lesson_completed',row['subject'],previous_topic or topic,reference_type='course',reference_id=cid)
+        elif previous_step_type in ('retrieval','practice','quiz','review'):
+            record_event(db,value.profile_id,'topic_practiced',row['subject'],previous_topic or topic,reference_type='course',reference_id=cid,metadata={'step_type':previous_step_type})
+        return {'ok':True}
 
     @app.get('/api/continuity')
     def continuity(profile_id:int=1):
         user(profile_id)
+        activity=db.one("SELECT * FROM profile_current_activity WHERE user_id=?",(profile_id,))
         adventure=db.one("SELECT * FROM adventure_sessions WHERE user_id=? AND status IN ('active','paused') ORDER BY updated_at DESC LIMIT 1",(profile_id,))
         session=db.one("SELECT ss.*,sp.subject,sp.goal,sp.deadline,sp.plan FROM study_sessions ss JOIN study_plans sp ON sp.id=ss.plan_id WHERE ss.user_id=? AND ss.status IN ('active','paused') ORDER BY COALESCE(ss.last_activity_at,ss.started) DESC LIMIT 1",(profile_id,))
         if session: session['plan']=json.loads(session['plan'])
@@ -276,14 +533,40 @@ def create_app(db_path=None, ai=None):
         if plan:
             plan['topics']=json.loads(plan['topics']); plan['plan']=json.loads(plan['plan'])
         due_cards=db.one("SELECT count(*) n FROM flashcards WHERE user_id=? AND due<=?",(profile_id,date.today().isoformat()))['n']
-        memory=db.memory(profile_id)
-        recommendation=None
-        if adventure: recommendation='Continúa tu aventura desde el punto exacto donde la dejaste.'
-        elif session: recommendation='Retoma tu Sesión Allen antes de empezar algo nuevo.'
-        elif due_cards: recommendation=f'Tienes {due_cards} tarjetas listas para repasar.'
-        elif memory.get('difficult_topics'): recommendation='Podemos reforzar '+memory['difficult_topics'][-1]+'.'
-        elif memory.get('recent_topics'): recommendation='Puedes profundizar en '+memory['recent_topics'][-1]+'.'
-        return dict(adventure=adventure,study_session=session,study_plan=plan,due_cards=due_cards,recommendation=recommendation)
+        recommendation=build_recommendation(db,profile_id)
+        mastery=db.all("SELECT * FROM topic_mastery WHERE user_id=? ORDER BY mastery_score ASC,last_seen DESC LIMIT 8",(profile_id,))
+        return dict(current_activity=activity,adventure=adventure,study_session=session,study_plan=plan,due_cards=due_cards,recommendation=recommendation,mastery=mastery)
+
+    @app.get('/api/mastery')
+    def mastery(profile_id:int=1):
+        user(profile_id)
+        return db.all("SELECT * FROM topic_mastery WHERE user_id=? ORDER BY subject,topic",(profile_id,))
+
+    @app.get('/api/recommendation')
+    def recommendation(profile_id:int=1):
+        user(profile_id)
+        return build_recommendation(db,profile_id)
+
+    @app.get('/api/backup/export')
+    def backup_export(profile_id:int=1):
+        user(profile_id)
+        payload=export_backup(db)
+        return payload
+
+    @app.post('/api/backup/validate')
+    async def backup_validate(request:Request):
+        payload=await request.json()
+        try:return validate_backup(payload)
+        except ValueError as exc:raise HTTPException(422,str(exc))
+
+    @app.post('/api/backup/restore')
+    async def backup_restore(request:Request):
+        payload=await request.json()
+        try:
+            summary=restore_backup(db,payload)
+        except ValueError as exc:
+            raise HTTPException(422,str(exc))
+        return {'ok':True,'summary':summary}
 
     @app.post('/api/adventures/start')
     def start_adventure(value:AdventureStart):
@@ -291,8 +574,13 @@ def create_app(db_path=None, ai=None):
         current=db.one("SELECT * FROM adventure_sessions WHERE user_id=? AND adventure_id=? AND status IN ('active','paused') ORDER BY id DESC LIMIT 1",(value.profile_id,value.adventure_id))
         if current:
             db.execute("UPDATE adventure_sessions SET status='active',updated_at=? WHERE id=?",(now(),current['id']))
+            db.execute("UPDATE adventure_sessions SET status='paused',updated_at=? WHERE user_id=? AND id<>? AND status='active'",(now(),value.profile_id,current['id']))
+            db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'adventure',current['id'],'','', 'active',now()))
             return db.one('SELECT * FROM adventure_sessions WHERE id=?',(current['id'],))
+        db.execute("UPDATE adventure_sessions SET status='paused',updated_at=? WHERE user_id=? AND status='active'",(now(),value.profile_id))
         sid=db.execute("INSERT INTO adventure_sessions(user_id,adventure_id,status,current_step,completed_steps,answers,mistakes,hints_used,started_at,updated_at) VALUES(?,?, 'active',0,0,'[]',0,0,?,?)",(value.profile_id,value.adventure_id,now(),now()))
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'adventure',sid,'','', 'active',now()))
+        record_event(db,value.profile_id,'lesson_started',reference_type='adventure',reference_id=sid)
         return db.one('SELECT * FROM adventure_sessions WHERE id=?',(sid,))
 
     @app.get('/api/adventures/active')
@@ -317,6 +605,17 @@ def create_app(db_path=None, ai=None):
         elif value.event=='abandon': status='abandoned'; completed_at=now()
         db.execute('INSERT INTO adventure_events(user_id,session_id,event,step,answer,correct,created) VALUES(?,?,?,?,?,?,?)',(value.profile_id,sid,value.event,value.step,value.answer,None if value.correct is None else int(value.correct),now()))
         db.execute('UPDATE adventure_sessions SET status=?,current_step=?,completed_steps=?,answers=?,mistakes=?,hints_used=?,updated_at=?,completed_at=? WHERE id=?',(status,current,completed,json.dumps(answers,ensure_ascii=False),mistakes,hints,now(),completed_at,sid))
+        if value.event=='hint':
+            record_event(db,value.profile_id,'hint_used',reference_type='adventure',reference_id=sid)
+        if value.event=='answer':
+            record_event(db,value.profile_id,'question_answered',reference_type='adventure',reference_id=sid,metadata={'correct':value.correct})
+        if value.event=='complete':
+            record_event(db,value.profile_id,'adventure_completed',reference_type='adventure',reference_id=sid)
+            db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='adventure' AND reference_id=?",(value.profile_id,sid))
+        elif value.event=='abandon':
+            db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='adventure' AND reference_id=?",(value.profile_id,sid))
+        else:
+            db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'adventure',sid,'','',status,now()))
         return db.one('SELECT * FROM adventure_sessions WHERE id=?',(sid,))
 
     @app.post('/api/simulations')
@@ -325,8 +624,41 @@ def create_app(db_path=None, ai=None):
         topic=value.topics[0]
         request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=value.question_count,kind='multiple')
         questions=generate(request)
-        sid=db.execute('INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at) VALUES(?,?,?,?,NULL,?,?)',(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),value.minutes,now()))
-        return dict(id=sid,subject=value.subject,topics=value.topics,questions=questions,minutes=value.minutes)
+        sid=db.execute("INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at,status,answers,updated_at,remaining_seconds) VALUES(?,?,?,?,NULL,?,?,'active','[]',?,?)",(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),(value.minutes if value.timed else 0),now(),now(),(value.minutes*60 if value.timed else 0)))
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'simulation',sid,value.subject,value.topics[0] if value.topics else '','active',now()))
+        return dict(id=sid,subject=value.subject,topics=value.topics,questions=questions,minutes=(value.minutes if value.timed else 0),timed=value.timed)
+
+    @app.get('/api/simulations/active')
+    def active_simulation(profile_id:int=1):
+        user(profile_id)
+        row=db.one("SELECT * FROM simulation_results WHERE user_id=? AND status IN ('active','paused','interrupted') AND result IS NULL ORDER BY COALESCE(updated_at,started_at) DESC LIMIT 1",(profile_id,))
+        if not row:return None
+        row['topics']=json.loads(row['topics']);row['questions']=json.loads(row['questions']);row['answers']=json.loads(row['answers'] or '[]')
+        return row
+
+    @app.post('/api/simulations/{sid}/progress')
+    def save_simulation_progress(sid:int,value:SimulationProgress):
+        user(value.profile_id)
+        row=db.one('SELECT id FROM simulation_results WHERE id=? AND user_id=?',(sid,value.profile_id))
+        if not row:raise HTTPException(404,'No encontramos ese simulacro.')
+        db.execute('UPDATE simulation_results SET answers=?,status=?,updated_at=?,remaining_seconds=COALESCE(?,remaining_seconds) WHERE id=?',(json.dumps(value.answers,ensure_ascii=False),value.status,now(),value.remaining_seconds,sid))
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) SELECT user_id,'simulation',id,subject,'',?,? FROM simulation_results WHERE id=?",(value.status,now(),sid))
+        return {'ok':True}
+
+    @app.post('/api/simulations/{sid}/reinforcement')
+    def simulation_reinforcement(sid:int,profile_id:int=1):
+        profile=user(profile_id)
+        row=db.one('SELECT * FROM simulation_results WHERE id=? AND user_id=?',(sid,profile_id))
+        if not row or not row['result']:raise HTTPException(409,'Completa el simulacro antes de crear el refuerzo.')
+        result=json.loads(row['result']);weak=result.get('review',[])
+        if not weak:return {'plan_id':None,'message':'No hay temas débiles destacados.'}
+        deadline=(date.today()+timedelta(days=3)).isoformat()
+        quiz_rows=db.all('SELECT result FROM quiz_results WHERE user_id=? ORDER BY id DESC LIMIT 30',(profile_id,))
+        cards=db.all('SELECT question,answer,due,interval FROM flashcards WHERE user_id=?',(profile_id,))
+        plan=build_plan(row['subject'],weak,deadline,30,profile['level'],'Plan de refuerzo',quiz_rows,cards,db.progress(profile_id))
+        pid=db.execute('INSERT INTO study_plans(user_id,subject,goal,deadline,minutes_per_day,level,topics,plan,created) VALUES(?,?,?,?,?,?,?,?,?)',
+            (profile_id,row['subject'],'Plan de refuerzo',deadline,30,profile['level'],json.dumps(weak,ensure_ascii=False),json.dumps(plan,ensure_ascii=False),now()))
+        return {'plan_id':pid,'topics':weak,'plan':plan}
 
     @app.post('/api/simulations/{sid}/submit')
     def submit_simulation(sid:int,value:Submission):
@@ -335,8 +667,13 @@ def create_app(db_path=None, ai=None):
         if not row: raise HTTPException(404,'No encontramos ese simulacro.')
         questions=json.loads(row['questions'])
         result=grade(questions,value.answers)
-        db.execute('UPDATE simulation_results SET result=?,completed_at=? WHERE id=?',(json.dumps(result,ensure_ascii=False),now(),sid))
+        db.execute("UPDATE simulation_results SET result=?,completed_at=?,status='completed',updated_at=? WHERE id=?",(json.dumps(result,ensure_ascii=False),now(),now(),sid))
         weak=result.get('review',[]) if isinstance(result,dict) else []
+        topics=json.loads(row['topics'])
+        for item in result.get('feedback',[]):
+            record_event(db,value.profile_id,'question_answered',row['subject'],item.get('topic',topics[0] if topics else row['subject']),reference_type='simulation',reference_id=sid,metadata={'correct':item.get('correct'),'difficulty':'Normal'})
+        record_event(db,value.profile_id,'simulation_completed',row['subject'],topics[0] if topics else row['subject'],reference_type='simulation',reference_id=sid,metadata={'score':result.get('score'),'total':result.get('total')})
+        db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='simulation' AND reference_id=?",(value.profile_id,sid))
         return dict(**result,reinforcement=dict(topics=weak,activities=[dict(type='explanation',minutes=10),dict(type='practice',minutes=15),dict(type='flashcards',minutes=5)] if weak else []))
 
     @app.post('/api/guides/cornell')
@@ -379,6 +716,9 @@ def create_app(db_path=None, ai=None):
             db.remember(value.profile_id,onboarded=True)
             profile=user(value.profile_id)
         db.prune()
+        active=db.one("SELECT * FROM profile_current_activity WHERE user_id=?",(value.profile_id,))
+        mastery_rows=db.all("SELECT subject,topic,mastery_score,status,next_review FROM topic_mastery WHERE user_id=? ORDER BY last_seen DESC LIMIT 4",(value.profile_id,))
+        profile['learning_context']={'active_journey':active,'mastery':mastery_rows}
         if value.conversation_id:
             row=db.one('SELECT messages FROM conversations WHERE id=? AND user_id=?',(value.conversation_id,value.profile_id))
             if not row:
@@ -527,6 +867,10 @@ def create_app(db_path=None, ai=None):
             config=json.loads(row['config'])
             kind='exercise' if config['count']==1 else 'quiz'
             conn.execute('INSERT OR IGNORE INTO progress(user_id,kind,subject,xp,day,reference) VALUES(?,?,?,?,?,?)',(value.profile_id,kind,config['subject'],10 if kind=='exercise' else 30,date.today().isoformat(),str(qid)))
+        config=json.loads(row['config'])
+        for item in result.get('feedback',[]):
+            record_event(db,value.profile_id,'question_answered',config.get('subject',''),item.get('topic',config.get('topic','')),reference_type='quiz',reference_id=qid,metadata={'correct':item.get('correct'),'difficulty':config.get('difficulty','Normal')})
+        record_event(db,value.profile_id,'quiz_completed',config.get('subject',''),config.get('topic',''),reference_type='quiz',reference_id=qid,metadata={'score':result.get('score'),'total':result.get('total'),'difficulty':config.get('difficulty','Normal')})
         return result
 
     @app.get('/api/quiz/results')
@@ -582,6 +926,7 @@ def create_app(db_path=None, ai=None):
         due=(date.today()+timedelta(days=interval)).isoformat()
         db.execute('UPDATE flashcards SET interval=?,due=?,reviews=reviews+1 WHERE id=?',(interval,due,cid))
         db.award(value.profile_id,'card','Tarjetas',5,f'{cid}:{date.today().isoformat()}')
+        record_event(db,value.profile_id,'flashcard_reviewed','Tarjetas',row['question'][:80],reference_type='flashcard',reference_id=cid,metadata={'rating':value.rating})
         return {'due':due}
 
     @app.delete('/api/flashcards/{cid}')
