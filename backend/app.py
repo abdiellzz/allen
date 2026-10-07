@@ -256,7 +256,8 @@ def create_app(db_path=None, ai=None):
         elif value.kind=='skipped': skipped+=1
         elif value.kind=='not_understood': difficulties+=1
         elif value.kind=='hint': hints+=1
-        if status!='completed' and value.kind not in ('completed',): status='active'
+        elif value.kind=='paused': status='paused'
+        if status!='completed' and value.kind not in ('completed','paused'): status='active'
         fields += ['activities_completed=?','activities_skipped=?','difficulties=?','hints_used=?','status=?']
         args += [completed,skipped,difficulties,hints,status]
         if status=='completed': fields.append('completed=?'); args.append(now())
@@ -269,7 +270,7 @@ def create_app(db_path=None, ai=None):
     def continuity(profile_id:int=1):
         user(profile_id)
         adventure=db.one("SELECT * FROM adventure_sessions WHERE user_id=? AND status IN ('active','paused') ORDER BY updated_at DESC LIMIT 1",(profile_id,))
-        session=db.one("SELECT ss.*,sp.subject,sp.goal,sp.deadline,sp.plan FROM study_sessions ss JOIN study_plans sp ON sp.id=ss.plan_id WHERE ss.user_id=? AND ss.status='active' ORDER BY COALESCE(ss.last_activity_at,ss.started) DESC LIMIT 1",(profile_id,))
+        session=db.one("SELECT ss.*,sp.subject,sp.goal,sp.deadline,sp.plan FROM study_sessions ss JOIN study_plans sp ON sp.id=ss.plan_id WHERE ss.user_id=? AND ss.status IN ('active','paused') ORDER BY COALESCE(ss.last_activity_at,ss.started) DESC LIMIT 1",(profile_id,))
         if session: session['plan']=json.loads(session['plan'])
         plan=db.one("SELECT * FROM study_plans WHERE user_id=? ORDER BY id DESC LIMIT 1",(profile_id,))
         if plan:
