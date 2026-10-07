@@ -94,6 +94,10 @@ class Database:
             for column,sql in sim_migrations.items():
                 if column not in sim_existing: db.execute(sql)
             apply_migrations(db)
+            # Backfill a baseline history row for courses created before numbered migrations existed.
+            if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='course_versions'").fetchone():
+                db.execute("""INSERT OR IGNORE INTO course_versions(course_id,version_number,source_document_id,structure_json,diff_json,status,created_at,published_at)
+                    SELECT id,version,source_document_id,structure_json,'{"summary":{"initial":true}}',status,created_at,published_at FROM courses""")
             if not db.execute('SELECT 1 FROM users LIMIT 1').fetchone():
                 db.execute("INSERT INTO users VALUES (1,'Explorador',NULL,'Premedia','🐵')")
 
