@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 380" role="img" aria-labelledby="t d">
+<title id="t">Privacidad local de Allen</title><desc id="d">Una computadora con un candado y tarjetas educativas dentro, representando aprendizaje local y privado.</desc>
+<rect width="560" height="380" rx="34" fill="#f7efe4"/>
+<rect x="72" y="70" width="416" height="238" rx="26" fill="#fffdf9" stroke="#dfcbb5" stroke-width="6"/>
+<rect x="94" y="94" width="372" height="174" rx="16" fill="#f4eadc"/>
+<path d="M214 308h132M258 270v38m44-38v38" stroke="#7f6856" stroke-width="10" stroke-linecap="round"/>
+<g transform="translate(177 119)">
+<rect x="0" y="42" width="78" height="72" rx="14" fill="#fff" stroke="#ddc7ae" stroke-width="4"/><path d="M18 65h42M18 84h30" stroke="#c8662a" stroke-width="7" stroke-linecap="round"/>
+<rect x="100" y="22" width="92" height="92" rx="18" fill="#4e7469"/><path d="M124 64h44m-22-22v44" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+</g>
+<g transform="translate(348 137)">
+<rect x="0" y="42" width="90" height="76" rx="18" fill="#fff8df" stroke="#d5b86f" stroke-width="4"/>
+<path d="M20 44V27c0-22 50-22 50 0v17" fill="none" stroke="#875f28" stroke-width="8" stroke-linecap="round"/>
+<circle cx="45" cy="78" r="8" fill="#875f28"/><path d="M45 86v15" stroke="#875f28" stroke-width="6" stroke-linecap="round"/>
+</g>
+</svg>
