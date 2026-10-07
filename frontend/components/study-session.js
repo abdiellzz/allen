@@ -28,6 +28,7 @@ export function planAllenPage(level='Premedia'){
    <label>Temas<input id="sim-topics" maxlength="500" required placeholder="IPv4, subnetting"></label>
    <label>Preguntas<input id="sim-count" type="number" min="3" max="10" value="5"></label>
    <label>Minutos<input id="sim-minutes" type="number" min="5" max="120" value="20"></label>
+   <label>Modo<select id="sim-timed"><option value="true">Con tiempo</option><option value="false">Sin tiempo</option></select></label>
    <button class="primary">Comenzar simulacro</button>
   </form>
   <div id="simulation-stage"></div>
@@ -101,12 +102,27 @@ export async function bindPlanAllen(root,{api,profileId,profile,go,toast}){
   }catch(error){toast(error.message);}
  });
  const simulationForm=root.querySelector('#simulation-form'),simulationStage=root.querySelector('#simulation-stage');
+ let simulationTimer=null;
+ function stopTimer(){if(simulationTimer){clearInterval(simulationTimer);simulationTimer=null;}}
+ function renderSimulation(sim){
+  stopTimer();
+  const saved=Array.isArray(sim.answers)?sim.answers:[];
+  simulationStage.innerHTML=\`<section class="simulation-shell" data-sim-id="\${sim.id}"><div class="row spaced"><div><span class="eyebrow">SIMULACRO EN CURSO</span><h2>\${esc(sim.subject)}</h2></div><div class="simulation-meta"><strong>\${sim.questions.length} preguntas</strong><span id="sim-timer">\${sim.minutes>0?sim.minutes+':00':'Sin límite de tiempo'}</span></div></div><progress value="\${saved.filter(Boolean).length}" max="\${sim.questions.length}" aria-label="Progreso del simulacro"></progress><form id="simulation-answers">\${sim.questions.map((q,i)=>\`<fieldset><legend>\${i+1}. \${esc(q.prompt)}</legend>\${(q.options||[]).map(o=>\`<label class="answer-option"><input type="radio" name="sim-\${i}" value="\${esc(o)}" \${saved[i]===o?'checked':''} required><span>\${esc(o)}</span></label>\`).join('')}</fieldset>\`).join('')}<button class="primary">Entregar simulacro</button></form></section>\`;
+  const formEl=simulationStage.querySelector('#simulation-answers');
+  formEl.addEventListener('change',async()=>{const answers=sim.questions.map((_,i)=>simulationStage.querySelector(\`input[name="sim-\${i}"]:checked\`)?.value||'');simulationStage.querySelector('progress').value=answers.filter(Boolean).length;await api('/simulations/'+sim.id+'/progress','POST',{profile_id:profileId,answers,status:'active'}).catch(()=>{});});
+  if(sim.minutes>0){
+   let seconds=sim.minutes*60;
+   const timer=simulationStage.querySelector('#sim-timer');
+   simulationTimer=setInterval(async()=>{seconds--;const m=Math.max(0,Math.floor(seconds/60)),sec=Math.max(0,seconds%60);if(timer)timer.textContent=m+':'+String(sec).padStart(2,'0');if(seconds<=0){stopTimer();const answers=sim.questions.map((_,i)=>simulationStage.querySelector(\`input[name="sim-\${i}"]:checked\`)?.value||'');await api('/simulations/'+sim.id+'/progress','POST',{profile_id:profileId,answers,status:'interrupted'}).catch(()=>{});toast('Terminó el tiempo. Puedes completar las respuestas y entregar cuando estés listo.');}},1000);
+  }
+  formEl.onsubmit=async ev=>{ev.preventDefault();stopTimer();const answers=sim.questions.map((_,i)=>simulationStage.querySelector(\`input[name="sim-\${i}"]:checked\`)?.value||'');const result=await api('/simulations/'+sim.id+'/submit','POST',{profile_id:profileId,answers});const total=result.total||sim.questions.length,score=result.score||0,pct=Math.round(score/Math.max(1,total)*100);simulationStage.innerHTML=\`<section class="simulation-result" data-result-sim="\${sim.id}"><img src="/static/assets/allen-complete.svg" alt=""><div><span class="eyebrow">RESULTADO</span><h2>\${score}/\${total} · \${pct}%</h2><p><b>Fuerte:</b> \${esc((result.mastered||[]).join(', ')||'en construcción')}</p><p><b>Reforzar:</b> \${esc((result.review||[]).join(', ')||'ninguno destacado')}</p><div class="row"><button class="primary" id="create-reinforcement">Crear Plan de Refuerzo</button><button data-page="Progreso">Ver progreso</button></div></div></section>\`;const reinforce=simulationStage.querySelector('#create-reinforcement');reinforce.onclick=async()=>{const created=await api('/simulations/'+sim.id+'/reinforcement?profile_id='+profileId,'POST',{});if(created.plan_id){toast('Plan de refuerzo creado.');await refresh();current.scrollIntoView({behavior:'smooth',block:'start'});}else toast(created.message||'No necesitas un refuerzo adicional ahora.');};};
+ }
  simulationForm.onsubmit=async e=>{e.preventDefault();try{
-  const payload={profile_id:profileId,subject:root.querySelector('#sim-subject').value.trim(),topics:root.querySelector('#sim-topics').value.split(',').map(x=>x.trim()).filter(Boolean),question_count:Number(root.querySelector('#sim-count').value),minutes:Number(root.querySelector('#sim-minutes').value),level:profile.level};
-  const sim=await api('/simulations','POST',payload);
-  simulationStage.innerHTML=`<section class="simulation-shell" data-sim-id="${sim.id}"><div class="row spaced"><div><span class="eyebrow">SIMULACRO EN CURSO</span><h2>${esc(sim.subject)}</h2></div><strong>${sim.questions.length} preguntas · ${sim.minutes} min</strong></div><form id="simulation-answers">${sim.questions.map((q,i)=>`<fieldset><legend>${i+1}. ${esc(q.prompt)}</legend>${(q.options||[]).map(o=>`<label class="answer-option"><input type="radio" name="sim-${i}" value="${esc(o)}" required><span>${esc(o)}</span></label>`).join('')}</fieldset>`).join('')}<button class="primary">Entregar simulacro</button></form></section>`;
-  simulationStage.querySelector('#simulation-answers').onsubmit=async ev=>{ev.preventDefault();const answers=sim.questions.map((_,i)=>simulationStage.querySelector(`input[name="sim-${i}"]:checked`)?.value||'');const result=await api('/simulations/'+sim.id+'/submit','POST',{profile_id:profileId,answers});const total=result.total||sim.questions.length,score=result.score||0;simulationStage.innerHTML=`<section class="simulation-result"><img src="/static/assets/allen-complete.svg" alt=""><div><span class="eyebrow">RESULTADO</span><h2>${score}/${total}</h2><p>Temas para reforzar: ${esc((result.review||[]).join(', ')||'ninguno destacado')}.</p><button data-page="Plan Allen">Crear plan de refuerzo</button></div></section>`;};
+  const timed=root.querySelector('#sim-timed').value==='true';
+  const payload={profile_id:profileId,subject:root.querySelector('#sim-subject').value.trim(),topics:root.querySelector('#sim-topics').value.split(',').map(x=>x.trim()).filter(Boolean),question_count:Number(root.querySelector('#sim-count').value),minutes:Number(root.querySelector('#sim-minutes').value),timed,level:profile.level};
+  const sim=await api('/simulations','POST',payload);renderSimulation({...sim,answers:[]});
  }catch(error){toast(error.message);}};
+ try{const activeSim=await api('/simulations/active?profile_id='+profileId);if(activeSim)renderSimulation(activeSim);}catch{}
  const guideForm=root.querySelector('#study-guide-form'),guideOut=root.querySelector('#study-guide-output');
  async function makeGuide(kind){
   const text=root.querySelector('#guide-text').value.trim();if(text.length<20){toast('Añade un poco más de contenido.');return;}
