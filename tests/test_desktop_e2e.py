@@ -60,7 +60,7 @@ def test_desktop_guided_learning_smoke_and_viewports():
                 page.keyboard.press("Control+K")
                 page.locator("#command-palette:not([hidden])").wait_for()
                 page.locator("#command-input").fill("progreso")
-                page.get_by_role("option").first.wait_for()
+                page.locator('#command-results [role="option"]').first.wait_for()
                 page.keyboard.press("Escape")
                 assert page.locator("#command-palette").get_attribute("hidden") is not None
 
