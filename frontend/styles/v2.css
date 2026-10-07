@@ -306,3 +306,9 @@ body{min-width:1024px}
 .exam-review.correct strong{color:var(--v2-green)}
 .exam-review.review strong{color:var(--v2-orange)}
 .exam-review small{color:var(--v2-muted)}
+
+.teacher-exam-review{margin:24px 0;padding:20px;border:1px solid var(--v2-line);border-radius:22px;background:#fffaf3}
+.teacher-exam-review details{margin:10px 0;padding:12px 14px;border:1px solid var(--v2-line);border-radius:14px;background:#fff}
+.teacher-exam-review summary{cursor:pointer;font-weight:800}
+.teacher-exam-review li{margin:.45rem 0;line-height:1.4}
+.teacher-exam-review .correct-option{color:var(--v2-green);font-weight:700}
