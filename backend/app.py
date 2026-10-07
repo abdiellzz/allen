@@ -20,7 +20,7 @@ from .ai import LocalAI
 from .database import Database, now
 from .education import catalog, generate, grade
 from .library import Library
-from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate
+from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress
 from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
@@ -383,9 +383,41 @@ def create_app(db_path=None, ai=None):
         topic=value.topics[0]
         request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=value.question_count,kind='multiple')
         questions=generate(request)
-        sid=db.execute('INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at) VALUES(?,?,?,?,NULL,?,?)',(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),value.minutes,now()))
+        sid=db.execute("INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at,status,answers,updated_at) VALUES(?,?,?,?,NULL,?,?,'active','[]',?)",(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),value.minutes,now(),now()))
         db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'simulation',sid,value.subject,value.topics[0] if value.topics else '','active',now()))
         return dict(id=sid,subject=value.subject,topics=value.topics,questions=questions,minutes=value.minutes)
+
+    @app.get('/api/simulations/active')
+    def active_simulation(profile_id:int=1):
+        user(profile_id)
+        row=db.one("SELECT * FROM simulation_results WHERE user_id=? AND status IN ('active','paused','interrupted') AND result IS NULL ORDER BY COALESCE(updated_at,started_at) DESC LIMIT 1",(profile_id,))
+        if not row:return None
+        row['topics']=json.loads(row['topics']);row['questions']=json.loads(row['questions']);row['answers']=json.loads(row['answers'] or '[]')
+        return row
+
+    @app.post('/api/simulations/{sid}/progress')
+    def save_simulation_progress(sid:int,value:SimulationProgress):
+        user(value.profile_id)
+        row=db.one('SELECT id FROM simulation_results WHERE id=? AND user_id=?',(sid,value.profile_id))
+        if not row:raise HTTPException(404,'No encontramos ese simulacro.')
+        db.execute('UPDATE simulation_results SET answers=?,status=?,updated_at=? WHERE id=?',(json.dumps(value.answers,ensure_ascii=False),value.status,now(),sid))
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) SELECT user_id,'simulation',id,subject,'',?,? FROM simulation_results WHERE id=?",(value.status,now(),sid))
+        return {'ok':True}
+
+    @app.post('/api/simulations/{sid}/reinforcement')
+    def simulation_reinforcement(sid:int,profile_id:int=1):
+        profile=user(profile_id)
+        row=db.one('SELECT * FROM simulation_results WHERE id=? AND user_id=?',(sid,profile_id))
+        if not row or not row['result']:raise HTTPException(409,'Completa el simulacro antes de crear el refuerzo.')
+        result=json.loads(row['result']);weak=result.get('review',[])
+        if not weak:return {'plan_id':None,'message':'No hay temas débiles destacados.'}
+        deadline=(date.today()+timedelta(days=3)).isoformat()
+        quiz_rows=db.all('SELECT result FROM quiz_results WHERE user_id=? ORDER BY id DESC LIMIT 30',(profile_id,))
+        cards=db.all('SELECT question,answer,due,interval FROM flashcards WHERE user_id=?',(profile_id,))
+        plan=build_plan(row['subject'],weak,deadline,30,profile['level'],'Plan de refuerzo',quiz_rows,cards,db.progress(profile_id))
+        pid=db.execute('INSERT INTO study_plans(user_id,subject,goal,deadline,minutes_per_day,level,topics,plan,created) VALUES(?,?,?,?,?,?,?,?,?)',
+            (profile_id,row['subject'],'Plan de refuerzo',deadline,30,profile['level'],json.dumps(weak,ensure_ascii=False),json.dumps(plan,ensure_ascii=False),now()))
+        return {'plan_id':pid,'topics':weak,'plan':plan}
 
     @app.post('/api/simulations/{sid}/submit')
     def submit_simulation(sid:int,value:Submission):
@@ -394,7 +426,7 @@ def create_app(db_path=None, ai=None):
         if not row: raise HTTPException(404,'No encontramos ese simulacro.')
         questions=json.loads(row['questions'])
         result=grade(questions,value.answers)
-        db.execute('UPDATE simulation_results SET result=?,completed_at=? WHERE id=?',(json.dumps(result,ensure_ascii=False),now(),sid))
+        db.execute("UPDATE simulation_results SET result=?,completed_at=?,status='completed',updated_at=? WHERE id=?",(json.dumps(result,ensure_ascii=False),now(),now(),sid))
         weak=result.get('review',[]) if isinstance(result,dict) else []
         topics=json.loads(row['topics'])
         for item in result.get('feedback',[]):
