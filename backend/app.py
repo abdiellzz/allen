@@ -20,7 +20,7 @@ from .ai import LocalAI
 from .database import Database, now
 from .education import catalog, generate, grade
 from .library import Library
-from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress
+from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport
 from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
@@ -296,6 +296,23 @@ def create_app(db_path=None, ai=None):
         cid=db.execute("INSERT INTO courses(owner_profile_id,source_document_id,title,subject,level,status,version,structure_json,created_at,updated_at) VALUES(?,?,?,?,?,'draft',1,?,?,?)",
             (value.profile_id,doc_id,value.title,value.subject,value.level,json.dumps(structure,ensure_ascii=False),now(),now()))
         return {'course_id':cid,'document_id':doc_id,'structure':structure}
+
+    @app.post('/api/teacher/packs/import')
+    def import_course_pack(value:CoursePackImport):
+        user(value.profile_id)
+        pack=value.pack
+        if pack.get('format')!='allen-course-pack' or pack.get('version')!=1:
+            raise HTTPException(422,'Course Pack no compatible.')
+        structure=pack.get('course')
+        try: validate_course_structure(structure)
+        except ValueError as exc: raise HTTPException(422,str(exc))
+        title=str(structure.get('title') or 'Curso importado')[:140]
+        subject=str(structure.get('subject') or 'General')[:80]
+        level=str(structure.get('level') or 'Premedia')
+        structure['status']='draft'
+        cid=db.execute("INSERT INTO courses(owner_profile_id,source_document_id,title,subject,level,status,version,structure_json,created_at,updated_at) VALUES(?,?,?, ?,?,'draft',1,?,?,?)",
+            (value.profile_id,None,title,subject,level,json.dumps(structure,ensure_ascii=False),now(),now()))
+        return {'course_id':cid,'status':'draft'}
 
     @app.get('/api/teacher/courses')
     def teacher_courses(profile_id:int=1):
