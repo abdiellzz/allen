@@ -20,6 +20,7 @@ class Settings(Strict):
     demo: bool = False
     font_size: Literal['normal', 'grande', 'muy grande'] = 'normal'
     high_contrast: bool = False
+    performance: Literal['Rápido','Equilibrado','Detallado'] = 'Equilibrado'
 
     @field_validator('ai_server')
     @classmethod
