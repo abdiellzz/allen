@@ -1,5 +1,8 @@
 # ALLEN — aprende, incluso sin Internet
 
+> **Release estable actual: ALLEN 1.0.0** · 7 de octubre de 2026  
+> Consulta [CHANGELOG.md](CHANGELOG.md) y [docs/RELEASE_1.0.0.md](docs/RELEASE_1.0.0.md).
+
 ## Main
 
 Abre **http://127.0.0.1:8787/fair** para una experiencia con retos, microlecciones, chat temporal y tarjeta de logro,. **Nueva persona** limpia la sesión del visitante; la inactividad también la reinicia. Consulta [FAIR_MODE.md](FAIR_MODE.md) para preparar el stand, configurar voz opcional y conocer las pruebas y límites.
@@ -47,9 +50,9 @@ El constructor determinista no finge que un texto generado es automáticamente c
 
 ## Alcance de plataforma
 
-ALLEN Offline v2 está diseñado primero para **Windows en escritorio y laptop**. La experiencia principal se valida para resoluciones de escritorio como 1366×768, 1440×900 y 1920×1080.
+ALLEN 1.0.0 está diseñado primero para **Windows en escritorio y laptop**. La experiencia principal se valida en 1920×1080, 1440×900 y 1366×768.
 
-No se está desarrollando una experiencia móvil dedicada en esta fase: no hay APK, PWA móvil, navegación específica para teléfonos ni optimización para pantallas pequeñas. El diseño puede conservar adaptación básica para no romperse, pero móvil no es un objetivo de producto.
+La interfaz también se prueba para 900×800, 640×900 y 390×844 para evitar overflow horizontal y mantener utilizables los flujos esenciales en pantallas pequeñas. Esto no convierte a ALLEN en una app móvil dedicada: no hay APK ni navegación móvil independiente; el objetivo principal sigue siendo escritorio/laptop.
 
 ## Publicación segura
 
