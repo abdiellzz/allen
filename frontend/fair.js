@@ -13,7 +13,7 @@ let locked=localStorage.getItem('allen-fair-lock')==='true',sounds=false,autoSpe
 let projectLinks={};
 function FairQRCode(){const url=projectLinks.PROJECT_URL||projectLinks.GITHUB_URL||projectLinks.SOCIAL_URL;if(!url)return '';try{const parsed=new URL(url);if(!['http:','https:'].includes(parsed.protocol)||parsed.username||parsed.password)return '';}catch{return '';}return `<section class="panel center"><h2>Conoce más sobre Allen</h2><img width="208" height="208" src="/api/fair/qr?url=${encodeURIComponent(url)}" alt="QR para conocer el proyecto Allen"><p>${esc(url)}</p><p class="muted">El QR se genera aquí. Abrir el enlace en tu teléfono puede requerir Internet.</p></section>`;}
 const categories=['Matemáticas','Inglés','Programación','Tecnología','Lógica','IA'];
-const icons={Matemáticas:'calculator',Inglés:'book-open',Programación:'layers',Tecnología:'lightbulb',Lógica:'compass',IA:'sparkles',Curiosidades:'compass'};
+const icons={Matemáticas:'calculator',Inglés:'book-open',Programación:'layers',Tecnología:'lightbulb',Lógica:'compass',IA:'sparkles',Curiosidades:'compass',Ciberseguridad:'shield-check',Redes:'map',Ciencias:'flask-conical','Pensamiento crítico':'circle-help',Estudio:'notebook-tabs'};
 function toast(text){notice.textContent=text;setTimeout(()=>{if(notice.textContent===text)notice.textContent='';},6500);}
 function button(label,attr='',primary=false){return `<button ${attr} class="${primary?'primary':''}">${label}</button>`;}
 function tile(label,description,ico,attr){return `<button class="tile" ${attr}>${icon(ico,44)}<strong>${label}</strong><span>${description}</span></button>`;}
