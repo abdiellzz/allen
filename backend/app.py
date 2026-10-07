@@ -66,7 +66,7 @@ def create_app(db_path=None, ai=None):
         if request.method in ('POST','PUT','DELETE','PATCH'):
             if not secrets.compare_digest(request.headers.get('x-allen-token',''),token):
                 return JSONResponse({'error':'Recarga Allen para continuar.'},403)
-            max_body=12_500_000 if request.url.path=='/api/teacher/import' else 5_500_000 if request.url.path.startswith('/api/backup/') else 200000
+            max_body=12_500_000 if request.url.path=='/api/teacher/import' else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 5_500_000 if request.url.path.startswith('/api/backup/') else 200000
             try:
                 if int(request.headers.get('content-length','0'))>max_body:
                     return JSONResponse({'error':'El archivo o texto es demasiado largo.'},413)
