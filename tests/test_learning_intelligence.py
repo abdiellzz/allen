@@ -135,3 +135,43 @@ def test_strong_diagnostic_topic_is_exposed_for_route_skipping():
         route=c.get(f"/api/courses/{cid}/route?profile_id=1").json()
         assert isinstance(route["diagnostic_skip_topics"],list)
         c.close()
+
+
+def test_quality_breakdown_is_explainable_and_publish_threshold_matches_ready():
+    strong={"units":[{"title":"U1","topics":[{"title":"CIDR","objective":"Explica y aplica CIDR","source":{"page":1},"source_excerpt":"CIDR usa prefijos de red.","questions":[{"prompt":"¿Cómo se interpreta un prefijo CIDR?","answer_hint":"Usa la longitud del prefijo."}]}]}],"final_exam":[{"topic":"CIDR","prompt":"¿Qué describe CIDR?","options":["A","B","C"],"correct":"A","source":{"page":1}}]}
+    report=evaluate_course(strong)
+    assert "breakdown" in report
+    assert report["breakdown"]["source_grounding"]["ok"]==1
+    assert report["breakdown"]["assessed_topics"]["ok"]==1
+    assert report["status"]=="ready"
+
+
+def test_curriculum_graph_does_not_call_every_previous_topic_a_prerequisite():
+    structure={"units":[{"title":"U1","topics":[{"title":"DNS","objective":"Explica resolución de nombres"},{"title":"DHCP","objective":"Describe asignación automática de red"}]}]}
+    graph=build_graph(structure)
+    assert any(e["relation"]=="builds_on" for e in graph["edges"])
+    assert not any(e["relation"]=="prerequisite" for e in graph["edges"])
+
+
+def test_learning_intelligence_tables_survive_backup_roundtrip():
+    with tempfile.TemporaryDirectory() as tmp:
+        path=Path(tmp)/"allen.sqlite3"
+        c=client_for(path)
+        cid,_=create_course(c)
+        c.post(f"/api/courses/{cid}/enroll",json={"profile_id":1})
+        diagnostic=c.get(f"/api/courses/{cid}/diagnostic?profile_id=1").json()
+        course=c.get(f"/api/teacher/courses/{cid}?profile_id=1").json()["structure"]
+        correct=[q["correct"] for q in course["final_exam"]][:len(diagnostic["questions"])]
+        c.post(f"/api/courses/{cid}/diagnostic/submit",json={"profile_id":1,"answers":correct})
+        backup=c.get("/api/backup/export?profile_id=1").json()
+        assert backup["tables"]["curriculum_edges"]
+        assert backup["tables"]["question_bank"]
+        assert backup["tables"]["course_quality_reviews"]
+        assert backup["tables"]["diagnostic_results"]
+        summary=c.post("/api/backup/validate",json=backup).json()
+        assert summary["questions"]>0
+        assert summary["diagnostics"]>0
+        restored=c.post("/api/backup/restore",json=backup)
+        assert restored.status_code==200
+        assert c.get(f"/api/teacher/courses/{cid}/graph?profile_id=1").json()["persisted_edges"]
+        c.close()
