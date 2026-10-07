@@ -296,3 +296,13 @@ body{min-width:1024px}
 
 .allen-mascot.allen-official{object-fit:contain;display:block}
 .chat-brand .allen-mascot.allen-official,.message.assistant>.allen-mascot.allen-official{background:#fff7ea;border-radius:15px;padding:2px}
+
+.course-exam-shell,.course-exam-result{margin:26px 0}
+.course-exam-shell>progress{margin:12px 0 20px}
+.course-exam-shell fieldset{border:0;border-bottom:1px solid var(--v2-line);padding:20px 0;margin:0}
+.course-exam-shell legend{font-size:19px;font-weight:800;line-height:1.45;margin-bottom:12px}
+.course-exam-result .panel{margin-top:18px}
+.exam-review{padding:14px 0;border-bottom:1px solid var(--v2-line)}
+.exam-review.correct strong{color:var(--v2-green)}
+.exam-review.review strong{color:var(--v2-orange)}
+.exam-review small{color:var(--v2-muted)}
