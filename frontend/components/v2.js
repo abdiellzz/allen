@@ -184,7 +184,7 @@ function recommendFor(subject){
 export function chatV2Bar({subject='General',level='Tu nivel',mode='Tutor'}={}){
  return `<div class="v2-chat-context"><span><small>Tema</small><b>${esc(subject)}</b></span><span><small>Nivel</small><b>${esc(level)}</b></span><span><small>Modo</small><b>${esc(mode)}</b></span></div>
  <div class="v2-chat-actions" aria-label="Acciones de aprendizaje">
-  ${[['easy','Explícamelo más fácil'],['example','Ponme un ejemplo'],['question','Hazme una pregunta'],['challenge','Ponme un reto'],['summary','Resume']].map(([k,l])=>`<button type="button" data-v2-chat="${k}">${l}</button>`).join('')}
+  ${[['easy','Explícamelo más fácil'],['example','Ponme un ejemplo'],['question','Hazme una pregunta'],['recall','Hazme recordar sin mirar'],['interleave','Mézclame ejercicios'],['elaborate','Pregúntame por qué'],['summary','Resume']].map(([k,l])=>`<button type="button" data-v2-chat="${k}">${l}</button>`).join('')}
  </div>`;
 }
 export const chatActionText={
@@ -192,6 +192,9 @@ export const chatActionText={
  example:'Ponme un ejemplo concreto de lo anterior y explícame cada paso.',
  question:'Hazme una pregunta para comprobar si entendí. No me des la respuesta todavía.',
  challenge:'Ponme un reto corto relacionado con lo que estamos viendo. Dame una pista solo si la pido.',
+ recall:'Comprueba mi memoria sobre lo anterior: hazme una sola pregunta sin pistas ni respuesta. Espera a que yo conteste antes de corregirme.',
+ interleave:'Dame una práctica que mezcle lo que estamos viendo con otro tipo de problema relacionado, para que yo tenga que decidir qué estrategia usar.',
+ elaborate:'Hazme una pregunta de “por qué” o “cómo lo sé” sobre lo anterior. Espera mi explicación y luego dame feedback.',
  summary:'Resume lo anterior en puntos clave y termina con una pregunta de repaso.'
 };
 
