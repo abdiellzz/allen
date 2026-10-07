@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS study_sessions(id INTEGER PRIMARY KEY, user_id INTEGE
 CREATE TABLE IF NOT EXISTS study_session_events(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, session_id INTEGER REFERENCES study_sessions(id) ON DELETE CASCADE, kind TEXT NOT NULL, activity_index INTEGER NOT NULL, note TEXT NOT NULL, created TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS adventure_sessions(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, adventure_id TEXT NOT NULL, status TEXT NOT NULL, current_step INTEGER NOT NULL DEFAULT 0, completed_steps INTEGER NOT NULL DEFAULT 0, answers TEXT NOT NULL DEFAULT '[]', mistakes INTEGER NOT NULL DEFAULT 0, hints_used INTEGER NOT NULL DEFAULT 0, started_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT);
 CREATE TABLE IF NOT EXISTS adventure_events(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, session_id INTEGER REFERENCES adventure_sessions(id) ON DELETE CASCADE, event TEXT NOT NULL, step INTEGER NOT NULL, answer TEXT NOT NULL DEFAULT '', correct INTEGER, created TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS simulation_results(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, subject TEXT NOT NULL, topics TEXT NOT NULL, questions TEXT NOT NULL, result TEXT, minutes INTEGER NOT NULL, started_at TEXT NOT NULL, completed_at TEXT);
+CREATE TABLE IF NOT EXISTS simulation_results(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, subject TEXT NOT NULL, topics TEXT NOT NULL, questions TEXT NOT NULL, result TEXT, minutes INTEGER NOT NULL, started_at TEXT NOT NULL, completed_at TEXT, status TEXT NOT NULL DEFAULT 'active', answers TEXT NOT NULL DEFAULT '[]', updated_at TEXT);
 CREATE TABLE IF NOT EXISTS topic_mastery(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, subject TEXT NOT NULL, topic TEXT NOT NULL, mastery_score INTEGER NOT NULL DEFAULT 0, confidence INTEGER NOT NULL DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0, correct_answers INTEGER NOT NULL DEFAULT 0, incorrect_answers INTEGER NOT NULL DEFAULT 0, hints_used INTEGER NOT NULL DEFAULT 0, explanations_requested INTEGER NOT NULL DEFAULT 0, practice_count INTEGER NOT NULL DEFAULT 0, quiz_count INTEGER NOT NULL DEFAULT 0, last_seen TEXT, next_review TEXT, difficulty TEXT NOT NULL DEFAULT 'Normal', status TEXT NOT NULL DEFAULT 'new', UNIQUE(user_id,subject,topic));
 CREATE TABLE IF NOT EXISTS learning_events(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, event_type TEXT NOT NULL, subject TEXT NOT NULL DEFAULT '', topic TEXT NOT NULL DEFAULT '', reference_type TEXT NOT NULL DEFAULT '', reference_id INTEGER, metadata_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS profile_current_activity(user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, activity_type TEXT NOT NULL, reference_id INTEGER, subject TEXT NOT NULL DEFAULT '', topic TEXT NOT NULL DEFAULT '', status TEXT NOT NULL, updated_at TEXT NOT NULL);
@@ -55,6 +55,14 @@ class Database:
             }
             for column,sql in migrations.items():
                 if column not in existing: db.execute(sql)
+            sim_existing={row['name'] for row in db.execute("PRAGMA table_info(simulation_results)").fetchall()}
+            sim_migrations={
+                'status':"ALTER TABLE simulation_results ADD COLUMN status TEXT NOT NULL DEFAULT 'active'",
+                'answers':"ALTER TABLE simulation_results ADD COLUMN answers TEXT NOT NULL DEFAULT '[]'",
+                'updated_at':"ALTER TABLE simulation_results ADD COLUMN updated_at TEXT",
+            }
+            for column,sql in sim_migrations.items():
+                if column not in sim_existing: db.execute(sql)
             if not db.execute('SELECT 1 FROM users LIMIT 1').fetchone():
                 db.execute("INSERT INTO users VALUES (1,'Explorador',NULL,'Premedia','🐵')")
 
