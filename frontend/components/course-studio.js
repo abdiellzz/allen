@@ -133,9 +133,11 @@ function stepBody(topic,step){
 }
 function routeView(data){
  const c=data.course,e=data.enrollment,unit=c.structure.units[e.unit_index],topic=unit.topics[e.topic_index],steps=topic.route||[],step=steps[Math.min(e.step_index,steps.length-1)]||{type:'discover',label:'Descubre'};
+ const journey=unit.topics.map((t,i)=>`<span class="${i<e.topic_index?'done':i===e.topic_index?'current':'future'}"><b>${i<e.topic_index?'✓':i+1}</b><small>${esc(t.title)}</small></span>`).join('<i>→</i>');
  return `<section class="guided-course-shell" data-course-id="${c.id}" data-unit="${e.unit_index}" data-topic="${e.topic_index}" data-step="${e.step_index}">
   ${allenGuide(step.type==='review'?'progress':'guide',`Estamos en ${topic.title}. ${step.label}: concéntrate solo en este paso.`)}
   <div class="row spaced"><div><span class="eyebrow">${esc(c.title)} · ${esc(unit.title)}</span><h1>${esc(topic.title)}</h1></div><span class="pill">Tema ${e.topic_index+1}/${unit.topics.length}</span></div>
+  <section class="learning-journey" aria-label="Recorrido del curso"><div class="row spaced"><div><span class="eyebrow">LEARNING JOURNEY</span><h2>Tu recorrido en esta unidad</h2></div><small>${e.topic_index+1} de ${unit.topics.length}</small></div><div class="learning-journey-track">${journey}</div></section>
   ${learningStepRail(e.step_index,steps.map(x=>x.label))}
   <article class="guided-learning-card">${stepBody(topic,step)}<div id="course-help-panel"></div><div class="row guided-actions"><button id="course-help">No entendí</button><button id="course-next" class="primary">${e.step_index>=steps.length-1?'Terminar tema':'Continuar'}</button></div></article>
  </section>`;

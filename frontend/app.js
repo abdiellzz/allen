@@ -28,6 +28,8 @@ const modules=[
  ['Aprende IA','✦','Aprende sobre IA','Conoce la tecnología que te acompaña.']
 ];
 let rememberedProfile=1;try{rememberedProfile=Number(localStorage.getItem('allen-active-profile'))||1;}catch{}
+const storedTheme=localStorage.getItem('allen-theme')||'light';
+document.documentElement.dataset.theme=storedTheme;
 let state={profiles:[],settings:{},catalog:{},profile:rememberedProfile,page:'Inicio',model:null};
 let chat={messages:[],id:null,controller:null},quiz=null,pageEpoch=0;
 let lastActivity=Date.now();
@@ -58,9 +60,40 @@ document.body.dataset.workspaceMode=storedMode;
 $('#nav').innerHTML=`<div class="workspace-mode" role="group" aria-label="Modo de trabajo"><button data-workspace-mode="student" class="${storedMode==='student'?'active':''}">Estudiante</button><button data-workspace-mode="teacher" class="${storedMode==='teacher'?'active':''}">Profesor</button></div>`+navGroups.map(([label,mode,items])=>`<div class="nav-group" data-nav-mode="${mode}"><span class="nav-group-label">${label}</span>${items.map(([page,name,title])=>`<button class="nav-btn" title="${title}" aria-label="${title}" data-page="${page}"><span class="nav-icon">${icon(name)}</span><span class="nav-text">${title}</span></button>`).join('')}</div>`).join('');
 $('#nav').addEventListener('click',e=>{const modeButton=e.target.closest('[data-workspace-mode]');if(!modeButton)return;const mode=modeButton.dataset.workspaceMode;document.body.dataset.workspaceMode=mode;localStorage.setItem('allen-workspace-mode',mode);document.querySelectorAll('[data-workspace-mode]').forEach(b=>b.classList.toggle('active',b.dataset.workspaceMode===mode));if(mode==='teacher'&&state.page==='Inicio')go('Teacher Studio');if(mode==='student'&&state.page==='Teacher Studio')go('Inicio');});
 $('.brand').innerHTML='<img class="brand-mascot" src="/static/assets/allen-brand.svg" alt="Allen"><span class="brand-text">ALLEN<small>Aprender es una aventura</small></span>';
+$('.top-actions').insertAdjacentHTML('afterbegin',`<button id="global-search-open" class="icon-action" title="Buscar en Allen (Ctrl+K)" aria-label="Buscar en Allen">${icon('search',18)}<span>Buscar</span><kbd>Ctrl K</kbd></button><button id="theme-toggle" class="icon-action" title="Cambiar tema" aria-label="Cambiar tema">${icon(storedTheme==='dark'?'sun':'moon',18)}</button>`);
+document.body.insertAdjacentHTML('beforeend',`<div id="command-palette" class="command-palette" hidden><div class="command-backdrop" data-command-close></div><section class="command-dialog" role="dialog" aria-modal="true" aria-labelledby="command-title"><div class="command-search-row">${icon('search',20)}<input id="command-input" autocomplete="off" placeholder="Buscar cursos, temas y acciones…" aria-label="Buscar en Allen"><kbd>Esc</kbd></div><div id="command-results"></div><p class="command-hint">Enter para abrir · Esc para cerrar · Ctrl+K desde cualquier página</p></section></div>`);
 $('.sidebar-bottom').innerHTML=`<div class="sidebar-allen"><img src="/static/assets/allen-guide.svg" alt="Allen"><div><strong>¿Seguimos?</strong><small>Tu progreso se queda aquí.</small></div></div><button class="nav-btn" data-page="Perfil" title="Mi perfil">${icon('user-round')}<span class="nav-text">Mi perfil</span></button><button class="nav-btn" data-page="Privacidad" title="Privacidad">${icon('shield-check')}<span class="nav-text">Privado y offline</span></button>`;
 const collapse=document.createElement('button');collapse.className='collapse-button';collapse.title='Contraer o expandir menú';collapse.setAttribute('aria-label',collapse.title);collapse.innerHTML=icon('panel-left-close');$('.sidebar').insertBefore(collapse,$('#nav'));collapse.onclick=()=>{const collapsed=document.body.classList.toggle('sidebar-collapsed');collapse.setAttribute('aria-expanded',String(!collapsed));};collapse.setAttribute('aria-expanded','true');
 document.addEventListener('click',e=>{const button=e.target.closest('[data-page]');if(button)go(button.dataset.page);});
+const commandItems=[
+ ['Inicio','Inicio','Tu espacio de aprendizaje'],
+ ['Aprender','Aprender','Explorar materias y explicaciones'],
+ ['Cursos','Cursos','Rutas completas y diagnóstico'],
+ ['Método Allen','Método Allen','Técnicas de estudio'],
+ ['Plan Allen','Plan Allen','Planificar un examen o meta'],
+ ['Biblioteca','Biblioteca','Apuntes y lecturas locales'],
+ ['Aventura','Aventura','Misiones educativas'],
+ ['Quiz','Quiz','Practicar con preguntas'],
+ ['Tarjetas','Tarjetas','Repaso con flashcards'],
+ ['Progreso','Progreso','Dashboard y mastery'],
+ ['Teacher Studio','Teacher Studio','Crear y revisar cursos'],
+ ['Configuración','Configuración','IA local, backups y preferencias']
+];
+function commandOpen(){
+ const modal=$('#command-palette');modal.hidden=false;document.body.classList.add('command-open');
+ const input=$('#command-input');input.value='';renderCommandResults('');setTimeout(()=>input.focus(),0);
+}
+function commandClose(){const modal=$('#command-palette');modal.hidden=true;document.body.classList.remove('command-open');}
+function renderCommandResults(query=''){
+ const q=query.trim().toLowerCase();
+ const rows=commandItems.filter(x=>!q||x.join(' ').toLowerCase().includes(q)).slice(0,10);
+ $('#command-results').innerHTML=rows.length?rows.map(([page,title,desc],i)=>`<button class="command-result ${i===0?'selected':''}" data-command-page="${esc(page)}"><span>${icon(page==='Teacher Studio'?'book-open':'arrow-right',18)}<b>${esc(title)}</b></span><small>${esc(desc)}</small></button>`).join(''):`<div class="command-empty"><b>Sin resultados</b><span>Prueba con “curso”, “quiz”, “progreso” o “configuración”.</span></div>`;
+}
+$('#global-search-open').onclick=commandOpen;
+$('#command-input').addEventListener('input',e=>renderCommandResults(e.target.value));
+$('#command-palette').addEventListener('click',e=>{if(e.target.closest('[data-command-close]'))commandClose();const item=e.target.closest('[data-command-page]');if(item){commandClose();go(item.dataset.commandPage);}});
+$('#theme-toggle').onclick=()=>{const next=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;localStorage.setItem('allen-theme',next);$('#theme-toggle').innerHTML=icon(next==='dark'?'sun':'moon',18);};
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();commandOpen();}else if(e.key==='Escape'&&!$('#command-palette').hidden){commandClose();}else if(e.key==='Enter'&&!$('#command-palette').hidden&&document.activeElement===$('#command-input')){$('#command-results .command-result')?.click();}});
 $('.skip').onclick=e=>{e.preventDefault();content.focus();content.scrollIntoView();};
 $('#profile-select').addEventListener('change',async e=>{chat.controller?.abort();state.profile=Number(e.target.value);resetStudy();updateProfiles();chat={messages:[],id:null,controller:null};quiz=null;await render();});
 function go(page){location.hash=encodeURIComponent(page);if(state.page===page)render();}
@@ -230,7 +263,20 @@ async function bindCards(){const cards=await api('/flashcards?profile_id='+state
  $('#card-list').onclick=e=>{const b=e.target.closest('[data-delete-card]');if(b&&confirm('¿Eliminar esta tarjeta?'))guarded(async()=>{await api('/flashcards/'+b.dataset.deleteCard+'?profile_id='+state.profile,'DELETE');render();});};
 }
 
-async function progressPage(){const [p,results]=await Promise.all([api('/progress?profile_id='+state.profile),api('/quiz/results?profile_id='+state.profile)]);return heading(state.page==='Docente'?'Acompañar su aprendizaje':'Mira todo lo que has avanzado','Pequeños pasos, sin comparaciones ni competencias.')+`<div class="learning-banner">${AllenMascot(p.xp?'celebrating':'studying')}<p>${p.xp?'Cada práctica suma. Mira lo que has aprendido.':'Tu aventura empieza con una pregunta.'}</p></div>`+stats(p)+`<div class="field-grid"><section class="panel"><span class="eyebrow">${esc(p.level)}</span><h2>Tu curiosidad suma</h2><p>${icon("layers",20)} ${p.cards} tarjetas con intervalo de al menos 3 días.</p><p>◷ ${p.minutes} minutos de estudio activo registrados.</p><p class="muted">+10 XP por ejercicio · +30 por quiz · +5 por día de estudio. Cada tarjeta suma una vez por día.</p><button data-page="Docente">Vista para padre o docente</button></section><section class="panel"><h2>Materias exploradas</h2>${p.subjects.length?p.subjects.map(s=>`<p>${esc(s.subject)} <b>· ${Math.floor(s.seconds/60)} min</b></p>`).join(''):'<p class="muted">Tus sesiones aparecerán aquí mientras estudias.</p>'}<p class="muted">Esta vista muestra progreso agregado, sin conversaciones. Los perfiles de un dispositivo no tienen contraseña.</p></section></div><section class="panel"><h2>Tus últimos quizzes</h2>${results.length?results.map(r=>`<div class="library-card row spaced"><span>${esc(r.config.subject+' · '+r.config.topic)}</span><b>${r.result.score}/${r.result.total}</b></div>`).join(''):'<p class="muted">Aún no has terminado un quiz.</p>'}</section>${achievementPanel(p,results)}`;}
+async function progressPage(){
+ const [p,results,continuityData]=await Promise.all([api('/progress?profile_id='+state.profile),api('/quiz/results?profile_id='+state.profile),api('/continuity?profile_id='+state.profile)]);
+ const mastery=continuityData?.mastery||[],strong=mastery.filter(x=>Number(x.mastery_score)>=80).length,developing=mastery.filter(x=>Number(x.mastery_score)>=55&&Number(x.mastery_score)<80).length,weak=mastery.filter(x=>Number(x.mastery_score)<55).length;
+ const totalSeconds=(p.subjects||[]).reduce((a,x)=>a+(x.seconds||0),0)||1;
+ const subjectBars=(p.subjects||[]).map(s=>`<article class="v4-subject-row"><div class="row spaced"><b>${esc(s.subject)}</b><span>${Math.floor((s.seconds||0)/60)} min</span></div><div><i style="width:${Math.max(5,Math.round((s.seconds||0)/totalSeconds*100))}%"></i></div></article>`).join('');
+ const recent=results.slice(0,5).map(r=>`<article class="v4-recent-result"><span>${esc(r.config.subject+' · '+r.config.topic)}</span><b>${r.result.score}/${r.result.total}</b></article>`).join('');
+ return heading(state.page==='Docente'?'Acompañar su aprendizaje':'Tu progreso','Entiende qué avanzó, qué necesita práctica y cuál es el siguiente paso.')+`
+ <section class="v4-progress-hero"><div><span class="eyebrow">PANORAMA DE APRENDIZAJE</span><h2>${p.xp?'Estás construyendo constancia.':'Tu progreso empieza con la primera práctica.'}</h2><p>Sin rankings. Solo evidencia de tu propio aprendizaje.</p></div>${AllenMascot(p.xp?'celebrating':'studying')}</section>
+ <section class="v4-kpi-grid"><article><span>Tiempo activo</span><b>${p.minutes} min</b><small>registrados localmente</small></article><article><span>Temas dominados</span><b>${strong}</b><small>${developing} en desarrollo</small></article><article><span>Por reforzar</span><b>${weak}</b><small>${continuityData?.due_topic_reviews?.length||0} repasos pendientes</small></article><article><span>Constancia</span><b>${p.streak} días</b><small>${p.xp} XP acumulados</small></article></section>
+ <div class="v4-progress-grid"><section class="panel"><div class="row spaced"><div><span class="eyebrow">MATERIAS</span><h2>Dónde estás invirtiendo tiempo</h2></div></div><div class="v4-subject-list">${subjectBars||'<p class="muted">Tus materias aparecerán aquí cuando estudies.</p>'}</div></section>
+ <section class="panel"><span class="eyebrow">MASTERY</span><h2>Estado de tus temas</h2><div class="v4-mastery-donut" style="--strong:${strong};--developing:${developing};--weak:${weak};--total:${Math.max(1,strong+developing+weak)}"><div><b>${strong+developing+weak}</b><span>temas</span></div></div><div class="v4-legend"><span><i class="strong"></i>Dominados ${strong}</span><span><i class="developing"></i>En desarrollo ${developing}</span><span><i class="weak"></i>Reforzar ${weak}</span></div></section></div>
+ <section class="panel v4-recent"><div class="row spaced"><div><span class="eyebrow">ACTIVIDAD RECIENTE</span><h2>Últimos quizzes</h2></div><button data-page="Quiz">Practicar</button></div><div>${recent||'<p class="muted">Aún no has terminado un quiz.</p>'}</div></section>
+ ${achievementPanel(p,results)}`;
+}
 function bindProgress(){}
 
 async function settingsPage(){const health=await api('/health'),s=state.settings,p=profile();return heading('A tu manera','Tu perfil, tu espacio y el cerebro local de Allen.')+`
