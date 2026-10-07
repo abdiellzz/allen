@@ -94,3 +94,23 @@ def test_course_pack_roundtrip_requires_review_again():
         assert new_row["status"]=="draft"
         assert c.post(f"/api/teacher/courses/{new_id}/publish",json={"profile_id":1}).status_code==409
         c.close()
+
+
+def test_course_exam_can_be_completed_after_publish():
+    with tempfile.TemporaryDirectory() as tmp:
+        c=client_for(Path(tmp)/"allen.sqlite3")
+        material="# Unidad Redes\nIPv4 identifica interfaces. DNS traduce nombres. DHCP asigna parámetros.\n# Unidad Seguridad\nMFA añade una segunda comprobación. Los backups permiten recuperar información."
+        payload={"profile_id":1,"title":"Curso examen","subject":"Redes","level":"Premedia","filename":"curso.md","mime":"text/markdown","content_base64":base64.b64encode(material.encode()).decode()}
+        imported=c.post("/api/teacher/import",json=payload).json()
+        cid=imported["course_id"]
+        course=c.get(f"/api/teacher/courses/{cid}?profile_id=1").json()
+        assert len(course["structure"].get("final_exam",[]))>0
+        c.put(f"/api/teacher/courses/{cid}/review",json={"profile_id":1,"structure":course["structure"]})
+        c.post(f"/api/teacher/courses/{cid}/publish",json={"profile_id":1})
+        c.post(f"/api/courses/{cid}/enroll",json={"profile_id":1})
+        public_exam=c.get(f"/api/courses/{cid}/exam?profile_id=1").json()
+        answers=[item["correct"] for item in course["structure"]["final_exam"]]
+        outcome=c.post(f"/api/courses/{cid}/exam/submit",json={"profile_id":1,"answers":answers})
+        assert outcome.status_code==200
+        assert outcome.json()["percentage"]==100
+        c.close()
