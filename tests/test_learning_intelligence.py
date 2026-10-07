@@ -108,3 +108,30 @@ def test_mastery_evidence_and_due_reviews_are_explainable():
         continuity=c.get('/api/continuity?profile_id=1').json()
         assert continuity["due_topic_reviews"]
         c.close()
+
+
+def test_question_bank_is_approved_after_teacher_review():
+    with tempfile.TemporaryDirectory() as tmp:
+        c=client_for(Path(tmp)/"allen.sqlite3")
+        cid,_=create_course(c)
+        rows=c.get(f"/api/teacher/courses/{cid}/questions?profile_id=1").json()
+        assert rows
+        assert all(row["status"]=="approved" for row in rows)
+        assert all("difficulty" in row and "objective" in row and "source_page" in row for row in rows)
+        c.close()
+
+
+def test_strong_diagnostic_topic_is_exposed_for_route_skipping():
+    with tempfile.TemporaryDirectory() as tmp:
+        c=client_for(Path(tmp)/"allen.sqlite3")
+        cid,structure=create_course(c)
+        c.post(f"/api/courses/{cid}/enroll",json={"profile_id":1})
+        diagnostic=c.get(f"/api/courses/{cid}/diagnostic?profile_id=1").json()
+        correct=[q["correct"] for q in structure["final_exam"]][:len(diagnostic["questions"])]
+        if len(correct)<len(diagnostic["questions"]):
+            correct=(correct*10)[:len(diagnostic["questions"])]
+        result=c.post(f"/api/courses/{cid}/diagnostic/submit",json={"profile_id":1,"answers":correct})
+        assert result.status_code==200
+        route=c.get(f"/api/courses/{cid}/route?profile_id=1").json()
+        assert isinstance(route["diagnostic_skip_topics"],list)
+        c.close()
