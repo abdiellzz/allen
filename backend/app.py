@@ -35,6 +35,7 @@ from .course_quality import evaluate_course, publication_allowed
 from .question_bank import sync_course_questions, stats_for_course
 from .learning_intelligence import mastery_evidence, due_reviews, diagnostic_questions, score_diagnostic, recommended_start
 from .course_versioning import compare_versions, seed_initial_version, apply_version, history as course_version_history
+from .version import ALLEN_VERSION
 
 ROOT=Path(__file__).resolve().parent.parent
 
@@ -57,7 +58,7 @@ def create_app(db_path=None, ai=None):
         db.prune()
         yield
 
-    app=FastAPI(title='ALLEN local',docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
+    app=FastAPI(title='ALLEN local',version=ALLEN_VERSION,docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
     app.state.db=db
     app.add_middleware(TrustedHostMiddleware,allowed_hosts=['127.0.0.1','localhost','[::1]']+(['testserver'] if db_path else []))
 
@@ -111,7 +112,7 @@ def create_app(db_path=None, ai=None):
     @app.get('/api/bootstrap')
     def bootstrap():
         db.prune()
-        return dict(token=token,profiles=[user(p['id']) for p in db.all('SELECT id FROM users')],settings=db.settings().model_dump(),catalog=catalog())
+        return dict(version=ALLEN_VERSION,token=token,profiles=[user(p['id']) for p in db.all('SELECT id FROM users')],settings=db.settings().model_dump(),catalog=catalog())
 
     @app.get('/api/fair/token')
     def fair_token():
@@ -120,7 +121,7 @@ def create_app(db_path=None, ai=None):
     @app.get('/api/health')
     def health():
         db.one('SELECT 1')
-        return dict(application=True,database=True,library=len(library.documents()),internet='No se consulta Internet; el navegador informa de la red.')
+        return dict(version=ALLEN_VERSION,application=True,database=True,library=len(library.documents()),internet='No se consulta Internet; el navegador informa de la red.')
 
     @app.get('/api/model/status')
     async def model_status():
