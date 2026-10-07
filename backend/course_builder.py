@@ -18,13 +18,19 @@ def _clean(text:str)->str:
     return text.strip()
 
 def decode_source(filename:str,mime:str,content_base64:str):
-    raw=base64.b64decode(content_base64,validate=True)
+    try:
+        raw=base64.b64decode(content_base64,validate=True)
+    except Exception as exc:
+        raise ValueError('El archivo no tiene un formato válido.') from exc
     if len(raw)>MAX_BYTES:
         raise ValueError("El archivo supera el límite local de 8 MB.")
     ext=Path(filename).suffix.lower()
     pages=[]
     if ext==".pdf" or mime=="application/pdf":
-        reader=PdfReader(io.BytesIO(raw))
+        try:
+            reader=PdfReader(io.BytesIO(raw))
+        except Exception as exc:
+            raise ValueError('No pudimos abrir este PDF.') from exc
         if len(reader.pages)>250:
             raise ValueError("El PDF tiene demasiadas páginas para esta versión.")
         for idx,page in enumerate(reader.pages,1):
