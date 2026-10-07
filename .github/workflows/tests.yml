@@ -8,6 +8,7 @@ on:
       - feature/allen-study-planner
       - feature/allen-learning-continuity
       - feature/allen-product-polish
+      - feature/allen-guided-learning-studio
   pull_request:
 jobs:
   python:
