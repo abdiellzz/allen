@@ -370,6 +370,7 @@ def create_app(db_path=None, ai=None):
             raise HTTPException(409,'El curso todavía tiene problemas de calidad que deben revisarse antes de publicar.')
         persist_graph(db,cid,structure)
         sync_course_questions(db,cid,structure)
+        db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
         db.execute("UPDATE courses SET status='published',published_at=?,updated_at=? WHERE id=?",(now(),now(),cid))
         return {'ok':True,'course_id':cid,'quality':quality}
 
