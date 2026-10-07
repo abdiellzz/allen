@@ -507,7 +507,7 @@ def create_app(db_path=None, ai=None):
         topic=value.topics[0]
         request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=value.question_count,kind='multiple')
         questions=generate(request)
-        sid=db.execute("INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at,status,answers,updated_at) VALUES(?,?,?,?,NULL,?,?,'active','[]',?)",(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),(value.minutes if value.timed else 0),now(),now()))
+        sid=db.execute("INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at,status,answers,updated_at,remaining_seconds) VALUES(?,?,?,?,NULL,?,?,'active','[]',?,?)",(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),(value.minutes if value.timed else 0),now(),now(),(value.minutes*60 if value.timed else 0)))
         db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'simulation',sid,value.subject,value.topics[0] if value.topics else '','active',now()))
         return dict(id=sid,subject=value.subject,topics=value.topics,questions=questions,minutes=(value.minutes if value.timed else 0),timed=value.timed)
 
@@ -524,7 +524,7 @@ def create_app(db_path=None, ai=None):
         user(value.profile_id)
         row=db.one('SELECT id FROM simulation_results WHERE id=? AND user_id=?',(sid,value.profile_id))
         if not row:raise HTTPException(404,'No encontramos ese simulacro.')
-        db.execute('UPDATE simulation_results SET answers=?,status=?,updated_at=? WHERE id=?',(json.dumps(value.answers,ensure_ascii=False),value.status,now(),sid))
+        db.execute('UPDATE simulation_results SET answers=?,status=?,updated_at=?,remaining_seconds=COALESCE(?,remaining_seconds) WHERE id=?',(json.dumps(value.answers,ensure_ascii=False),value.status,now(),value.remaining_seconds,sid))
         db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) SELECT user_id,'simulation',id,subject,'',?,? FROM simulation_results WHERE id=?",(value.status,now(),sid))
         return {'ok':True}
 
