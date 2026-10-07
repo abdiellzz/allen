@@ -15,7 +15,7 @@ def recovery_dir(db_path):
     root.mkdir(parents=True,exist_ok=True)
     return root
 
-def create_snapshot(db_path,reason="manual"):
+def create_snapshot(db_path,reason="manual",preserve=None):
     path=Path(db_path)
     if not path.exists() or path.stat().st_size==0:
         return None
@@ -27,7 +27,7 @@ def create_snapshot(db_path,reason="manual"):
         source.backup(dest)
     finally:
         dest.close();source.close()
-    _rotate(path)
+    _rotate(path,preserve or set())
     return target.name
 
 def ensure_pre_migration_snapshot(db_path,current_version,target_version):
@@ -36,11 +36,17 @@ def ensure_pre_migration_snapshot(db_path,current_version,target_version):
         return create_snapshot(path,f"pre-migration-v{current_version}-to-v{target_version}")
     return None
 
-def _rotate(db_path):
+def _rotate(db_path,preserve=None):
+    preserve=set(preserve or ())
     files=sorted(recovery_dir(db_path).glob("*.sqlite3"),key=lambda p:p.stat().st_mtime,reverse=True)
-    for old in files[KEEP_SNAPSHOTS:]:
-        try: old.unlink()
-        except OSError: pass
+    kept=0
+    for old in files:
+        if old.name in preserve:
+            continue
+        kept+=1
+        if kept>KEEP_SNAPSHOTS:
+            try: old.unlink()
+            except OSError: pass
 
 def list_snapshots(db_path):
     out=[]
@@ -70,7 +76,7 @@ def restore_snapshot(db_path,name):
     check=integrity_report(source_path)
     if not check["ok"]:
         raise ValueError("El snapshot no supera la comprobación de integridad.")
-    safety=create_snapshot(path,"before-recovery-restore")
+    safety=create_snapshot(path,"before-recovery-restore",{name})
     source=sqlite3.connect(source_path)
     dest=sqlite3.connect(path)
     try:
