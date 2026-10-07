@@ -40,7 +40,9 @@ class LocalAI:
             result=dict(state='IA LOCAL DESCONECTADA', connected=False, models=[], configured=bool(settings.model))
         self._status_cache_key=key
         self._status_cache=result
-        self._status_cache_until=now+15.0
+        # Cache healthy local servers; disconnected states are checked again immediately so
+        # starting/restarting llama.cpp is detected without making the user wait.
+        self._status_cache_until=now+(15.0 if result.get('connected') else 0.0)
         return result
 
     def messages(self, request, profile, settings, sources):
