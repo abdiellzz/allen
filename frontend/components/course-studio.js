@@ -35,8 +35,10 @@ function teacherAnalyticsView(data){
 }
 function qualityView(q,graph){
  if(!q)return '';
+ const b=q.breakdown||{},ratio=x=>x&&x.total?Math.round(x.ok/x.total*100):0;
  return `<section class="course-quality panel"><div class="row spaced"><div><span class="eyebrow">COURSE QUALITY</span><h2>${q.score}/100</h2></div><span class="pill ${q.blocking_issues?'warn':'green'}">${q.blocking_issues} bloqueos</span></div>
  <p>${q.passed}/${q.checks} checks superados · ${graph?.nodes?.length||0} conceptos · ${graph?.edges?.length||0} relaciones curriculares.</p>
+ <div class="quality-breakdown"><article><b>${ratio(b.source_grounding)}%</b><span>Con fuente</span></article><article><b>${ratio(b.measurable_objectives)}%</b><span>Objetivos medibles</span></article><article><b>${ratio(b.assessed_topics)}%</b><span>Temas evaluados</span></article><article><b>${ratio(b.final_exam)}%</b><span>Examen final</span></article></div>
  ${q.issues.length?`<div class="quality-issues">${q.issues.slice(0,12).map(i=>`<article class="${i.severity}"><b>${esc(i.location||'Curso')}</b><span>${esc(i.message)}</span></article>`).join('')}</div>`:'<p class="success-copy">No encontramos problemas importantes antes de publicar.</p>'}
  </section>`;
 }
