@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json
 FORMAT="allen-backup"; VERSION=1
-TABLES=("users","progress","quiz_results","flashcards","learning_sessions","library_packs","student_memory","saved_answers","study_plans","study_sessions","study_session_events","adventure_sessions","adventure_events","simulation_results","topic_mastery","learning_events","profile_current_activity")
+TABLES=("users","progress","quiz_results","flashcards","learning_sessions","library_packs","student_memory","saved_answers","study_plans","study_sessions","study_session_events","adventure_sessions","adventure_events","simulation_results","topic_mastery","learning_events","profile_current_activity","teacher_documents","courses","course_enrollments")
 
 def export_backup(db):
     data={"format":FORMAT,"version":VERSION,"tables":{}}
