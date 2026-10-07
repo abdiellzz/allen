@@ -293,3 +293,6 @@ body{min-width:1024px}
 .course-flashcard strong{display:block;font-size:20px;margin-bottom:10px}
 @media(max-width:1180px){.teacher-course-grid,.student-course-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.allen-step-rail{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.allen-guide-visual img{filter:none}}
+
+.allen-mascot.allen-official{object-fit:contain;display:block}
+.chat-brand .allen-mascot.allen-official,.message.assistant>.allen-mascot.allen-official{background:#fff7ea;border-radius:15px;padding:2px}
