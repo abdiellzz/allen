@@ -54,7 +54,7 @@ def test_desktop_guided_learning_smoke_and_viewports():
                     page.set_viewport_size({"width":width,"height":height})
                     page.wait_for_timeout(100)
                     overflow=page.evaluate("document.documentElement.scrollWidth-window.innerWidth")
-                    assert overflow <= 2
+                    assert overflow <= 2, f"horizontal overflow {overflow}px at {width}x{height}"
 
                 page.set_viewport_size({"width":1366,"height":768})
                 page.keyboard.press("Control+K")
