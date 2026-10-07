@@ -30,6 +30,10 @@ from .learning_engine import recommend_next_action
 from .recommendations import build_recommendation
 from .backup import export_backup, validate_backup, restore_backup
 from .course_builder import decode_source, build_course, course_pack, validate_course_structure
+from .curriculum_graph import build_graph, persist_graph, prerequisite_chain
+from .course_quality import evaluate_course, publication_allowed
+from .question_bank import sync_course_questions, stats_for_course
+from .learning_intelligence import mastery_evidence, due_reviews, diagnostic_questions, score_diagnostic, recommended_start
 
 ROOT=Path(__file__).resolve().parent.parent
 
@@ -343,8 +347,13 @@ def create_app(db_path=None, ai=None):
         try: validate_course_structure(value.structure)
         except ValueError as exc: raise HTTPException(422,str(exc))
         value.structure['status']='reviewed'
+        quality=evaluate_course(value.structure)
+        graph=persist_graph(db,cid,value.structure)
+        synced=sync_course_questions(db,cid,value.structure)
+        db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
+        db.execute("INSERT INTO course_quality_reviews(course_id,score,blocking_issues,report_json,created_at) VALUES(?,?,?,?,?)",(cid,quality['score'],quality['blocking_issues'],json.dumps(quality,ensure_ascii=False),now()))
         db.execute("UPDATE courses SET status='reviewed',structure_json=?,updated_at=? WHERE id=?",(json.dumps(value.structure,ensure_ascii=False),now(),cid))
-        return {'ok':True}
+        return {'ok':True,'quality':quality,'graph':{'nodes':len(graph['nodes']),'edges':len(graph['edges'])},'question_bank':synced}
 
     @app.post('/api/teacher/courses/{cid}/publish')
     def publish_course(cid:int,value:CoursePublish):
@@ -356,8 +365,14 @@ def create_app(db_path=None, ai=None):
         except ValueError as exc: raise HTTPException(422,str(exc))
         if row['status']=='draft':
             raise HTTPException(409,'Revisa y aprueba el curso antes de publicarlo.')
+        quality=evaluate_course(structure)
+        if not publication_allowed(quality):
+            raise HTTPException(409,'El curso todavía tiene problemas de calidad que deben revisarse antes de publicar.')
+        persist_graph(db,cid,structure)
+        sync_course_questions(db,cid,structure)
+        db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
         db.execute("UPDATE courses SET status='published',published_at=?,updated_at=? WHERE id=?",(now(),now(),cid))
-        return {'ok':True,'course_id':cid}
+        return {'ok':True,'course_id':cid,'quality':quality}
 
     @app.get('/api/teacher/courses/{cid}/pack')
     def export_course_pack(cid:int,profile_id:int=1):
@@ -366,6 +381,106 @@ def create_app(db_path=None, ai=None):
         if not row: raise HTTPException(404,'No encontramos ese curso.')
         doc=db.one("SELECT title,filename,page_count FROM teacher_documents WHERE id=?",(row['source_document_id'],)) if row['source_document_id'] else {}
         return course_pack(json.loads(row['structure_json']),doc or {})
+
+    @app.get('/api/teacher/courses/{cid}/quality')
+    def course_quality(cid:int,profile_id:int=1):
+        user(profile_id)
+        row=db.one("SELECT * FROM courses WHERE id=? AND owner_profile_id=?",(cid,profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese curso.')
+        structure=json.loads(row['structure_json'])
+        report=evaluate_course(structure)
+        report['question_bank']=stats_for_course(db,cid)
+        return report
+
+    @app.get('/api/teacher/courses/{cid}/questions')
+    def teacher_question_bank(cid:int,profile_id:int=1):
+        user(profile_id)
+        course=db.one("SELECT id FROM courses WHERE id=? AND owner_profile_id=?",(cid,profile_id))
+        if not course: raise HTTPException(404,'No encontramos ese curso.')
+        rows=db.all("SELECT id,unit_index,topic_index,subject,topic,objective,prompt,answer,options_json,difficulty,kind,source_page,status,origin,attempts,correct_count,incorrect_count FROM question_bank WHERE course_id=? ORDER BY unit_index,topic_index,id",(cid,))
+        for row in rows:
+            row['options']=json.loads(row.pop('options_json') or '[]')
+            row['correct_rate']=round(row['correct_count']/max(1,row['attempts'])*100) if row['attempts'] else None
+        return rows
+
+    @app.get('/api/teacher/courses/{cid}/graph')
+    def course_graph(cid:int,profile_id:int=1):
+        user(profile_id)
+        row=db.one("SELECT * FROM courses WHERE id=? AND owner_profile_id=?",(cid,profile_id))
+        if not row: raise HTTPException(404,'No encontramos ese curso.')
+        structure=json.loads(row['structure_json'])
+        graph=build_graph(structure)
+        graph['persisted_edges']=db.all("SELECT from_node,to_node,relation,reason FROM curriculum_edges WHERE course_id=?",(cid,))
+        return graph
+
+    @app.get('/api/teacher/analytics')
+    def teacher_analytics(profile_id:int=1):
+        user(profile_id)
+        courses=db.all("SELECT id,title,subject,status,structure_json FROM courses WHERE owner_profile_id=?",(profile_id,))
+        out=[]
+        for course in courses:
+            structure=json.loads(course.pop('structure_json'))
+            quality=evaluate_course(structure)
+            enrollments=db.one("SELECT count(*) n FROM course_enrollments WHERE course_id=?",(course['id'],))['n']
+            completions=db.one("SELECT count(*) n FROM course_enrollments WHERE course_id=? AND status='completed'",(course['id'],))['n']
+            helps=db.one("SELECT count(*) n FROM learning_events WHERE reference_type='course' AND reference_id=? AND event_type='explanation_requested'",(course['id'],))['n']
+            question_stats=stats_for_course(db,course['id'])
+            weak=db.all("""SELECT tm.topic,ROUND(AVG(tm.mastery_score),1) mastery,COUNT(*) learners
+                FROM topic_mastery tm JOIN course_enrollments ce ON ce.user_id=tm.user_id
+                WHERE ce.course_id=? AND tm.subject=? GROUP BY tm.topic ORDER BY mastery ASC LIMIT 5""",(course['id'],course['subject']))
+            active_positions=db.all("SELECT unit_index,topic_index,COUNT(*) learners FROM course_enrollments WHERE course_id=? AND status='active' GROUP BY unit_index,topic_index ORDER BY learners DESC LIMIT 5",(course['id'],))
+            help_hotspots=db.all("SELECT topic,COUNT(*) requests FROM learning_events WHERE reference_type='course' AND reference_id=? AND event_type='explanation_requested' GROUP BY topic ORDER BY requests DESC LIMIT 5",(course['id'],))
+            out.append({**course,'quality_score':quality['score'],'quality_issues':len(quality['issues']),'enrollments':enrollments,
+                        'completions':completions,'help_requests':helps,'question_bank':question_stats,'weak_topics':weak,
+                        'active_positions':active_positions,'help_hotspots':help_hotspots})
+        total_enroll=sum(x['enrollments'] for x in out); total_complete=sum(x['completions'] for x in out)
+        return {'courses':out,'summary':{'courses':len(out),'enrollments':total_enroll,'completion_rate':round(total_complete/max(1,total_enroll)*100)}}
+
+    @app.get('/api/mastery/evidence')
+    def mastery_evidence_api(profile_id:int=1,subject:str=Query(...,max_length=80),topic:str=Query(...,max_length=120)):
+        user(profile_id)
+        result=mastery_evidence(db,profile_id,subject,topic)
+        if not result: raise HTTPException(404,'Todavía no hay evidencia de dominio para este tema.')
+        return result
+
+    @app.get('/api/reviews/due')
+    def reviews_due(profile_id:int=1):
+        user(profile_id)
+        return due_reviews(db,profile_id)
+
+    @app.get('/api/courses/{cid}/diagnostic')
+    def course_diagnostic(cid:int,profile_id:int=1):
+        user(profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        structure=json.loads(course['structure_json'])
+        qs=diagnostic_questions(structure,7)
+        if not qs: raise HTTPException(409,'Este curso todavía no tiene preguntas suficientes para diagnóstico.')
+        safe=[{'topic':q['topic'],'prompt':q['prompt'],'options':q['options'],'source':q.get('source',{})} for q in qs]
+        return {'course':{'id':cid,'title':course['title'],'subject':course['subject']},'questions':safe}
+
+    @app.post('/api/courses/{cid}/diagnostic/submit')
+    def submit_course_diagnostic(cid:int,value:Submission):
+        user(value.profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        structure=json.loads(course['structure_json'])
+        qs=diagnostic_questions(structure,7)
+        if len(value.answers)!=len(qs): raise HTTPException(422,'Responde todas las preguntas del diagnóstico.')
+        scores=score_diagnostic(qs,value.answers)
+        start=recommended_start(structure,scores)
+        db.execute("INSERT INTO diagnostic_results(course_id,user_id,answers_json,result_json,created_at) VALUES(?,?,?,?,?)",
+                   (cid,value.profile_id,json.dumps(value.answers,ensure_ascii=False),json.dumps({'topics':scores,'recommended_start':start},ensure_ascii=False),now()))
+        for q,answer in zip(qs,value.answers):
+            correct=answer==q['correct']
+            record_event(db,value.profile_id,'question_answered',course['subject'],q['topic'],reference_type='diagnostic',reference_id=cid,metadata={'correct':correct,'difficulty':'Normal'})
+            bank=db.one("SELECT id FROM question_bank WHERE course_id=? AND topic=? AND prompt=? LIMIT 1",(cid,q['topic'],q['prompt']))
+            if bank:
+                db.execute("UPDATE question_bank SET attempts=attempts+1,correct_count=correct_count+?,incorrect_count=incorrect_count+? WHERE id=?",(int(correct),int(not correct),bank['id']))
+        enrollment=db.one("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        if enrollment:
+            db.execute("UPDATE course_enrollments SET unit_index=?,topic_index=?,step_index=0,updated_at=? WHERE id=?",(start['unit_index'],start['topic_index'],now(),enrollment['id']))
+        return {'topics':scores,'recommended_start':start,'skipped_topics':[t for t,d in scores.items() if d['percentage']>=80]}
 
     @app.get('/api/courses')
     def available_courses(profile_id:int=1):
@@ -396,7 +511,15 @@ def create_app(db_path=None, ai=None):
         if not course: raise HTTPException(404,'Ese curso no está publicado.')
         enrollment=db.one("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,profile_id))
         if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
-        return {'course':{'id':cid,'title':course['title'],'subject':course['subject'],'level':course['level'],'structure':json.loads(course['structure_json'])},'enrollment':enrollment}
+        diagnostic=db.one("SELECT result_json FROM diagnostic_results WHERE course_id=? AND user_id=? ORDER BY id DESC LIMIT 1",(cid,profile_id))
+        skip_topics=[]
+        if diagnostic:
+            try:
+                result=json.loads(diagnostic['result_json'])
+                skip_topics=[topic for topic,data in result.get('topics',{}).items() if data.get('percentage',0)>=80]
+            except Exception:
+                pass
+        return {'course':{'id':cid,'title':course['title'],'subject':course['subject'],'level':course['level'],'structure':json.loads(course['structure_json'])},'enrollment':enrollment,'diagnostic_skip_topics':skip_topics}
 
     @app.get('/api/courses/{cid}/exam')
     def course_exam(cid:int,profile_id:int=1):
@@ -447,6 +570,8 @@ def create_app(db_path=None, ai=None):
             score+=int(correct)
             feedback.append({'topic':q.get('topic',''),'correct':correct,'answer':answer,'correct_answer':q.get('correct',''),'source':q.get('source',{})})
             record_event(db,value.profile_id,'question_answered',course['subject'],q.get('topic',''),reference_type='course_exam',reference_id=cid,metadata={'correct':correct,'difficulty':'Normal'})
+            bank=db.one("SELECT id FROM question_bank WHERE course_id=? AND topic=? AND prompt=? LIMIT 1",(cid,q.get('topic',''),q.get('prompt','')))
+            if bank: db.execute("UPDATE question_bank SET attempts=attempts+1,correct_count=correct_count+?,incorrect_count=incorrect_count+? WHERE id=?",(int(correct),int(not correct),bank['id']))
         total=len(questions)
         weak=list(dict.fromkeys(x['topic'] for x in feedback if not x['correct']))
         strong=list(dict.fromkeys(x['topic'] for x in feedback if x['correct']))
@@ -535,7 +660,8 @@ def create_app(db_path=None, ai=None):
         due_cards=db.one("SELECT count(*) n FROM flashcards WHERE user_id=? AND due<=?",(profile_id,date.today().isoformat()))['n']
         recommendation=build_recommendation(db,profile_id)
         mastery=db.all("SELECT * FROM topic_mastery WHERE user_id=? ORDER BY mastery_score ASC,last_seen DESC LIMIT 8",(profile_id,))
-        return dict(current_activity=activity,adventure=adventure,study_session=session,study_plan=plan,due_cards=due_cards,recommendation=recommendation,mastery=mastery)
+        topic_reviews=due_reviews(db,profile_id,5)
+        return dict(current_activity=activity,adventure=adventure,study_session=session,study_plan=plan,due_cards=due_cards,due_topic_reviews=topic_reviews,recommendation=recommendation,mastery=mastery)
 
     @app.get('/api/mastery')
     def mastery(profile_id:int=1):
