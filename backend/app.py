@@ -20,7 +20,7 @@ from .ai import LocalAI
 from .database import Database, now
 from .education import catalog, generate, grade
 from .library import Library
-from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport
+from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport, CourseHelp
 from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
@@ -436,6 +436,35 @@ def create_app(db_path=None, ai=None):
         db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
         record_event(db,value.profile_id,'quiz_completed',course['subject'],'Examen final',reference_type='course_exam',reference_id=cid,metadata={'score':score,'total':total,'difficulty':'Normal'})
         return result
+
+    @app.post('/api/courses/{cid}/help')
+    def course_help(cid:int,value:CourseHelp):
+        user(value.profile_id)
+        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        enrollment=db.one("SELECT id FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+        structure=json.loads(course['structure_json'])
+        try:
+            topic=structure['units'][value.unit_index]['topics'][value.topic_index]
+        except (IndexError,KeyError,TypeError):
+            raise HTTPException(422,'Tema fuera de rango.')
+        count=db.one("SELECT count(*) n FROM learning_events WHERE user_id=? AND event_type='explanation_requested' AND reference_type='course' AND reference_id=? AND topic=?",(value.profile_id,cid,topic['title']))['n']
+        level=min(4,count+1)
+        record_event(db,value.profile_id,'explanation_requested',course['subject'],topic['title'],reference_type='course',reference_id=cid,metadata={'help_level':level})
+        if level==1:
+            title='Vamos más simple'
+            text=topic.get('objective','').replace('Explicar y aplicar','La idea que queremos entender es')
+        elif level==2:
+            title='Miremos un ejemplo concreto'
+            text=topic.get('source_excerpt','')[:500]
+        elif level==3:
+            title='Conectemos las piezas'
+            text='Lee el fragmento y dime qué palabras o relaciones reconoces: '+topic.get('source_excerpt','')[:420]
+        else:
+            title='Probemos con una mini práctica'
+            text=(topic.get('questions') or [{'prompt':'Explícalo con tus propias palabras.'}])[0].get('prompt','Explícalo con tus propias palabras.')
+        return {'level':level,'title':title,'text':text,'topic':topic['title'],'source':topic.get('source',{})}
 
     @app.post('/api/courses/{cid}/progress')
     def update_course_progress(cid:int,value:CourseProgress):
