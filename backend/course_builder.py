@@ -151,8 +151,14 @@ def build_course(title:str,subject:str,level:str,pages:list[dict],source_text:st
             if other is not topic and candidate and candidate!=correct and candidate not in distractors:
                 distractors.append(candidate)
             if len(distractors)>=3: break
-        while len(distractors)<2:
-            distractors.append("Esta afirmación no aparece sustentada en el material del curso.")
+        fallbacks=[
+            "El material no presenta esta idea como definición del tema.",
+            "Esta afirmación pertenece a otro concepto y no describe este tema.",
+            "No hay evidencia suficiente en la fuente para sostener esta afirmación.",
+        ]
+        for fallback in fallbacks:
+            if len(distractors)>=3: break
+            if fallback not in distractors and fallback!=correct: distractors.append(fallback)
         options=[correct]+distractors[:3]
         # Rotate deterministically so the correct answer is not always first.
         shift=idx%len(options)
