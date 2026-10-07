@@ -588,3 +588,105 @@ html[data-theme="dark"] .v4-mastery-donut::before{background:var(--v3-surface)}
 @media(prefers-reduced-motion:reduce){
  .command-backdrop{backdrop-filter:none}
 }
+
+
+/* ALLEN Product Finish */
+:where(button,a,input,select,textarea,summary,[tabindex]):focus-visible{
+ outline:3px solid color-mix(in srgb,var(--v3-accent) 72%,white);
+ outline-offset:3px;
+}
+button,.module-card,.student-course-card,.teacher-course-card,.command-result{
+ transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease;
+}
+button:hover,.module-card:hover{transform:translateY(-1px)}
+button:active,.module-card:active{transform:translateY(0)}
+@media(prefers-reduced-motion:reduce){
+ button,.module-card,.student-course-card,.teacher-course-card,.command-result{transition:none!important}
+}
+.allen-loader-shell{display:grid;gap:18px;place-items:center;padding:34px 12px}
+.skeleton-grid{width:min(820px,100%);display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.skeleton-grid i{display:block;height:90px;border-radius:18px;background:linear-gradient(90deg,var(--v3-surface-2),color-mix(in srgb,var(--v3-surface-2) 70%,white),var(--v3-surface-2));background-size:220% 100%;animation:skeleton-shimmer 1.35s ease-in-out infinite}
+@keyframes skeleton-shimmer{to{background-position:-220% 0}}
+.polished-empty{display:grid;place-items:center;text-align:center;gap:8px;min-height:260px;padding:32px;border:1px dashed var(--v3-border);border-radius:24px;background:var(--v3-surface)}
+.polished-empty p{max-width:560px;margin:0 auto}.polished-empty small{color:var(--v3-muted)}
+.global-error{display:grid;grid-template-columns:150px minmax(0,1fr);gap:22px;align-items:center;border-left:4px solid var(--v3-danger)}
+.global-error .allen-mascot{width:130px;height:130px}
+.global-error details{margin-top:14px}
+.command-result[role="option"],.command-result{min-height:54px}
+#toast:empty{opacity:0;pointer-events:none;transform:translateY(8px)}
+#toast:not(:empty){opacity:1;transform:translateY(0)}
+#toast{transition:opacity .18s ease,transform .18s ease}
+.teacher-course-card,.student-course-card,.mastery-card,.panel{scroll-margin-top:110px}
+.learning-journey-track{scrollbar-width:thin;scrollbar-color:var(--v3-border) transparent}
+.learning-journey-track::-webkit-scrollbar{height:8px}
+.learning-journey-track::-webkit-scrollbar-thumb{background:var(--v3-border);border-radius:999px}
+.command-dialog{max-height:min(70vh,680px)}
+#command-results{max-height:52vh;overflow:auto}
+html[data-theme="dark"] .skeleton-grid i{background:linear-gradient(90deg,#202420,#2b302a,#202420);background-size:220% 100%}
+
+@media(max-width:900px){
+ .topbar{height:auto;min-height:66px;gap:10px;flex-wrap:wrap;padding:10px 14px}
+ .top-actions{gap:7px;flex-wrap:wrap;justify-content:flex-end}
+ .profile-picker select{max-width:150px}
+ .v3-home-hero{grid-template-columns:1fr;min-height:auto}
+ .v3-home-hero .welcome-art{order:-1}
+ .v3-home-hero .welcome-art img{max-height:150px!important}
+ .v3-focus-card,.v3-recommendation{grid-template-columns:110px minmax(0,1fr)}
+ .v3-focus-card img,.v3-recommendation img{height:100px}
+ .v3-mastery .mastery-grid{grid-template-columns:1fr}
+ .teacher-studio-nav{top:72px;overflow-x:auto;flex-wrap:nowrap}
+ .teacher-studio-nav a{white-space:nowrap}
+ .v4-progress-hero{grid-template-columns:1fr}
+ .v4-progress-hero .allen-mascot{display:none}
+ .v4-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .command-dialog{margin-top:4vh}
+ .global-error{grid-template-columns:1fr;text-align:center}
+ .global-error .allen-mascot{margin:auto}
+ .global-error .row{justify-content:center}
+}
+@media(max-width:640px){
+ main{padding:18px 12px}
+ .sidebar{padding:10px 12px}
+ .sidebar nav{gap:4px}
+ .workspace-mode{min-width:210px}
+ .nav-btn{min-height:44px;padding:9px 10px}
+ .topbar>#breadcrumb{width:100%;font-size:12px;color:var(--v3-muted)}
+ .top-actions{width:100%;justify-content:space-between}
+ .network{display:none}
+ .icon-action{min-width:44px;justify-content:center}
+ .profile-picker{margin-left:auto}
+ .v3-home-hero{padding:20px}
+ .v3-home-hero h1{font-size:36px}
+ .home-question{display:grid;grid-template-columns:1fr auto}
+ .v3-focus-card,.v3-recommendation{grid-template-columns:1fr;padding:18px}
+ .v3-focus-card img,.v3-recommendation img{display:none}
+ .v3-focus-card h2,.v3-recommendation h2{font-size:23px}
+ .v3-mastery .section-head,.row.spaced{align-items:flex-start}
+ .v4-kpi-grid{grid-template-columns:1fr 1fr}
+ .v4-kpi-grid article{padding:14px}
+ .v4-kpi-grid b{font-size:24px}
+ .v4-progress-grid{gap:12px}
+ .teacher-course-actions,.recovery-primary-actions,.guided-actions{display:grid;grid-template-columns:1fr}
+ .teacher-course-actions button,.recovery-primary-actions button,.guided-actions button{width:100%}
+ .teacher-studio-nav{top:116px}
+ .learning-journey{padding:14px}
+ .learning-journey-track>span{min-width:130px;grid-template-columns:30px minmax(80px,1fr)}
+ .learning-journey-track>span b{width:30px;height:30px}
+ .command-dialog{width:calc(100vw - 18px);margin:8px auto 0;border-radius:16px;max-height:calc(100vh - 16px)}
+ #command-results{max-height:65vh}
+ .command-result{grid-template-columns:1fr;gap:2px}
+ .command-result small{padding-left:27px}
+ .skeleton-grid{grid-template-columns:1fr}
+ .skeleton-grid i:nth-child(3){display:none}
+ .field-grid,.cards-grid,.cards-grid.four,.teacher-course-grid,.student-course-grid{grid-template-columns:1fr!important}
+ .course-coverage{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .quality-breakdown,.v3-quality .quality-breakdown{grid-template-columns:1fr}
+}
+@media(max-width:430px){
+ .v4-kpi-grid{grid-template-columns:1fr}
+ .workspace-mode{min-width:190px}
+ .top-actions{gap:5px}
+ .profile-picker select{max-width:130px}
+ .v3-home-hero h1{font-size:32px}
+ .learning-journey-track{margin-right:-8px}
+}
