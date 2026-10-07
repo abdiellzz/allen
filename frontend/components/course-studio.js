@@ -15,6 +15,7 @@ export function teacherStudioPage(){
    <p class="muted">Todo se procesa en este equipo. Máximo 8 MB y 250 páginas en esta versión.</p>
    <button class="primary">Analizar y crear borrador</button>
   </form>
+  <details class="import-panel"><summary>Importar un Course Pack de Allen</summary><p>Los .allenpack se importan como borrador y deben revisarse antes de publicarse en este dispositivo.</p><input id="course-pack-file" type="file" accept=".allenpack,application/json"><button id="course-pack-import" type="button">Importar Course Pack</button></details>
  </section>
  <section id="teacher-course-list"></section>
  <section id="teacher-course-review"></section>`;
@@ -60,6 +61,8 @@ export function bindTeacherStudio(root,{api,profileId,toast}){
   review.querySelectorAll('[data-question]').forEach(input=>{const [u,t,q]=input.dataset.question.split(':').map(Number);current.structure.units[u].topics[t].questions[q].prompt=input.value.trim();});
   try{await api('/teacher/courses/'+current.id+'/review','PUT',{profile_id:profileId,structure:current.structure});toast('Revisión guardada. Ya puedes publicar el curso.');review.innerHTML='';await refresh();}catch(err){toast(err.message);}
  };
+ const packInput=root.querySelector('#course-pack-file'),packButton=root.querySelector('#course-pack-import');
+ if(packButton)packButton.onclick=async()=>{try{const file=packInput.files[0];if(!file)throw new Error('Selecciona un archivo .allenpack.');if(file.size>3_000_000)throw new Error('El Course Pack es demasiado grande.');const pack=JSON.parse(await file.text());const result=await api('/teacher/packs/import','POST',{profile_id:profileId,pack});toast('Course Pack importado como borrador. Revísalo antes de publicar.');await refresh();await openReview(result.course_id);}catch(err){toast(err.message);}};
  refresh().catch(e=>toast(e.message));
 }
 function fileToBase64(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onerror=()=>reject(new Error('No pudimos leer el archivo.'));r.onload=()=>resolve(String(r.result).split(',')[1]||'');r.readAsDataURL(file);});}
