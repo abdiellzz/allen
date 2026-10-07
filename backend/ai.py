@@ -26,7 +26,7 @@ class LocalAI:
         key=(settings.ai_server, settings.model)
         now=time.monotonic()
         if not refresh and self._status_cache_key==key and self._status_cache and now < self._status_cache_until:
-            return self._status_cache
+            return {**self._status_cache,'metrics':dict(self.metrics)}
         try:
             # One OpenAI-compatible request is enough to prove the local server is alive.
             # Caching avoids two extra round trips before every chat response.
