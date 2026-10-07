@@ -74,3 +74,23 @@ def test_teacher_content_is_profile_owned():
         cid=c.post("/api/teacher/import",json=payload).json()["course_id"]
         assert c.get(f"/api/teacher/courses/{cid}?profile_id={p2['id']}").status_code==404
         c.close()
+
+
+def test_course_pack_roundtrip_requires_review_again():
+    with tempfile.TemporaryDirectory() as tmp:
+        c=client_for(Path(tmp)/"allen.sqlite3")
+        text="# Redes\nIPv4 identifica interfaces. DNS traduce nombres a direcciones. DHCP asigna configuración automáticamente."
+        payload={"profile_id":1,"title":"Pack Redes","subject":"Redes","level":"Premedia","filename":"pack.txt","mime":"text/plain","content_base64":base64.b64encode(text.encode()).decode()}
+        cid=c.post("/api/teacher/import",json=payload).json()["course_id"]
+        row=c.get(f"/api/teacher/courses/{cid}?profile_id=1").json()
+        c.put(f"/api/teacher/courses/{cid}/review",json={"profile_id":1,"structure":row["structure"]})
+        c.post(f"/api/teacher/courses/{cid}/publish",json={"profile_id":1})
+        pack=c.get(f"/api/teacher/courses/{cid}/pack?profile_id=1").json()
+        assert pack["format"]=="allen-course-pack"
+        imported=c.post("/api/teacher/packs/import",json={"profile_id":1,"pack":pack})
+        assert imported.status_code==200
+        new_id=imported.json()["course_id"]
+        new_row=c.get(f"/api/teacher/courses/{new_id}?profile_id=1").json()
+        assert new_row["status"]=="draft"
+        assert c.post(f"/api/teacher/courses/{new_id}/publish",json={"profile_id":1}).status_code==409
+        c.close()
