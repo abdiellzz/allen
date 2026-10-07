@@ -229,3 +229,9 @@ class CourseHelp(Strict):
     profile_id: int = Field(ge=1)
     unit_index: int = Field(ge=0,le=100)
     topic_index: int = Field(ge=0,le=100)
+
+
+class CourseExamProgress(Strict):
+    profile_id: int = Field(ge=1)
+    answers: list[str] = Field(default_factory=list,max_length=50)
+    status: Literal['active','paused'] = 'active'
