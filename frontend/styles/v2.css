@@ -198,3 +198,9 @@ body{min-width:1024px}
 .session-method-note{margin:18px 0;padding:16px 18px;border-left:4px solid var(--v2-green);border-radius:14px;background:var(--v2-green-soft);color:#39594f}
 #study-plan-form .field-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:1180px){.plan-allen-days{grid-template-columns:repeat(2,minmax(0,1fr))}#study-plan-form .field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.study-guide-maker{margin-top:26px}
+.study-guide-maker textarea{width:100%;resize:vertical;min-height:170px}
+.study-guide-result{margin-top:20px}
+.study-guide-result li{margin:.5rem 0;line-height:1.45}
+.study-guide-result.v2-cornell-sheet{min-height:320px}
