@@ -114,3 +114,23 @@ def test_course_exam_can_be_completed_after_publish():
         assert outcome.status_code==200
         assert outcome.json()["percentage"]==100
         c.close()
+
+
+def test_course_help_escalates_without_abandoning_source():
+    with tempfile.TemporaryDirectory() as tmp:
+        c=client_for(Path(tmp)/"allen.sqlite3")
+        material="# Redes\nIPv4 identifica interfaces en una red. DNS traduce nombres de dominio a direcciones IP. DHCP asigna parámetros automáticamente."
+        payload={"profile_id":1,"title":"Ayuda guiada","subject":"Redes","level":"Premedia","filename":"help.md","mime":"text/markdown","content_base64":base64.b64encode(material.encode()).decode()}
+        cid=c.post("/api/teacher/import",json=payload).json()["course_id"]
+        course=c.get(f"/api/teacher/courses/{cid}?profile_id=1").json()
+        c.put(f"/api/teacher/courses/{cid}/review",json={"profile_id":1,"structure":course["structure"]})
+        c.post(f"/api/teacher/courses/{cid}/publish",json={"profile_id":1})
+        c.post(f"/api/courses/{cid}/enroll",json={"profile_id":1})
+        levels=[]
+        for _ in range(4):
+            response=c.post(f"/api/courses/{cid}/help",json={"profile_id":1,"unit_index":0,"topic_index":0})
+            assert response.status_code==200
+            levels.append(response.json()["level"])
+        assert levels==[1,2,3,4]
+        assert c.post(f"/api/courses/{cid}/help",json={"profile_id":1,"unit_index":0,"topic_index":0}).json()["level"]==4
+        c.close()
