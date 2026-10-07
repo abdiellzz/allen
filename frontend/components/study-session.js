@@ -20,7 +20,16 @@ export function planAllenPage(level='Premedia'){
   </form>
  </section>
  <section id="study-plan-current"></section>
- <section id="study-session-stage"></section>`;
+ <section id="study-session-stage"></section>
+ <section class="panel study-guide-maker">
+  <div class="row spaced"><div><span class="eyebrow">GUÍAS DE ESTUDIO</span><h2>Convierte tus apuntes en práctica.</h2><p>Pega un texto y Allen lo organiza localmente como guía Cornell o guía de estudio.</p></div></div>
+  <form id="study-guide-form" class="stack">
+   <label>Título<input id="guide-title" maxlength="120" value="Mi guía de estudio"></label>
+   <label>Apuntes<textarea id="guide-text" minlength="20" maxlength="20000" rows="8" required placeholder="Pega aquí tus apuntes…"></textarea></label>
+   <div class="row"><button class="primary" data-guide-kind="cornell" type="submit">Convertir a Cornell</button><button data-guide-kind="study" type="button">Crear guía completa</button></div>
+  </form>
+  <div id="study-guide-output"></div>
+ </section>`;
 }
 
 function activityIcon(type){
@@ -79,6 +88,20 @@ export async function bindPlanAllen(root,{api,profileId,profile,go,toast}){
    stage.scrollIntoView({behavior:'smooth',block:'start'});
   }catch(error){toast(error.message);}
  });
+ const guideForm=root.querySelector('#study-guide-form'),guideOut=root.querySelector('#study-guide-output');
+ async function makeGuide(kind){
+  const text=root.querySelector('#guide-text').value.trim();if(text.length<20){toast('Añade un poco más de contenido.');return;}
+  const payload={profile_id:profileId,title:root.querySelector('#guide-title').value.trim()||'Guía de estudio',text};
+  const data=await api('/guides/'+kind,'POST',payload);
+  if(kind==='cornell'){
+   guideOut.innerHTML=`<section class="v2-cornell-sheet study-guide-result"><aside><strong>Preguntas / pistas</strong>${data.cues.map(x=>`<span>${esc(x)}</span>`).join('')}</aside><main><strong>Notas principales</strong>${data.notes.map(x=>`<p>${esc(x)}</p>`).join('')}<footer><b>Resumen:</b> ${esc(data.summary)}</footer></main></section>`;
+  }else{
+   guideOut.innerHTML=`<section class="study-guide-result panel"><span class="eyebrow">GUÍA ALLEN</span><h2>${esc(data.title)}</h2><h3>Conceptos importantes</h3><ul>${data.concepts.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><h3>Preguntas de recuperación</h3><ol>${data.questions.map(x=>`<li>${esc(x)}</li>`).join('')}</ol><h3>Mini quiz</h3><ol>${data.mini_quiz.map(x=>`<li>${esc(x)}</li>`).join('')}</ol><h3>Resumen</h3><p>${esc(data.summary)}</p></section>`;
+  }
+  guideOut.scrollIntoView({behavior:'smooth',block:'start'});
+ }
+ guideForm.onsubmit=e=>{e.preventDefault();makeGuide('cornell').catch(err=>toast(err.message));};
+ root.querySelector('[data-guide-kind="study"]').onclick=()=>makeGuide('study').catch(err=>toast(err.message));
  await refresh();
 }
 
