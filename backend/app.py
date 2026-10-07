@@ -350,6 +350,7 @@ def create_app(db_path=None, ai=None):
         quality=evaluate_course(value.structure)
         graph=persist_graph(db,cid,value.structure)
         synced=sync_course_questions(db,cid,value.structure)
+        db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
         db.execute("INSERT INTO course_quality_reviews(course_id,score,blocking_issues,report_json,created_at) VALUES(?,?,?,?,?)",(cid,quality['score'],quality['blocking_issues'],json.dumps(quality,ensure_ascii=False),now()))
         db.execute("UPDATE courses SET status='reviewed',structure_json=?,updated_at=? WHERE id=?",(json.dumps(value.structure,ensure_ascii=False),now(),cid))
         return {'ok':True,'quality':quality,'graph':{'nodes':len(graph['nodes']),'edges':len(graph['edges'])},'question_bank':synced}
@@ -389,6 +390,17 @@ def create_app(db_path=None, ai=None):
         report=evaluate_course(structure)
         report['question_bank']=stats_for_course(db,cid)
         return report
+
+    @app.get('/api/teacher/courses/{cid}/questions')
+    def teacher_question_bank(cid:int,profile_id:int=1):
+        user(profile_id)
+        course=db.one("SELECT id FROM courses WHERE id=? AND owner_profile_id=?",(cid,profile_id))
+        if not course: raise HTTPException(404,'No encontramos ese curso.')
+        rows=db.all("SELECT id,unit_index,topic_index,subject,topic,objective,prompt,answer,options_json,difficulty,kind,source_page,status,origin,attempts,correct_count,incorrect_count FROM question_bank WHERE course_id=? ORDER BY unit_index,topic_index,id",(cid,))
+        for row in rows:
+            row['options']=json.loads(row.pop('options_json') or '[]')
+            row['correct_rate']=round(row['correct_count']/max(1,row['attempts'])*100) if row['attempts'] else None
+        return rows
 
     @app.get('/api/teacher/courses/{cid}/graph')
     def course_graph(cid:int,profile_id:int=1):
