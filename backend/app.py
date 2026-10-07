@@ -20,7 +20,7 @@ from .ai import LocalAI
 from .database import Database, now
 from .education import catalog, generate, grade
 from .library import Library
-from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport, CourseHelp
+from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport, CourseHelp, CourseExamProgress
 from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
@@ -409,7 +409,27 @@ def create_app(db_path=None, ai=None):
         questions=structure.get('final_exam',[])
         if not questions: raise HTTPException(409,'Este curso todavía no tiene examen final.')
         safe=[{'topic':q.get('topic',''),'prompt':q.get('prompt',''),'options':q.get('options',[]),'source':q.get('source',{})} for q in questions]
-        return {'course':{'id':cid,'title':course['title'],'subject':course['subject']},'questions':safe}
+        session=db.one("SELECT * FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,profile_id))
+        if not session:
+            sid=db.execute("INSERT INTO course_exam_sessions(course_id,user_id,answers_json,status,started_at,updated_at) VALUES(?,?,?,'active',?,?)",(cid,profile_id,json.dumps(['']*len(questions)),now(),now()))
+            session=db.one("SELECT * FROM course_exam_sessions WHERE id=?",(sid,))
+        answers=json.loads(session['answers_json'] or '[]')
+        return {'course':{'id':cid,'title':course['title'],'subject':course['subject']},'questions':safe,'answers':answers,'exam_session_id':session['id']}
+
+    @app.post('/api/courses/{cid}/exam/progress')
+    def save_course_exam_progress(cid:int,value:CourseExamProgress):
+        user(value.profile_id)
+        course=db.one("SELECT id FROM courses WHERE id=? AND status='published'",(cid,))
+        if not course: raise HTTPException(404,'Ese curso no está publicado.')
+        enrollment=db.one("SELECT id FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+        existing=db.one("SELECT id FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+        payload=json.dumps(value.answers,ensure_ascii=False)
+        if existing:
+            db.execute("UPDATE course_exam_sessions SET answers_json=?,status=?,updated_at=? WHERE id=?",(payload,value.status,now(),existing['id']))
+        else:
+            db.execute("INSERT INTO course_exam_sessions(course_id,user_id,answers_json,status,started_at,updated_at) VALUES(?,?,?,?,?,?)",(cid,value.profile_id,payload,value.status,now(),now()))
+        return {'ok':True}
 
     @app.post('/api/courses/{cid}/exam/submit')
     def submit_course_exam(cid:int,value:Submission):
@@ -432,6 +452,7 @@ def create_app(db_path=None, ai=None):
         strong=list(dict.fromkeys(x['topic'] for x in feedback if x['correct']))
         result={'score':score,'total':total,'percentage':round(score/max(1,total)*100),'strong_topics':strong,'weak_topics':weak,'feedback':feedback}
         db.execute("INSERT INTO course_exam_results(course_id,user_id,answers_json,result_json,created_at) VALUES(?,?,?,?,?)",(cid,value.profile_id,json.dumps(value.answers,ensure_ascii=False),json.dumps(result,ensure_ascii=False),now()))
+        db.execute("DELETE FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
         db.execute("UPDATE course_enrollments SET status='completed',completed_at=?,updated_at=? WHERE course_id=? AND user_id=?",(now(),now(),cid,value.profile_id))
         db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
         record_event(db,value.profile_id,'quiz_completed',course['subject'],'Examen final',reference_type='course_exam',reference_id=cid,metadata={'score':score,'total':total,'difficulty':'Normal'})
