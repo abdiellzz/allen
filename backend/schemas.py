@@ -155,7 +155,7 @@ class StudyPlanCreate(Strict):
 
 class StudySessionEvent(Strict):
     profile_id: int = Field(ge=1)
-    kind: Literal['started','completed','skipped','hint','understood','not_understood']
+    kind: Literal['started','completed','skipped','hint','understood','not_understood','paused']
     activity_index: int = Field(ge=0,le=100)
     note: str = Field('',max_length=500)
 
