@@ -223,3 +223,9 @@ class CourseProgress(Strict):
 class CoursePackImport(Strict):
     profile_id: int = Field(ge=1)
     pack: dict
+
+
+class CourseHelp(Strict):
+    profile_id: int = Field(ge=1)
+    unit_index: int = Field(ge=0,le=100)
+    topic_index: int = Field(ge=0,le=100)
