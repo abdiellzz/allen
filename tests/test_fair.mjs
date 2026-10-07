@@ -10,7 +10,7 @@ test('visitor receives warning then reset; empty home attracts',()=>{
  assert.equal(inactivityDecision(45000,-1,true,true),'stay');
 });
 test('every offline micro lesson includes a valid answer and feedback',()=>{
- assert.equal(Object.keys(lessons).length,6);
+ assert.ok(Object.keys(lessons).length>=11);
  for(const lesson of Object.values(lessons)){assert.equal(lesson.options.length,3);assert.ok(lesson.options[lesson.correct]);assert.ok(lesson.feedback.length>20);}
 });
 test('speech defaults off and local mode never silently switches to cloud',async()=>{

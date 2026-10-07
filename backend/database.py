@@ -90,10 +90,16 @@ class Database:
             day -= timedelta(days=1)
         xp = sum(e['xp'] for e in events)
         sessions = self.all('SELECT subject,SUM(seconds) seconds FROM learning_sessions WHERE user_id=? GROUP BY subject', (user,))
+        daily_rows = self.all("SELECT substr(created,1,10) day,SUM(seconds) seconds FROM learning_sessions WHERE user_id=? GROUP BY substr(created,1,10)", (user,))
+        daily = {row['day']: row['seconds'] for row in daily_rows}
+        week = []
+        for offset in range(6,-1,-1):
+            current = date.today() - timedelta(days=offset)
+            week.append(dict(day=current.isoformat(), seconds=daily.get(current.isoformat(),0)))
         return dict(xp=xp, streak=streak, level=['Explorador','Curioso','Aprendiz','Investigador','Inventor'][min(xp//100,4)],
                     lessons=sum(e['kind']=='exercise' for e in events), quizzes=sum(e['kind']=='quiz' for e in events),
                     cards=self.one('SELECT count(*) n FROM flashcards WHERE user_id=? AND interval>=3', (user,))['n'],
-                    minutes=sum(s['seconds'] for s in sessions)//60, subjects=sessions)
+                    minutes=sum(s['seconds'] for s in sessions)//60, subjects=sessions, week=week)
 
     def erase_profile(self, user):
         with self.connect() as db:

@@ -21,9 +21,11 @@ Descarga el repositorio como ZIP, extrae la carpeta y ejecuta `install_allen.bat
 
 El instalador no descarga modelos ni ejecutables de IA. Para activar respuestas abiertas, instala una versión confiable de llama.cpp, coloca un modelo GGUF con licencia adecuada y crea `%LOCALAPPDATA%\ALLEN\local_model.json` siguiendo `config/local_model.example.json`. Sin ese paso, ALLEN funciona en modo demo con sus actividades locales.
 
-## Android
+## Alcance de plataforma
 
-La versión Android offline se prepara por separado en `android/`. Reutilizará la interfaz, tendrá SQLite/Room privado y ejecutará `llama.cpp` para ARM64 mediante un puente nativo. No se debe intentar convertir directamente el servidor FastAPI de Windows en un APK ni incluir modelos GGUF en GitHub. Consulta `android/README.md` para la arquitectura y los requisitos de compilación.
+ALLEN Offline v2 está diseñado primero para **Windows en escritorio y laptop**. La experiencia principal se valida para resoluciones de escritorio como 1366×768, 1440×900 y 1920×1080.
+
+No se está desarrollando una experiencia móvil dedicada en esta fase: no hay APK, PWA móvil, navegación específica para teléfonos ni optimización para pantallas pequeñas. El diseño puede conservar adaptación básica para no romperse, pero móvil no es un objetivo de producto.
 
 ## Publicación segura
 
