@@ -2,7 +2,7 @@ import {allenGuide,learningStepRail} from './allen-guide.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 export function teacherStudioPage(){
- return `<div class="v2-page-heading teacher-studio-heading"><div><span class="eyebrow">ALLEN TEACHER STUDIO</span><h1>Diseña, revisa y mejora cursos con trazabilidad.</h1><p>Una sola superficie para contenido, calidad, preguntas, analytics y versiones. Todo permanece local.</p></div><span class="teacher-mode-badge">MODO PROFESOR</span></div>
+ return `<div class="v2-page-heading teacher-studio-heading"><div><span class="eyebrow">ALLEN TEACHER STUDIO</span><h1>Diseña, revisa y mejora cursos con trazabilidad.</h1><p>Una sola superficie para contenido, calidad, preguntas, analytics y versiones. Importa PDF, TXT o Markdown y mantén todo local.</p></div><span class="teacher-mode-badge">MODO PROFESOR</span></div>
  <nav class="teacher-studio-nav" aria-label="Secciones de Teacher Studio"><a href="#teacher-create">Crear curso</a><a href="#teacher-analytics">Analytics</a><a href="#teacher-course-list">Cursos</a><a href="#teacher-course-review">Revisión</a></nav>
  ${allenGuide('teaching','Primero organizo el material. Después tú revisas objetivos, temas, preguntas y fuentes antes de publicarlo.')}
  <section id="teacher-create" class="teacher-import panel">
