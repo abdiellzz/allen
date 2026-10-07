@@ -235,3 +235,13 @@ class CourseExamProgress(Strict):
     profile_id: int = Field(ge=1)
     answers: list[str] = Field(default_factory=list,max_length=50)
     status: Literal['active','paused'] = 'active'
+
+
+class CourseVersionImport(Strict):
+    profile_id: int = Field(ge=1)
+    filename: str = Field(min_length=1,max_length=180)
+    mime: str = Field(min_length=1,max_length=80)
+    content_base64: str = Field(min_length=20,max_length=12_000_000)
+
+class RecoveryRestore(Strict):
+    snapshot: str = Field(min_length=1,max_length=180)
