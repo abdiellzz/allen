@@ -134,3 +134,24 @@ def test_course_help_escalates_without_abandoning_source():
         assert levels==[1,2,3,4]
         assert c.post(f"/api/courses/{cid}/help",json={"profile_id":1,"unit_index":0,"topic_index":0}).json()["level"]==4
         c.close()
+
+
+def test_course_exam_answers_resume_after_reload():
+    with tempfile.TemporaryDirectory() as tmp:
+        c=client_for(Path(tmp)/"allen.sqlite3")
+        material="# Redes\nIPv4 identifica interfaces. DNS traduce nombres de dominio a direcciones IP. DHCP asigna parámetros de red automáticamente."
+        payload={"profile_id":1,"title":"Examen persistente","subject":"Redes","level":"Premedia","filename":"persist.md","mime":"text/markdown","content_base64":base64.b64encode(material.encode()).decode()}
+        cid=c.post("/api/teacher/import",json=payload).json()["course_id"]
+        course=c.get(f"/api/teacher/courses/{cid}?profile_id=1").json()
+        c.put(f"/api/teacher/courses/{cid}/review",json={"profile_id":1,"structure":course["structure"]})
+        c.post(f"/api/teacher/courses/{cid}/publish",json={"profile_id":1})
+        c.post(f"/api/courses/{cid}/enroll",json={"profile_id":1})
+        exam=c.get(f"/api/courses/{cid}/exam?profile_id=1").json()
+        first=exam["questions"][0]["options"][0]
+        saved=[""]*len(exam["questions"])
+        saved[0]=first
+        r=c.post(f"/api/courses/{cid}/exam/progress",json={"profile_id":1,"answers":saved,"status":"active"})
+        assert r.status_code==200
+        resumed=c.get(f"/api/courses/{cid}/exam?profile_id=1").json()
+        assert resumed["answers"][0]==first
+        c.close()
