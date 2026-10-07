@@ -15,7 +15,7 @@ class LocalAI:
         self._status_cache = None
         self._status_cache_key = None
         self._status_cache_until = 0.0
-        self.metrics = {'time_to_first_token':None,'generation_duration':None,'estimated_tokens':0,'tokens_per_second':None,'mode':'Equilibrado'}
+        self.metrics = {'time_to_first_token':None,'generation_duration':None,'estimated_tokens':0,'estimated_tokens_per_second':None,'mode':'Equilibrado','queue_state':'idle'}
 
     def client(self, timeout=90):
         return httpx.AsyncClient(timeout=timeout, trust_env=False, follow_redirects=False, transport=self.transport)
@@ -98,7 +98,9 @@ class LocalAI:
         payload=dict(model=status['effective_model'],messages=messages,temperature=settings.temperature,max_tokens=token_budget,stream=True)
         started=time.monotonic(); first_token_at=None; estimated_tokens=0
         self.metrics['mode']=getattr(settings,'performance','Equilibrado')
+        self.metrics['queue_state']='queued'
         async with self.lock:
+            self.metrics['queue_state']='running'
             async with self.client() as client:
                 async with client.stream('POST',settings.ai_server+'/v1/chat/completions',json=payload) as response:
                     response.raise_for_status()
@@ -138,4 +140,4 @@ class LocalAI:
                     if pending:
                         yield {'type':'delta','text':safe_reply(pending) or pending}
         finished=time.monotonic(); duration=max(0.001,finished-started)
-        self.metrics.update(time_to_first_token=round((first_token_at-started),3) if first_token_at else None,generation_duration=round(duration,3),estimated_tokens=estimated_tokens,tokens_per_second=round(estimated_tokens/duration,2) if estimated_tokens else None)
+        self.metrics.update(time_to_first_token=round((first_token_at-started),3) if first_token_at else None,generation_duration=round(duration,3),estimated_tokens=estimated_tokens,estimated_tokens_per_second=round(estimated_tokens/duration,2) if estimated_tokens else None,queue_state='done')
