@@ -190,3 +190,30 @@ class SimulationProgress(Strict):
     profile_id: int = Field(ge=1)
     answers: list[str] = Field(default_factory=list,max_length=10)
     status: Literal['active','paused','interrupted'] = 'active'
+
+
+class TeacherImport(Strict):
+    profile_id: int = Field(ge=1)
+    title: str = Field(min_length=1,max_length=140)
+    subject: str = Field(min_length=1,max_length=80)
+    level: Literal['Primaria','Premedia','Media','Universidad / Técnico'] = 'Premedia'
+    filename: str = Field(min_length=1,max_length=180)
+    mime: str = Field(min_length=1,max_length=80)
+    content_base64: str = Field(min_length=20,max_length=12_000_000)
+
+class CourseReview(Strict):
+    profile_id: int = Field(ge=1)
+    structure: dict
+
+class CoursePublish(Strict):
+    profile_id: int = Field(ge=1)
+
+class CourseEnroll(Strict):
+    profile_id: int = Field(ge=1)
+
+class CourseProgress(Strict):
+    profile_id: int = Field(ge=1)
+    unit_index: int = Field(ge=0,le=100)
+    topic_index: int = Field(ge=0,le=100)
+    step_index: int = Field(ge=0,le=100)
+    status: Literal['active','paused','completed'] = 'active'
