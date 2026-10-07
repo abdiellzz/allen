@@ -107,11 +107,14 @@ export function bindCourses(root,{api,profileId,toast,go}){
   route.innerHTML=`<section class="course-exam-shell" data-course-exam="${id}">
    ${allenGuide('teaching','Llegaste al examen final. Aquí ya no te doy pistas: primero demuestra lo que recuerdas y después revisamos juntos.')}
    <div class="row spaced"><div><span class="eyebrow">EXAMEN FINAL</span><h1>${esc(data.course.title)}</h1></div><span class="pill">${data.questions.length} preguntas</span></div>
-   <form id="course-exam-form">${data.questions.map((q,i)=>`<fieldset><legend>${i+1}. ${esc(q.prompt)}</legend>${q.options.map(o=>`<label class="answer-option"><input type="radio" name="course-exam-${i}" value="${esc(o)}" required><span>${esc(o)}</span></label>`).join('')}</fieldset>`).join('')}<button class="primary">Entregar examen</button></form>
+   <form id="course-exam-form">${data.questions.map((q,i)=>`<fieldset><legend>${i+1}. ${esc(q.prompt)}</legend>${q.options.map(o=>`<label class="answer-option"><input type="radio" name="course-exam-${i}" value="${esc(o)}" ${data.answers?.[i]===o?'checked':''} required><span>${esc(o)}</span></label>`).join('')}</fieldset>`).join('')}<button class="primary">Entregar examen</button></form>
   </section>`;
   route.scrollIntoView({behavior:'smooth',block:'start'});
-  route.querySelector('#course-exam-form').onsubmit=async e=>{e.preventDefault();try{
-   const answers=data.questions.map((_,i)=>route.querySelector(`input[name="course-exam-${i}"]:checked`)?.value||'');
+  const examForm=route.querySelector('#course-exam-form');
+  const collectExamAnswers=()=>data.questions.map((_,i)=>route.querySelector(`input[name="course-exam-${i}"]:checked`)?.value||'');
+  examForm.addEventListener('change',()=>api('/courses/'+id+'/exam/progress','POST',{profile_id:profileId,answers:collectExamAnswers(),status:'active'}).catch(()=>{}));
+  examForm.onsubmit=async e=>{e.preventDefault();try{
+   const answers=collectExamAnswers();
    const result=await api('/courses/'+id+'/exam/submit','POST',{profile_id:profileId,answers});
    route.innerHTML=`<section class="course-exam-result">${allenGuide(result.percentage>=70?'celebrate':'progress',result.percentage>=70?'Terminaste el curso. Ahora sabemos qué temas dominas y cuáles conviene revisar.':'Terminaste el examen. No hace falta empezar de cero: vamos a reforzar exactamente lo que costó.',[{label:'Ver progreso',page:'Progreso',primary:true}])}<div class="panel"><span class="eyebrow">RESULTADO DEL CURSO</span><h1>${result.score}/${result.total} · ${result.percentage}%</h1><p><b>Fuertes:</b> ${esc(result.strong_topics.join(', ')||'todavía construyéndose')}</p><p><b>Reforzar:</b> ${esc(result.weak_topics.join(', ')||'ninguno destacado')}</p><details><summary>Revisar respuestas y fuentes</summary>${result.feedback.map((x,i)=>`<article class="exam-review ${x.correct?'correct':'review'}"><strong>${i+1}. ${esc(x.topic)}</strong><p>${x.correct?'Correcto':'Respuesta esperada: '+esc(x.correct_answer)}</p><small>Fuente: página ${x.source?.page||'—'}</small></article>`).join('')}</details>${result.weak_topics.length?'<button class="primary" id="course-reinforce">Crear Plan Allen de refuerzo</button>':''}</div></section>`;
    const reinforce=route.querySelector('#course-reinforce');if(reinforce)reinforce.onclick=()=>{try{sessionStorage.setItem('allen-plan-prefill',JSON.stringify({subject:data.course.subject,topics:result.weak_topics,goal:'Reforzar examen del curso'}));}catch{}go('Plan Allen');};
