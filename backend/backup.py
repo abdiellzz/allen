@@ -63,4 +63,11 @@ def restore_backup(db,payload):
                            (course["id"],report["score"],report["blocking_issues"],json.dumps(report,ensure_ascii=False)))
             except Exception:
                 continue
+    if "course_versions" not in tables:
+        from .course_versioning import seed_initial_version
+        for course in db.all("SELECT id,source_document_id,structure_json,status FROM courses"):
+            try:
+                seed_initial_version(db,course["id"],course["source_document_id"],json.loads(course["structure_json"]),course["status"])
+            except Exception:
+                continue
     return validate_backup(payload)
