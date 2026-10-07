@@ -7,7 +7,7 @@ export function teacherStudioPage(){
  <section class="teacher-import panel">
   <form id="teacher-import-form" class="stack">
    <div class="field-grid">
-    <label>Título del curso1input id="course-title" maxlength="140" required placeholder="Fundamentos de Redes"></label>
+    <label>Título del curso<input id="course-title" maxlength="140" required placeholder="Fundamentos de Redes"></label>
     <label>Materia<input id="course-subject" maxlength="80" required placeholder="Redes"></label>
     <label>Nivel<select id="course-level"><option>Primaria</option><option>Premedia</option><option>Media</option><option>Universidad / Técnico</option></select></label>
    </div>
@@ -25,7 +25,7 @@ function coverage(c={}){
 }
 function courseList(rows){
  if(!rows.length)return '<section class="panel empty"><h2>Aún no hay cursos</h2><p>Importa un documento para crear el primer borrador.</p></section>';
- return `<section class="teacher-course-grid">${rows.map(r=>`<article class="teacher-course-card"><div class="row spaced"><span class="eyebrow">${esc(r.subject)} · ${esc(r.level)}</span><span class="pill">${esc(r.status)}</span></div><h2>${esc(r.title)}</h2>${coverage(r.coverage)}<div class="row"><button data-review-course="${r.id}">Revisar</button>${r.status==='reviewed'?`<button class="primary" data-publish-course="${r.id}">Publicar</button>`:''}${r.status==='published'?'<span class="pill green">Publicado</span>':''}</div></article>`).join('')}</section>`;
+ return `<section class="teacher-course-grid">${rows.map(r=>`<article class="teacher-course-card"><div class="row spaced"><span class="eyebrow">${esc(r.subject)} · ${esc(r.level)}</span><span class="pill">${esc(r.status)}</span></div><h2>${esc(r.title)}</h2>${coverage(r.coverage)}<div class="row"><button data-review-course="${r.id}">Revisar</button>${r.status==='reviewed'?`<button class="primary" data-publish-course="${r.id}">Publicar</button>`:''}${r.status==='published'?`<span class="pill green">Publicado</span><button data-export-pack="${r.id}">Exportar .allenpack</button>`:''}</div></article>`).join('')}</section>`;
 }
 function reviewView(row){
  const s=row.structure;
@@ -50,8 +50,9 @@ export function bindTeacherStudio(root,{api,profileId,toast}){
    toast('Borrador creado. Ahora revísalo antes de publicar.');form.reset();await refresh();await openReview(data.course_id);
   }catch(err){toast(err.message);}};
  async function openReview(id){current=await api('/teacher/courses/'+id+'?profile_id='+profileId);review.innerHTML=reviewView(current);review.scrollIntoView({behavior:'smooth',block:'start'});}
- list.onclick=e=>{const r=e.target.closest('[data-review-course]'),p=e.target.closest('[data-publish-course]');if(r)openReview(r.dataset.reviewCourse).catch(x=>toast(x.message));if(p)publish(Number(p.dataset.publishCourse));};
+ list.onclick=e=>{const r=e.target.closest('[data-review-course]'),p=e.target.closest('[data-publish-course]'),x=e.target.closest('[data-export-pack]');if(r)openReview(r.dataset.reviewCourse).catch(err=>toast(err.message));if(p)publish(Number(p.dataset.publishCourse));if(x)exportPack(Number(x.dataset.exportPack));};
  async function publish(id){try{await api('/teacher/courses/'+id+'/publish','POST',{profile_id:profileId});toast('Curso publicado para este dispositivo.');await refresh();}catch(err){toast(err.message);}}
+ async function exportPack(id){try{const pack=await api('/teacher/courses/'+id+'/pack?profile_id='+profileId);const blob=new Blob([JSON.stringify(pack,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(pack.course?.title||'curso-allen').replace(/[^a-z0-9áéíóúñ_-]+/gi,'-')+'.allenpack';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Course Pack exportado.');}catch(err){toast(err.message);}}
  review.onclick=async e=>{
   if(e.target.id==='close-course-review'){review.innerHTML='';return;}
   if(e.target.id!=='approve-course'||!current)return;
