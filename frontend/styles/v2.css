@@ -204,3 +204,30 @@ body{min-width:1024px}
 .study-guide-result{margin-top:20px}
 .study-guide-result li{margin:.5rem 0;line-height:1.45}
 .study-guide-result.v2-cornell-sheet{min-height:320px}
+
+.nav-group{display:grid;gap:5px;margin:10px 0 15px}
+.nav-group-label{padding:0 14px 5px;font-size:10px;font-weight:800;letter-spacing:.14em;color:#9b8067}
+.nav-btn{position:relative}
+.nav-btn.active::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:4px;background:var(--v2-orange)}
+.sidebar-allen{display:grid;grid-template-columns:58px 1fr;gap:10px;align-items:center;margin:10px 8px;padding:10px;border-radius:18px;background:linear-gradient(145deg,#fff7ea,#f3e6d5);border:1px solid var(--v2-line)}
+.sidebar-allen img{width:58px;height:52px;object-fit:cover;border-radius:12px}
+.sidebar-allen div{display:grid;gap:2px}.sidebar-allen small{font-size:11px;color:var(--v2-muted)}
+.continuity-welcome .welcome-art img{width:100%;max-height:310px;object-fit:cover;border-radius:24px}
+.continuity-card,.recommendation-card{display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:center;margin:20px 0;padding:24px;border:1px solid var(--v2-line);border-radius:28px;background:#fff;box-shadow:var(--v2-shadow)}
+.continuity-card.primary-continuity{background:linear-gradient(140deg,#fff3df,#fffdf8);border-color:#e1bb91}
+.continuity-card img,.recommendation-card img{width:100%;height:170px;object-fit:cover;border-radius:20px}
+.continuity-card h2,.recommendation-card h2{font-size:28px;margin:.3rem 0}
+.continuity-card p,.recommendation-card p{color:var(--v2-muted)}
+.recommendation-card{background:linear-gradient(145deg,#eef5f1,#fff)}
+.continuity-progress{height:12px;margin:14px 0 22px;border-radius:999px;background:#efe2d2;overflow:hidden}
+.continuity-progress i{display:block;height:100%;background:linear-gradient(90deg,var(--v2-orange),var(--v2-gold));transition:width .25s ease}
+.persistent-adventure{margin-top:24px}
+.danger-soft{border-color:#d8b6a0;color:#8a4d32;background:#fff8f2}
+.adventure-complete,.simulation-result{display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:center;margin-top:24px;padding:26px;border:1px solid var(--v2-line);border-radius:28px;background:linear-gradient(145deg,#fff9ec,#fff);box-shadow:var(--v2-shadow)}
+.adventure-complete img,.simulation-result img{width:100%;border-radius:20px}
+.simulation-maker>div:first-child img{width:210px;height:120px;object-fit:cover;border-radius:18px}
+.simulation-shell{margin-top:20px;padding-top:20px;border-top:1px solid var(--v2-line)}
+.simulation-shell fieldset{border:0;padding:16px 0;margin:0;border-bottom:1px solid var(--v2-line)}
+.simulation-shell legend{font-weight:800;font-size:18px;margin-bottom:10px}
+.simulation-result h2{font-size:58px;color:var(--v2-orange);margin:.2rem 0}
+@media(prefers-reduced-motion:reduce){.continuity-progress i{transition:none!important}}

@@ -239,12 +239,13 @@ export function studyMethodPage(){
 }
 
 export function libraryVisual(subject='General'){
- const s=String(subject||'').toLowerCase();
- let image='/static/assets/allen-library.svg';
- if(s.includes('program')||s.includes('python'))image='/static/assets/allen-coding.svg';
- else if(s.includes('red'))image='/static/assets/allen-networking.svg';
- else if(s.includes('ciber'))image='/static/assets/allen-cybersecurity.svg';
- else if(s.includes('mat'))image='/static/assets/allen-math.svg';
- else if(s.includes('cien'))image='/static/assets/allen-science.svg';
- return image;
+ const key=String(subject||'').toLowerCase();
+ if(key.includes('program')||key.includes('python'))return '/static/assets/allen-python.svg';
+ if(key.includes('red'))return '/static/assets/allen-network-map.svg';
+ if(key.includes('ciber'))return '/static/assets/allen-security-shield.svg';
+ if(key.includes('mat'))return '/static/assets/allen-math-board.svg';
+ if(key.includes('cien'))return '/static/assets/allen-science-lab.svg';
+ if(key.includes('ingl'))return '/static/assets/allen-english-book.svg';
+ if(key.includes('ia'))return '/static/assets/allen-ai-lab.svg';
+ return '/static/assets/allen-reading-desk.svg';
 }

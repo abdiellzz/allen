@@ -6,6 +6,7 @@ on:
       - ui/offline-experience-refresh
       - feature/allen-offline-v2
       - feature/allen-study-planner
+      - feature/allen-learning-continuity
   pull_request:
 jobs:
   python:

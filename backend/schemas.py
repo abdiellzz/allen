@@ -155,7 +155,7 @@ class StudyPlanCreate(Strict):
 
 class StudySessionEvent(Strict):
     profile_id: int = Field(ge=1)
-    kind: Literal['started','completed','skipped','hint','understood','not_understood']
+    kind: Literal['started','completed','skipped','hint','understood','not_understood','paused']
     activity_index: int = Field(ge=0,le=100)
     note: str = Field('',max_length=500)
 
@@ -163,3 +163,23 @@ class GuideRequest(Strict):
     profile_id: int = Field(ge=1)
     title: str = Field('Guía de estudio',max_length=120)
     text: str = Field(min_length=20,max_length=20000)
+
+
+class AdventureStart(Strict):
+    profile_id: int = Field(ge=1)
+    adventure_id: str = Field(min_length=1,max_length=80)
+
+class AdventureEvent(Strict):
+    profile_id: int = Field(ge=1)
+    step: int = Field(ge=0,le=100)
+    event: Literal['answer','hint','advance','pause','resume','complete','abandon']
+    answer: str = Field('',max_length=500)
+    correct: bool | None = None
+
+class SimulationCreate(Strict):
+    profile_id: int = Field(ge=1)
+    subject: str = Field(min_length=1,max_length=80)
+    topics: list[str] = Field(min_length=1,max_length=12)
+    question_count: int = Field(5,ge=3,le=10)
+    minutes: int = Field(20,ge=5,le=120)
+    level: Literal['Primaria','Premedia','Media','Universidad / Técnico'] = 'Premedia'
