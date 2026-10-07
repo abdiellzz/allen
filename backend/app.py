@@ -383,9 +383,9 @@ def create_app(db_path=None, ai=None):
         topic=value.topics[0]
         request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=value.question_count,kind='multiple')
         questions=generate(request)
-        sid=db.execute("INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at,status,answers,updated_at) VALUES(?,?,?,?,NULL,?,?,'active','[]',?)",(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),value.minutes,now(),now()))
+        sid=db.execute("INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at,status,answers,updated_at) VALUES(?,?,?,?,NULL,?,?,'active','[]',?)",(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),(value.minutes if value.timed else 0),now(),now()))
         db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'simulation',sid,value.subject,value.topics[0] if value.topics else '','active',now()))
-        return dict(id=sid,subject=value.subject,topics=value.topics,questions=questions,minutes=value.minutes)
+        return dict(id=sid,subject=value.subject,topics=value.topics,questions=questions,minutes=(value.minutes if value.timed else 0),timed=value.timed)
 
     @app.get('/api/simulations/active')
     def active_simulation(profile_id:int=1):
