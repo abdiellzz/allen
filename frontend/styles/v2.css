@@ -707,3 +707,6 @@ html,body{max-width:100%;overflow-x:clip}
  .course-coverage,.quality-breakdown,.mastery-evidence-grid{min-width:0}
  img,svg{max-width:100%}
 }
+
+/* remove legacy desktop-only floor */
+body{min-width:0}
