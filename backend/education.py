@@ -48,6 +48,115 @@ BANK['Tecnología'][next(iter(BANK['Tecnología']))].extend([('¿Qué protege el
 BANK['Historia'][next(iter(BANK['Historia']))].extend([('¿Qué representa una línea del tiempo?', 'secuencia de hechos', ['mapa de calles', 'lista de colores', 'operación matemática'], 'Ordena acontecimientos según sus fechas.'), ('¿Cuántos años tiene un siglo?', '100', ['10', '50', '1000'], 'Un siglo equivale a cien años.'), ('¿Cuántos años tiene una década?', '10', ['100', '5', '1000'], 'Una década equivale a diez años.'), ('¿Cuál puede ser una fuente oral?', 'entrevista', ['moneda', 'edificio', 'cerámica'], 'Una entrevista recoge un testimonio hablado.'), ('¿Qué estudia la arqueología mediante restos materiales?', 'sociedades del pasado', ['órbitas planetarias', 'ecuaciones', 'clima futuro'], 'Los objetos y construcciones aportan pistas sobre el pasado.'), ('¿Cuál es un ejemplo de fuente escrita?', 'carta', ['vasija', 'herramienta', 'hueso'], 'Una carta conserva información mediante escritura.'), ('¿Qué ayuda a contrastar un relato histórico?', 'comparar fuentes', ['ignorar fechas', 'inventar detalles', 'leer solo un título'], 'Varias fuentes permiten encontrar coincidencias y diferencias.'), ('¿Qué es una fuente secundaria?', 'análisis posterior', ['testimonio directo de la época', 'objeto original', 'diario del protagonista'], 'Una fuente secundaria interpreta otras fuentes después de los hechos.')])
 BANK['Geografía'][next(iter(BANK['Geografía']))].extend([('¿Qué instrumento indica los puntos cardinales?', 'brújula', ['termómetro', 'reloj', 'balanza'], 'La brújula orienta mediante el campo magnético terrestre.'), ('¿Qué punto cardinal indica la salida aproximada del Sol?', 'este', ['oeste', 'norte', 'sur'], 'El Sol sale aproximadamente por el este.'), ('¿Qué es una isla?', 'tierra rodeada de agua', ['agua rodeada de tierra', 'cordillera', 'desierto'], 'Una isla tiene agua a su alrededor.'), ('¿Qué representa un mapa?', 'un territorio', ['una melodía', 'una receta', 'una emoción'], 'Un mapa representa una superficie a escala.'), ('¿Qué es una cordillera?', 'conjunto de montañas', ['grupo de islas', 'río pequeño', 'llanura'], 'Una cordillera es una cadena de montañas.'), ('¿Qué es la desembocadura de un río?', 'lugar donde termina', ['lugar donde nace', 'su parte más alta', 'una nube'], 'Allí el río vierte sus aguas en otro río, lago o mar.'), ('¿Qué mide la latitud?', 'distancia angular al ecuador', ['profundidad del mar', 'temperatura', 'altura de árboles'], 'La latitud se expresa en grados al norte o al sur del ecuador.'), ('¿Qué muestra la leyenda de un mapa?', 'significado de símbolos', ['hora exacta', 'peso del papel', 'autor de un cuento'], 'La leyenda permite interpretar colores y símbolos.')])
 
+
+# Allen Offline v2: broader reviewed educational practice banks.
+BANK['Redes']={
+ 'IPv4 y CIDR':[
+  ('¿Qué identifica una dirección IPv4 dentro de una red?','un dispositivo o interfaz',['una contraseña','un archivo','una impresora únicamente'],'Una dirección IPv4 identifica una interfaz dentro de una red IP.'),
+  ('¿Qué prefijo deja 8 bits para hosts?','/24',['/16','/30','/32'],'En IPv4 hay 32 bits; /24 deja 8 bits para la parte de host.'),
+  ('¿Qué dirección representa normalmente la red en 192.168.1.0/24?','192.168.1.0',['192.168.1.1','192.168.1.255','192.168.0.1'],'La primera dirección del bloque representa la dirección de red.'),
+  ('¿Cuántas subredes iguales produce tomar 2 bits adicionales?','4',['2','6','8'],'Dos bits permiten 2² = 4 combinaciones, por lo que se obtienen cuatro subredes.')
+ ],
+ 'DNS y DHCP':[
+  ('¿Qué servicio traduce nombres como ejemplo.com a direcciones IP?','DNS',['DHCP','HTTP','NTP'],'DNS resuelve nombres de dominio a direcciones y otros registros.'),
+  ('¿Qué servicio puede asignar automáticamente una dirección IP a un equipo?','DHCP',['DNS','HTTPS','SSH'],'DHCP entrega parámetros de red automáticamente dentro de una red administrada.'),
+  ('¿Cuál es una ventaja de DHCP en una red de usuarios?','reduce configuración manual',['cifra todos los archivos','duplica el ancho de banda','elimina routers'],'DHCP evita configurar manualmente cada dirección en muchos equipos.')
+ ],
+ 'Protocolos y puertos':[
+  ('¿Qué protocolo de transporte establece una conexión antes de intercambiar datos?','TCP',['UDP','DNS','ARP'],'TCP establece una sesión y ofrece entrega ordenada.'),
+  ('¿Qué protocolo de transporte prioriza baja sobrecarga sin establecer conexión?','UDP',['TCP','HTTPS','SMTP'],'UDP envía datagramas sin una sesión de transporte previa.'),
+  ('¿Qué protocolo web cifra normalmente el tráfico entre navegador y sitio?','HTTPS',['HTTP sin TLS','FTP','DHCP'],'HTTPS combina HTTP con TLS para proteger el tráfico en tránsito.')
+ ],
+ 'Dispositivos de red':[
+  ('¿Qué dispositivo conecta normalmente redes distintas?','router',['switch','teclado','monitor'],'Un router reenvía paquetes entre redes diferentes.'),
+  ('¿Qué dispositivo conecta equipos dentro de una LAN usando direcciones MAC?','switch',['router doméstico únicamente','impresora','modem analógico'],'Un switch Ethernet reenvía tramas dentro de la red local.')
+ ]
+}
+BANK['Ciberseguridad']={
+ 'Contraseñas y MFA':[
+  ('¿Cuál es una buena práctica para contraseñas?','usar una frase larga y única',['reutilizar la misma','compartirla por chat','hacerla muy corta'],'Una contraseña larga y única reduce el impacto de filtraciones y adivinación.'),
+  ('¿Qué aporta MFA?','otra comprobación de identidad',['más velocidad de Internet','copias automáticas','más almacenamiento'],'MFA añade un factor adicional además de la contraseña.'),
+  ('¿Qué conviene hacer si sospechas que una contraseña fue expuesta?','cambiarla y revisar accesos',['publicarla para comparar','desactivar MFA','ignorar el aviso'],'Cambiarla y revisar actividad ayuda a recuperar control de la cuenta.')
+ ],
+ 'Phishing y privacidad':[
+  ('¿Qué señal puede indicar phishing?','urgencia inesperada y enlace extraño',['un saludo normal','un documento propio','una fecha conocida'],'Los atacantes suelen usar urgencia y enlaces que imitan sitios legítimos.'),
+  ('¿Qué es más seguro ante un mensaje inesperado que pide iniciar sesión?','abrir el sitio por una ruta conocida',['usar el enlace del mensaje sin revisar','enviar la contraseña por correo','desactivar alertas'],'Entrar desde un marcador o dirección conocida reduce el riesgo de páginas falsas.'),
+  ('¿Qué dato conviene compartir solo cuando sea necesario?','información personal sensible',['una definición escolar','el nombre de un planeta','una operación matemática'],'Minimizar datos compartidos reduce exposición innecesaria.')
+ ],
+ 'Backups y actualizaciones':[
+  ('¿Para qué sirve una copia de seguridad?','recuperar datos ante pérdida o daño',['acelerar el procesador','aumentar la RAM','reemplazar contraseñas'],'Un backup permite restaurar información cuando el original falla o se pierde.'),
+  ('¿Por qué conviene instalar actualizaciones de seguridad?','corrigen vulnerabilidades conocidas',['eliminan la necesidad de contraseñas','hacen infalible el equipo','evitan todo malware'],'Las actualizaciones corrigen fallos y vulnerabilidades conocidas.'),
+  ('¿Qué hace que un backup sea realmente útil?','poder restaurarlo correctamente',['tener solo el nombre del archivo','guardarlo siempre en la misma carpeta','nunca comprobarlo'],'Una copia debe poder restaurarse cuando haga falta.')
+ ],
+ 'Mínimo privilegio':[
+  ('¿Qué significa mínimo privilegio?','dar solo los permisos necesarios',['dar permisos de administrador a todos','compartir cuentas','desactivar controles'],'Cada persona o proceso recibe únicamente los permisos que necesita.'),
+  ('¿Por qué separar cuentas administrativas de cuentas normales?','reduce exposición de privilegios',['duplica archivos','mejora resolución de pantalla','evita usar contraseñas'],'Usar privilegios elevados solo cuando se necesitan reduce el impacto de errores o abuso.')
+ ]
+}
+BANK['IA']={
+ 'Modelos y tokens':[
+  ('¿Qué es un modelo de IA en términos simples?','un sistema que usa patrones aprendidos',['una base de datos infalible','un navegador web','un antivirus necesariamente'],'Un modelo aprende patrones de datos y los usa para producir predicciones o respuestas.'),
+  ('¿Qué es un token en un modelo de lenguaje?','una unidad de texto',['una contraseña','una imagen completa','un servidor'],'Los modelos dividen el texto en unidades llamadas tokens.'),
+  ('¿Puede un modelo de lenguaje equivocarse?','sí',['no','solo sin Internet','solo si usa imágenes'],'Los modelos pueden producir respuestas incorrectas o inventadas.')
+ ],
+ 'Entrenamiento e inferencia':[
+  ('¿Qué ocurre durante entrenamiento?','se ajustan parámetros usando datos',['se abre una página web','se instala un teclado','se borra la memoria RAM'],'Durante el entrenamiento se ajustan parámetros para aprender patrones.'),
+  ('¿Qué ocurre durante inferencia?','se usa el modelo para generar una salida',['se cambia el sistema operativo','se compran datos','se fabrica hardware'],'Inferencia es ejecutar un modelo ya entrenado con una entrada.'),
+  ('¿Entrenamiento e inferencia son lo mismo?','no',['sí','solo en modelos locales','solo en texto'],'Son fases distintas: aprender parámetros y usar el modelo.')
+ ],
+ 'RAG y modelos locales':[
+  ('¿Qué busca hacer RAG?','aportar información recuperada al modelo',['cambiar el teclado','duplicar el modelo','ocultar la pregunta'],'RAG recupera contenido relevante y lo incorpora al contexto de la generación.'),
+  ('¿Qué ventaja puede tener un modelo local?','procesar contenido en el propio equipo',['garantizar precisión total','no requerir electricidad','saber todo sin datos'],'Un modelo local puede reducir el envío de contenido a servicios externos.'),
+  ('¿Un modelo local elimina la necesidad de verificar información?','no',['sí','solo en matemáticas','solo si está offline'],'La verificación sigue siendo necesaria cuando la exactitud importa.')
+ ],
+ 'Sesgo y alucinaciones':[
+  ('¿Qué es una alucinación de IA?','una respuesta inventada que parece plausible',['un fallo de pantalla','un virus','una copia de seguridad'],'Un modelo puede producir información falsa con apariencia convincente.'),
+  ('¿Qué ayuda a reducir el impacto de una alucinación?','verificar con fuentes confiables',['copiar sin leer','repetir la pregunta muchas veces solamente','ocultar la respuesta'],'Contrastar información importante reduce el riesgo de aceptar errores.'),
+  ('¿Qué es un sesgo en un sistema de IA?','una tendencia sistemática en resultados',['un puerto de red','un tipo de archivo','un navegador'],'Los datos y decisiones de diseño pueden producir patrones de resultados desiguales o parciales.')
+ ]
+}
+BANK['Estudio']={
+ 'Recuperación activa':[
+  ('¿Qué es active recall?','intentar recordar sin mirar la respuesta',['releer de forma pasiva','copiar el texto entero','subrayar todo'],'Recuperar la información desde la memoria fortalece el aprendizaje.'),
+  ('¿Qué pregunta favorece active recall?','¿puedo explicarlo sin mirar?',['¿cuántas veces lo releí?','¿qué color tiene la página?','¿cuánto ocupa el archivo?'],'Explicar sin consultar obliga a recuperar la idea desde la memoria.')
+ ],
+ 'Repetición espaciada':[
+  ('¿Qué propone la repetición espaciada?','repasar en intervalos separados',['estudiar todo una sola vez','repetir cada minuto para siempre','no volver a practicar'],'Distribuir repasos ayuda a reforzar recuerdos a largo plazo.'),
+  ('¿Qué conviene hacer con una tarjeta difícil?','revisarla antes que una muy fácil',['eliminarla siempre','marcarla como aprendida sin verla','ignorarla'],'Una tarjeta difícil necesita un intervalo de repaso más corto.')
+ ]
+}
+BANK['Pensamiento crítico']={
+ 'Fuentes y evidencia':[
+  ('¿Qué conviene revisar ante una afirmación importante?','la evidencia y la fuente',['solo los likes','solo el título','solo quién la compartió'],'La calidad de la evidencia y de la fuente importa más que la popularidad.'),
+  ('¿Una afirmación repetida muchas veces se vuelve verdadera?','no',['sí','solo en redes sociales','solo si es corta'],'La repetición no sustituye evidencia verificable.'),
+  ('¿Qué fortalece una conclusión?','evidencia consistente de varias fuentes',['una sola opinión anónima','un rumor','un titular sin contenido'],'Varias fuentes confiables y coherentes aumentan la solidez de una conclusión.')
+ ],
+ 'Correlación y causalidad':[
+  ('¿Correlación demuestra automáticamente causalidad?','no',['sí','solo con dos variables','solo en gráficos'],'Dos variables pueden moverse juntas por otras razones; hace falta más evidencia para establecer causa.'),
+  ('¿Qué pregunta ayuda a evaluar causalidad?','¿hay otras variables que expliquen el resultado?',['¿el gráfico usa colores bonitos?','¿la noticia tiene muchos comentarios?','¿el texto es corto?'],'Buscar variables de confusión ayuda a evaluar explicaciones alternativas.')
+ ]
+}
+BANK['Inglés']['Present simple']=[
+ ('Complete: She ___ Python every day.','studies',['study','studied','studying'],'Con he/she/it, muchos verbos añaden -s o cambian a -ies.'),
+ ('Which sentence describes a routine?','I study every morning.',['I studied yesterday.','I will study tomorrow.','I am a book.'],'El present simple se usa para rutinas y hechos habituales.'),
+ ('Choose the negative form: He works here.','He does not work here.',['He not works here.','He did not work here.','He no work here.'],'Con he/she/it se usa does not + verbo base.')
+]
+BANK['Inglés']['Past simple']=[
+ ('Complete: Yesterday I ___ a lesson.','studied',['study','studies','studying'],'Studied es el pasado regular de study.'),
+ ('Which sentence is in the past?','I learned Python last year.',['I learn Python every day.','I am learning now.','I will learn tomorrow.'],'Last year sitúa la acción en el pasado.'),
+ ('What is the past of go?','went',['goed','goes','going'],'Go es irregular: go → went.')
+]
+BANK['Programación']['Estructuras y datos']=[
+ ('¿Qué estructura guarda varios elementos en orden en Python?','list',['bool','float','if'],'Una lista almacena una secuencia de elementos.'),
+ ('¿Qué estructura guarda pares clave-valor?','dict',['str','while','return'],'Un diccionario relaciona claves con valores.'),
+ ('¿Qué palabra se usa para manejar una excepción en Python?','try',['loop','case','echo'],'try inicia un bloque donde una excepción puede manejarse con except.')
+]
+BANK['Programación']['APIs y JSON']=[
+ ('¿Qué formato usa pares clave-valor y es común en APIs web?','JSON',['PNG','MP3','EXE'],'JSON representa datos estructurados mediante objetos, listas y valores.'),
+ ('¿Qué hace una API en términos generales?','define una forma de comunicación entre sistemas',['aumenta la RAM','repara hardware','cifra todos los archivos'],'Una API define operaciones y datos que otro software puede utilizar.'),
+ ('¿Qué método HTTP suele usarse para consultar un recurso?','GET',['POST siempre','DELETE siempre','PATCH siempre'],'GET se usa habitualmente para solicitar una representación de un recurso.')
+]
+
 def catalog():
     return {'Matemáticas':MATH_TOPICS, **{s:list(topics) for s,topics in BANK.items()}}
 
