@@ -213,6 +213,28 @@ export function achievementPanel(progress={},results=[]){
  <section class="v2-recommendation"><img src="/static/assets/allen-thinking.svg" alt=""><div><span class="eyebrow">SIGUIENTE PASO</span><h2>${esc(rec)}</h2><p>Es una sugerencia local basada en tu actividad agregada.</p></div></section>`;
 }
 
+export function studyMethodPage(){
+ const methods=[
+  ['Recuperación activa','Intenta recordar o aplicar antes de volver a mirar la respuesta.','Haz una pregunta sin mostrar la solución y responde con tus palabras.'],
+  ['Práctica espaciada','Vuelve a un concepto en distintos momentos en lugar de concentrarlo todo en una sola sesión.','Usa las tarjetas de Allen y repasa cuando vuelvan a aparecer.'],
+  ['Intercalado','Alterna tipos de problemas relacionados para elegir la estrategia correcta.','Mezcla fracciones, porcentajes y ecuaciones en una práctica posterior.'],
+  ['Elaboración','Explica por qué funciona una idea y conéctala con algo que ya conoces.','Responde “¿por qué?” o “¿cómo lo sabes?” después de resolver.'],
+  ['Ejemplos concretos','Empieza con un caso específico antes de ir a la regla general.','Allen muestra un ejemplo y luego cambia los números o el contexto.'],
+  ['Doble representación','Combina palabras con una estructura visual útil.','Usa tabla, esquema, pasos o mapa simple cuando el tema lo permita.']
+ ];
+ return `<div class="v2-page-heading"><div><span class="eyebrow">MÉTODO ALLEN</span><h1>Aprender no es solo leer una respuesta.</h1><p>Allen combina técnicas de estudio con evidencia para ayudarte a recordar, entender y aplicar lo que aprendes.</p></div></div>
+ <section class="v2-adventure-hero">
+  <div><span class="eyebrow">FLUJO DE APRENDIZAJE</span><h2>Descubre → recupera → explica → mezcla → representa → revisa.</h2><p>No se usan todos los pasos en cada turno. Allen elige los que tengan sentido para tu nivel y la tarea.</p><button data-page="Tutor">Probar el método con Allen</button></div>
+  <img src="/static/assets/allen-study.svg" alt="Allen estudiando con su método de aprendizaje">
+ </section>
+ <section class="v2-method-grid">${methods.map(([name,why,example],i)=>`<article><b>${i+1}</b><div><h2>${esc(name)}</h2><p>${esc(why)}</p><small>${esc(example)}</small></div></article>`).join('')}</section>
+ <section class="v2-cornell">
+  <div><span class="eyebrow">PARA APUNTES</span><h2>Allen también puede ayudarte a estudiar con notas tipo Cornell.</h2><p>Cuando pegues apuntes, puede separar ideas principales, crear preguntas de recuperación, resumir lo esencial y ayudarte a revisarlo después.</p></div>
+  <div class="v2-cornell-sheet"><aside><strong>Preguntas / pistas</strong><span>¿Qué significa?</span><span>¿Por qué importa?</span><span>¿Cómo se aplica?</span></aside><main><strong>Notas principales</strong><p>Conceptos, ejemplos, relaciones y datos importantes.</p><footer><b>Resumen:</b> la idea central en pocas líneas.</footer></main></div>
+ </section>
+ <section class="panel"><span class="eyebrow">BASE DEL MÉTODO</span><h2>Qué prioriza Allen</h2><p>La prioridad está en práctica de recuperación y estudio espaciado. Intercalado, autoexplicación, ejemplos concretos y representaciones visuales se usan cuando aportan valor.</p><p class="muted">Referencias de diseño pedagógico: Cornell Learning Strategies Center; Dunlosky et al. (2013). Allen adapta estas ideas a una experiencia local y offline.</p></section>`;
+}
+
 export function libraryVisual(subject='General'){
  const s=String(subject||'').toLowerCase();
  let image='/static/assets/allen-library.svg';
