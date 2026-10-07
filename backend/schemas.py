@@ -218,3 +218,8 @@ class CourseProgress(Strict):
     topic_index: int = Field(ge=0,le=100)
     step_index: int = Field(ge=0,le=100)
     status: Literal['active','paused','completed'] = 'active'
+
+
+class CoursePackImport(Strict):
+    profile_id: int = Field(ge=1)
+    pack: dict
