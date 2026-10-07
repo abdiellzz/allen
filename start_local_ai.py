@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 from urllib.request import ProxyHandler, HTTPRedirectHandler, build_opener
 
 ROOT=Path(__file__).resolve().parent
-DATA=Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'
+DATA=Path(os.environ.get('ALLEN_DATA_ROOT') or (Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'))
 
 class NoRedirect(HTTPRedirectHandler):
     def redirect_request(self,*args,**kwargs):
