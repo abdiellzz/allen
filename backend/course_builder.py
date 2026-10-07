@@ -74,6 +74,37 @@ def _heading_candidates(text:str):
         if len(heads)>=12: break
     return heads
 
+
+def _heading_line(line:str):
+    plain=re.sub(r"^[#\-*\d.() ]+","",line).strip()
+    is_heading=3<=len(plain)<=90 and (
+        line.strip().startswith("#") or
+        re.match(r"^(unidad|tema|cap[ií]tulo|m[oó]dulo|lecci[oó]n|parte)\b",plain,re.I) or
+        (plain.isupper() and len(plain.split())<=9)
+    )
+    return plain.title() if is_heading else None
+
+def _sections(pages:list[dict]):
+    sections=[]; current=None
+    for page in pages:
+        for raw in page.get("text","").splitlines():
+            line=raw.strip()
+            if not line: continue
+            heading=_heading_line(line)
+            if heading:
+                if current and current["lines"]:
+                    current["text"]="\n".join(current.pop("lines"))
+                    sections.append(current)
+                current={"title":heading,"page":page.get("page",1),"lines":[]}
+            else:
+                if current is None:
+                    current={"title":"Introducción","page":page.get("page",1),"lines":[]}
+                current["lines"].append(line)
+    if current and current["lines"]:
+        current["text"]="\n".join(current.pop("lines"))
+        sections.append(current)
+    return sections[:12]
+
 def _sentences(text:str):
     parts=re.split(r"(?<=[.!?])\s+",re.sub(r"\s+"," ",text))
     return [p.strip() for p in parts if 25<=len(p.strip())<=320]
@@ -95,16 +126,20 @@ def _source_ref(pages,needle):
     return {"page":pages[0]["page"] if pages else 1}
 
 def build_course(title:str,subject:str,level:str,pages:list[dict],source_text:str):
-    headings=_heading_candidates(source_text)
+    sections=_sections(pages)
     sentences=_sentences(source_text)
     keywords=_keywords(source_text,16)
-    if not headings:
-        headings=[f"Unidad {i+1}: {kw.title()}" for i,kw in enumerate(keywords[:min(6,max(2,len(keywords)))])]
-    unit_count=min(8,max(1,len(headings)))
+    if not sections:
+        headings=_heading_candidates(source_text)
+        if not headings:
+            headings=[f"Unidad {i+1}: {kw.title()}" for i,kw in enumerate(keywords[:min(6,max(2,len(keywords)))])]
+        sections=[{"title":heading,"page":pages[0]["page"] if pages else 1,"text":source_text} for heading in headings]
     units=[]
     cursor=0
-    for idx,heading in enumerate(headings[:unit_count]):
-        sample=sentences[cursor:cursor+5] or sentences[:5]
+    for idx,section in enumerate(sections[:8]):
+        heading=section["title"]
+        section_sentences=_sentences(section.get("text",""))
+        sample=section_sentences[:8] or sentences[cursor:cursor+5] or sentences[:5]
         cursor+=5
         topic_names=[]
         for s in sample:
