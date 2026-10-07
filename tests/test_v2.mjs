@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {missions,achievements,chatActionText} from '../frontend/components/v2.js';
+import {missions,achievements,chatActionText,studyMethodPage} from '../frontend/components/v2.js';
 
 test('Allen v2 includes several educational missions',()=>{
   assert.ok(missions.length >= 5);
@@ -21,9 +21,16 @@ test('every mission has guided steps and explanations',()=>{
 });
 
 test('chat v2 exposes learning actions instead of generic gimmicks',()=>{
-  for(const key of ['easy','example','question','challenge','summary']){
+  for(const key of ['easy','example','question','recall','interleave','elaborate','summary']){
     assert.equal(typeof chatActionText[key],'string');
     assert.ok(chatActionText[key].length > 20);
   }
   assert.ok(achievements.length >= 8);
+});
+
+
+test('Allen study method exposes evidence-based learning flow',()=>{
+  const html=studyMethodPage();
+  for(const term of ['Recuperación activa','Práctica espaciada','Intercalado','Elaboración','Doble representación']) assert.ok(html.includes(term));
+  assert.ok(html.includes('Cornell'));
 });
