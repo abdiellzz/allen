@@ -19,7 +19,7 @@ def validate_backup(payload):
     if not isinstance(tables,dict): raise ValueError("Respaldo incompleto.")
     size=len(json.dumps(payload,ensure_ascii=False))
     if size>5_000_000: raise ValueError("El respaldo es demasiado grande.")
-    return {"profiles":len(tables.get("users",[])),"flashcards":len(tables.get("flashcards",[])),"plans":len(tables.get("study_plans",[])),"adventures":len(tables.get("adventure_sessions",[])),"simulations":len(tables.get("simulation_results",[]))}
+    return {"profiles":len(tables.get("users",[])),"flashcards":len(tables.get("flashcards",[])),"plans":len(tables.get("study_plans",[])),"adventures":len(tables.get("adventure_sessions",[])),"simulations":len(tables.get("simulation_results",[])),"courses":len(tables.get("courses",[]))}
 
 def restore_backup(db,payload):
     validate_backup(payload)
