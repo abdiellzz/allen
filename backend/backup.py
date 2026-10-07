@@ -44,4 +44,23 @@ def restore_backup(db,payload):
             safe=Settings.model_validate(settings)
             con.execute("INSERT OR REPLACE INTO settings(id,value) VALUES(1,?)",(safe.model_dump_json(),))
         con.execute("PRAGMA foreign_keys=ON")
+    # Backup v1 is intentionally backward compatible. Older v1 files did not
+    # contain derived learning-intelligence tables, so reconstruct only those
+    # derived structures without inventing diagnostic history.
+    if "question_bank" not in tables or "curriculum_edges" not in tables:
+        from .course_quality import evaluate_course
+        from .curriculum_graph import persist_graph
+        from .question_bank import sync_course_questions
+        for course in db.all("SELECT id,status,structure_json FROM courses"):
+            try:
+                structure=json.loads(course["structure_json"])
+                persist_graph(db,course["id"],structure)
+                sync_course_questions(db,course["id"],structure)
+                if course["status"] in ("reviewed","published"):
+                    db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(course["id"],))
+                report=evaluate_course(structure)
+                db.execute("INSERT INTO course_quality_reviews(course_id,score,blocking_issues,report_json,created_at) VALUES(?,?,?,?,datetime('now'))",
+                           (course["id"],report["score"],report["blocking_issues"],json.dumps(report,ensure_ascii=False)))
+            except Exception:
+                continue
     return validate_backup(payload)
