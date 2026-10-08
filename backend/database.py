@@ -1,5 +1,6 @@
 import sqlite3
 import os
+from contextvars import ContextVar
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -63,6 +64,7 @@ class Database:
     def __init__(self, path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._active_transaction = ContextVar(f"allen_tx_{id(self)}", default=None)
         previous_version=0
         if self.path.exists() and self.path.stat().st_size:
             try:
@@ -118,9 +120,27 @@ class Database:
 
     @contextmanager
     def transaction(self):
-        with self.connect() as db:
+        existing=self._active_transaction.get()
+        if existing is not None:
+            yield existing
+            return
+        db=sqlite3.connect(self.path,timeout=10)
+        db.row_factory=sqlite3.Row
+        db.execute('PRAGMA foreign_keys=ON')
+        db.execute('PRAGMA secure_delete=ON')
+        db.execute('PRAGMA journal_mode=WAL')
+        db.execute('PRAGMA synchronous=NORMAL')
+        token=self._active_transaction.set(db)
+        try:
             db.execute('BEGIN IMMEDIATE')
             yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            self._active_transaction.reset(token)
+            db.close()
 
     def schema_version(self):
         with self.connect() as db:
@@ -143,6 +163,9 @@ class Database:
         return result
 
     def all(self, sql, args=()):
+        active=self._active_transaction.get()
+        if active is not None:
+            return [dict(r) for r in active.execute(sql,args).fetchall()]
         with self.connect() as db:
             return [dict(r) for r in db.execute(sql, args).fetchall()]
 
@@ -151,6 +174,9 @@ class Database:
         return rows[0] if rows else None
 
     def execute(self, sql, args=()):
+        active=self._active_transaction.get()
+        if active is not None:
+            return active.execute(sql,args).lastrowid
         with self.connect() as db:
             return db.execute(sql, args).lastrowid
 
