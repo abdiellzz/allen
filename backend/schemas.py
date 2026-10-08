@@ -262,5 +262,11 @@ class RecoveryRestore(Strict):
     snapshot: str = Field(min_length=1,max_length=180)
 
 
+
+class TeacherPin(Strict):
+    pin: str = Field(min_length=6,max_length=12,pattern=r'^\d{6,12}
+    content: str = Field(min_length=20, max_length=64000)
+)
+
 class LicenseActivation(Strict):
     content: str = Field(min_length=20, max_length=64000)
