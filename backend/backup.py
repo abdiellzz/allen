@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json
 FORMAT="allen-backup"; VERSION=1
-TABLES=("users","progress","quiz_results","flashcards","learning_sessions","library_packs","student_memory","saved_answers","study_plans","study_sessions","study_session_events","adventure_sessions","adventure_events","simulation_results","topic_mastery","learning_events","profile_current_activity","teacher_documents","courses","course_enrollments","course_exam_results","course_exam_sessions","curriculum_edges","question_bank","course_quality_reviews","diagnostic_results","course_versions")
+TABLES=("users","progress","quiz_results","flashcards","learning_sessions","library_packs","student_memory","saved_answers","conversations","conversation_states","study_plans","study_sessions","study_session_events","adventure_sessions","adventure_events","simulation_results","topic_mastery","learning_events","profile_current_activity","teacher_documents","courses","course_enrollments","course_exam_results","course_exam_sessions","curriculum_edges","question_bank","course_quality_reviews","diagnostic_results","course_versions")
 
 def export_backup(db):
     data={"format":FORMAT,"version":VERSION,"tables":{}}
@@ -24,17 +24,29 @@ def validate_backup(payload):
 def restore_backup(db,payload):
     validate_backup(payload)
     tables=payload["tables"]
-    # Restore is intentionally all-or-nothing and uses trusted table/column names only.
+    # Restore is all-or-nothing. Table names are fixed and columns must match
+    # the actual schema; malformed backups fail instead of leaking across users.
     with db.connect() as con:
         con.execute("PRAGMA foreign_keys=OFF")
+        schema_columns={}
+        for table in TABLES:
+            schema_columns[table]={row["name"] for row in con.execute(f"PRAGMA table_info({table})").fetchall()}
         for table in reversed(TABLES):
-            try:con.execute(f"DELETE FROM {table}")
-            except Exception:pass
+            con.execute(f"DELETE FROM {table}")
         for table in TABLES:
             rows=tables.get(table,[])
+            if not isinstance(rows,list):
+                raise ValueError(f"Tabla inválida en el respaldo: {table}.")
+            allowed=schema_columns.get(table,set())
             for row in rows:
-                if not isinstance(row,dict) or not row: continue
-                cols=[c for c in row.keys() if c.replace("_","").isalnum()]
+                if not isinstance(row,dict) or not row:
+                    continue
+                unknown=set(row)-allowed
+                if unknown:
+                    raise ValueError(f"El respaldo contiene columnas no válidas en {table}.")
+                cols=[c for c in row.keys() if c in allowed]
+                if not cols:
+                    continue
                 values=[row[c] for c in cols]
                 q=",".join("?" for _ in cols)
                 con.execute(f"INSERT INTO {table}({','.join(cols)}) VALUES({q})",values)
@@ -43,7 +55,10 @@ def restore_backup(db,payload):
             from .schemas import Settings
             safe=Settings.model_validate(settings)
             con.execute("INSERT OR REPLACE INTO settings(id,value) VALUES(1,?)",(safe.model_dump_json(),))
-        con.execute("PRAGMA foreign_keys=ON")
+        violations=con.execute("PRAGMA foreign_key_check").fetchall()
+        if violations:
+            raise ValueError("El respaldo tiene relaciones inválidas y no se restauró.")
+
     # Backup v1 is intentionally backward compatible. Older v1 files did not
     # contain derived learning-intelligence tables, so reconstruct only those
     # derived structures without inventing diagnostic history.
