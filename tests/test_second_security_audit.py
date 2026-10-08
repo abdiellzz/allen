@@ -37,7 +37,7 @@ def test_persistent_adventure_ignores_client_correct_flag(tmp_path):
 
     wrong=client.post(
         f"/api/adventures/{sid}/event",
-        json={"profile_id":1,"step":0,"event":"answer","answer":"Reutilizar una contraseña fácil","correct":True},
+        json={"profile_id":1,"step":0,"event":"answer","answer":"Reutilizar una contraseña fácil"},
     )
     assert wrong.status_code==200
     assert wrong.json()["correct"] is False
@@ -45,13 +45,13 @@ def test_persistent_adventure_ignores_client_correct_flag(tmp_path):
 
     jump=client.post(
         f"/api/adventures/{sid}/event",
-        json={"profile_id":1,"step":1,"event":"advance","answer":"","correct":True},
+        json={"profile_id":1,"step":1,"event":"advance","answer":""},
     )
     assert jump.status_code==409
 
     early=client.post(
         f"/api/adventures/{sid}/event",
-        json={"profile_id":1,"step":4,"event":"complete","answer":"","correct":True},
+        json={"profile_id":1,"step":4,"event":"complete","answer":""},
     )
     assert early.status_code==409
     client.close()
