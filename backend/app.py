@@ -76,6 +76,9 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         response.headers['Referrer-Policy']='no-referrer'
         response.headers['Cache-Control']='no-store'
         response.headers['Permissions-Policy']='camera=(), microphone=(), geolocation=()'
+        response.headers['X-Frame-Options']='DENY'
+        response.headers['Cross-Origin-Opener-Policy']='same-origin'
+        response.headers['Cross-Origin-Resource-Policy']='same-origin'
         return response
 
     @app.middleware('http')
