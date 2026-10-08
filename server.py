@@ -9,7 +9,7 @@ if __name__ == '__main__':
     try:
         import uvicorn
     except ImportError:
-        print('Ejecuta start_allen.bat para instalar las dependencias.')
+        print('Faltan dependencias. Crea un entorno virtual e instala requirements-dev.txt; consulta docs/DEVELOPMENT.md.')
         sys.exit(1)
     if '--open' in sys.argv:
         def open_when_ready():

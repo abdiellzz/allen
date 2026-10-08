@@ -2,16 +2,27 @@
 
 Esta guía explica cómo usar las funciones principales de ALLEN desde la interfaz. ALLEN está diseñado para funcionar de forma local y offline; el modelo de IA local es opcional para las funciones abiertas del tutor.
 
-## 1. Iniciar ALLEN
+## 1. Iniciar y activar ALLEN
 
-### Windows
+### Instalación Windows
 
-1. Ejecuta `start_allen.bat`.
-2. Mantén abierta la ventana del servidor.
-3. ALLEN abre `http://127.0.0.1:8787`.
-4. Para cerrar el servidor usa `Ctrl+C`.
+La forma recomendada es usar el instalador o Portable de la release actual. No necesitas Python instalado.
 
-La primera instalación puede necesitar Internet para instalar dependencias. Después, las funciones locales pueden utilizarse sin conexión.
+- Instalador: ejecuta `ALLEN-1.2.0-Setup-Windows-x64.exe`.
+- Portable: extrae todo el ZIP y ejecuta `ALLEN.exe`.
+
+### Primera ejecución
+
+1. Abre ALLEN.
+2. Copia el **Machine ID** de la pantalla de activación.
+3. Solicita una licencia para ese Machine ID.
+4. Importa el archivo `.license`.
+5. ALLEN valida firma, equipo y fechas completamente offline.
+6. Si la licencia es válida, entra al espacio de aprendizaje.
+
+### Desarrollo desde código
+
+Para ejecutar el proyecto desde el repositorio consulta [DEVELOPMENT.md](DEVELOPMENT.md). Los scripts heredados de arranque e instalación ya no forman parte del proyecto; usa la guía de desarrollo actual.
 
 ## 2. Perfiles
 

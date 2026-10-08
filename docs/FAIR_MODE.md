@@ -2,7 +2,7 @@
 
 ## Abrir y preparar el stand
 
-Ejecuta `start_allen.bat` y abre http://127.0.0.1:8787/fair. También funciona `/?mode=fair` y el enlace de Configuración. La primera instalación/actualización de dependencias necesita Internet; las actividades y el generador QR funcionan localmente después de instalarlo.
+Ejecuta `ALLEN.exe` y abre http://127.0.0.1:8787/fair. También funciona `/?mode=fair` y el enlace de Configuración. La primera instalación/actualización de dependencias necesita Internet; las actividades y el generador QR funcionan localmente después de instalarlo.
 
 En **Presentador → Probar sistema** comprueba backend, base, modelo, reconocimiento y voces. Este panel distingue una API disponible de una captura de micrófono o reproducción realmente probada. Los botones **Probar micrófono** y **Probar voz local** permiten comprobar el hardware. **Bloquear Modo Feria** oculta la salida y redirige la aplicación habitual hacia la feria en este navegador. Desbloquear requiere confirmación deliberada; no es una barrera de seguridad frente a quien controle el navegador o el sistema operativo.
 
@@ -29,7 +29,7 @@ No se graba audio en ALLEN. Voz de entrada desactivada de inicio; modo local exi
 
 ## Archivos y rutas
 
-Backend: `backend/fair.py`, integración mínima en `backend/app.py`. Frontend: `frontend/fair.html`, `fair.js`, `fair.css`, `fair-content.js`, `fair-voice.js`, `components/fair-mascot.js`; entrada desde `frontend/app.js`. Dependencia QR en `requirements.txt` y comprobación actualizada en `start_allen.bat`.
+Backend: `backend/fair.py`, integración mínima en `backend/app.py`. Frontend: `frontend/fair.html`, `fair.js`, `fair.css`, `fair-content.js`, `fair-voice.js`, `components/fair-mascot.js`; entrada desde `frontend/app.js`. Dependencia QR en `requirements.txt` y comprobación actualizada en `ALLEN.exe`.
 
 Rutas: GET `/fair`, `/?mode=fair`; GET `/api/fair/token`, `/bootstrap`, `/stats`, `/links`, `/qr`; POST `/api/fair/sessions`, `/end`, `/event`, `/challenge`, `/answer`, `/chat`. Los POST usan la protección de origen y token existente. Las actividades de feria no llaman a las rutas de escritura de los perfiles habituales.
 

@@ -1,19 +1,46 @@
-*.gguf
+# Python
 __pycache__/
 *.py[cod]
-.env
 .venv/
 .pytest_cache/
+.coverage
+htmlcov/
+
+# Runtime data
 *.sqlite3
 *.sqlite3-*
 *.log
+*.license
+.env
+.env.*
+
+# Models / ML artifacts
+*.gguf
+*.safetensors
+models/*
+!models/.gitkeep
+
+# Private licensing material
+license_private_key.pem
+*.pem.private
+
+# Build output
+build/
+dist/
+artifacts/
+*.spec.bak
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Node tooling (tests do not require committing dependencies)
+node_modules/
 
 # Optional local training artifacts
 allen_training/.venv/
 allen_training/output/*
 !allen_training/output/.gitkeep
-*.safetensors
-
-# Private/commercial licensing material
-license_private_key.pem
-*.license
