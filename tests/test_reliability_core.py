@@ -39,7 +39,7 @@ def test_numbered_migration_upgrades_v8_and_keeps_pre_migration_snapshot():
         con.commit();con.close()
 
         db=Database(path)
-        assert db.schema_version()==10
+        assert db.schema_version()==11
         assert db.one("SELECT value FROM legacy_marker")["value"]=="keep me"
         versions={row["version"] for row in db.all("SELECT version FROM schema_migrations")}
         assert {9,10}.issubset(versions)
