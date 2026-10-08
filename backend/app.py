@@ -154,7 +154,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             if request.url.path not in allowed and not licensing.status().get('active'):
                 return JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402)
         if request.url.path.startswith('/api/'):
-            max_body=12_500_000 if request.url.path=='/api/teacher/import' or request.url.path.endswith('/versions') else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 5_500_000 if request.url.path.startswith('/api/backup/') else 200000
+            max_body=12_500_000 if request.url.path=='/api/teacher/import' or request.url.path.endswith('/versions') else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 8_000_000 if request.url.path.startswith('/api/backup/') else 200000
             try:
                 if int(request.headers.get('content-length','0'))>max_body:
                     return security_headers(JSONResponse({'error':'El archivo o texto es demasiado largo.'},413))
@@ -933,8 +933,27 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.get('/api/backup/export')
     def backup_export(profile_id:int=1):
         user(profile_id)
-        payload=export_backup(db)
-        return payload
+        return export_backup(db)
+
+    @app.post('/api/backup/export-encrypted')
+    async def backup_export_encrypted(request:Request):
+        body=await request.json()
+        profile_id=int(body.get('profile_id',1))
+        user(profile_id)
+        try:
+            return encrypt_backup(export_backup(db),body.get('password',''))
+        except (ValueError,TypeError) as exc:
+            raise HTTPException(422,str(exc))
+
+    @app.post('/api/backup/decrypt')
+    async def backup_decrypt(request:Request):
+        body=await request.json()
+        try:
+            payload=decrypt_backup(body.get('envelope'),body.get('password',''))
+            validate_backup(payload)
+            return payload
+        except (ValueError,TypeError) as exc:
+            raise HTTPException(422,str(exc))
 
     @app.post('/api/backup/validate')
     async def backup_validate(request:Request):
