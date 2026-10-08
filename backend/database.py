@@ -57,6 +57,36 @@ CREATE INDEX IF NOT EXISTS idx_flashcards_user_due ON flashcards(user_id,due);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_study_session_unique_day ON study_sessions(user_id,plan_id,day);
 '''
 
+def _ensure_compat_columns(db):
+    study_existing={row['name'] for row in db.execute("PRAGMA table_info(study_sessions)").fetchall()}
+    study_migrations={
+        'current_activity_index':"ALTER TABLE study_sessions ADD COLUMN current_activity_index INTEGER NOT NULL DEFAULT 0",
+        'last_activity_at':"ALTER TABLE study_sessions ADD COLUMN last_activity_at TEXT",
+        'activities_completed':"ALTER TABLE study_sessions ADD COLUMN activities_completed INTEGER NOT NULL DEFAULT 0",
+        'activities_skipped':"ALTER TABLE study_sessions ADD COLUMN activities_skipped INTEGER NOT NULL DEFAULT 0",
+        'difficulties':"ALTER TABLE study_sessions ADD COLUMN difficulties INTEGER NOT NULL DEFAULT 0",
+        'hints_used':"ALTER TABLE study_sessions ADD COLUMN hints_used INTEGER NOT NULL DEFAULT 0",
+    }
+    for column,sql in study_migrations.items():
+        if column not in study_existing:
+            db.execute(sql)
+
+    sim_existing={row['name'] for row in db.execute("PRAGMA table_info(simulation_results)").fetchall()}
+    sim_migrations={
+        'status':"ALTER TABLE simulation_results ADD COLUMN status TEXT NOT NULL DEFAULT 'active'",
+        'answers':"ALTER TABLE simulation_results ADD COLUMN answers TEXT NOT NULL DEFAULT '[]'",
+        'updated_at':"ALTER TABLE simulation_results ADD COLUMN updated_at TEXT",
+        'remaining_seconds':"ALTER TABLE simulation_results ADD COLUMN remaining_seconds INTEGER NOT NULL DEFAULT 0",
+    }
+    for column,sql in sim_migrations.items():
+        if column not in sim_existing:
+            db.execute(sql)
+
+    teacher_existing={row['name'] for row in db.execute("PRAGMA table_info(teacher_security)").fetchall()}
+    if 'kdf_n' not in teacher_existing:
+        db.execute("ALTER TABLE teacher_security ADD COLUMN kdf_n INTEGER NOT NULL DEFAULT 16384")
+
+
 def now():
     return utc_now_iso()
 
@@ -75,29 +105,7 @@ class Database:
         ensure_pre_migration_snapshot(self.path,previous_version,LATEST_SCHEMA_VERSION)
         with self.connect() as db:
             db.executescript(SCHEMA)
-            existing={row['name'] for row in db.execute("PRAGMA table_info(study_sessions)").fetchall()}
-            migrations={
-                'current_activity_index':"ALTER TABLE study_sessions ADD COLUMN current_activity_index INTEGER NOT NULL DEFAULT 0",
-                'last_activity_at':"ALTER TABLE study_sessions ADD COLUMN last_activity_at TEXT",
-                'activities_completed':"ALTER TABLE study_sessions ADD COLUMN activities_completed INTEGER NOT NULL DEFAULT 0",
-                'activities_skipped':"ALTER TABLE study_sessions ADD COLUMN activities_skipped INTEGER NOT NULL DEFAULT 0",
-                'difficulties':"ALTER TABLE study_sessions ADD COLUMN difficulties INTEGER NOT NULL DEFAULT 0",
-                'hints_used':"ALTER TABLE study_sessions ADD COLUMN hints_used INTEGER NOT NULL DEFAULT 0",
-            }
-            for column,sql in migrations.items():
-                if column not in existing: db.execute(sql)
-            sim_existing={row['name'] for row in db.execute("PRAGMA table_info(simulation_results)").fetchall()}
-            sim_migrations={
-                'status':"ALTER TABLE simulation_results ADD COLUMN status TEXT NOT NULL DEFAULT 'active'",
-                'answers':"ALTER TABLE simulation_results ADD COLUMN answers TEXT NOT NULL DEFAULT '[]'",
-                'updated_at':"ALTER TABLE simulation_results ADD COLUMN updated_at TEXT",
-                'remaining_seconds':"ALTER TABLE simulation_results ADD COLUMN remaining_seconds INTEGER NOT NULL DEFAULT 0",
-            }
-            for column,sql in sim_migrations.items():
-                if column not in sim_existing: db.execute(sql)
-            teacher_existing={row['name'] for row in db.execute("PRAGMA table_info(teacher_security)").fetchall()}
-            if 'kdf_n' not in teacher_existing:
-                db.execute("ALTER TABLE teacher_security ADD COLUMN kdf_n INTEGER NOT NULL DEFAULT 16384")
+            _ensure_compat_columns(db)
             apply_migrations(db)
             # Backfill a baseline history row for courses created before numbered migrations existed.
             if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='course_versions'").fetchone():
@@ -137,6 +145,7 @@ class Database:
         result=restore_snapshot(self.path,name)
         with self.connect() as db:
             db.executescript(SCHEMA)
+            _ensure_compat_columns(db)
             apply_migrations(db)
         return result
 
