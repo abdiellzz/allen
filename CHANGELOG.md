@@ -2,6 +2,17 @@
 
 Todos los cambios relevantes de ALLEN se documentan aquí.
 
+## [1.1.1] — 2026-10-07
+
+### Eliminación completa
+- Nuevo archivo `Eliminar ALLEN completamente.bat` incluido en el Portable y el instalador.
+- Confirmación explícita escribiendo `BORRAR` antes de eliminar datos.
+- Elimina instalación, perfiles, progreso, SQLite, backups, snapshots, configuración local, accesos directos y temporales propios de ALLEN.
+- Ejecuta primero el desinstalador oficial cuando existe para limpiar correctamente el registro de Windows.
+- El portable elimina también su propia carpeta y `ALLEN-Data`.
+- No elimina modelos GGUF ni instalaciones externas de llama.cpp.
+
+
 ## [1.1.0] — 2026-10-07
 
 ### Distribución Windows

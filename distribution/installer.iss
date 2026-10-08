@@ -37,6 +37,7 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 
 [Icons]
 Name: "{autoprograms}\ALLEN"; Filename: "{app}\ALLEN.exe"
+Name: "{autoprograms}\Eliminar ALLEN completamente"; Filename: "{app}\Eliminar ALLEN completamente.bat"; WorkingDir: "{app}"
 Name: "{autodesktop}\ALLEN"; Filename: "{app}\ALLEN.exe"; Tasks: desktopicon
 
 [Run]
