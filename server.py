@@ -17,7 +17,7 @@ if __name__ == '__main__':
             for _ in range(60):
                 try:
                     with urllib.request.urlopen('http://127.0.0.1:8787/api/health', timeout=1):
-                        webbrowser.open('http://127.0.0.1:8787/?access='+app.state.access_key)
+                        webbrowser.open('http://127.0.0.1:8787/?access='+app.state.issue_launch_key())
                         return
                 except OSError:
                     time.sleep(0.5)

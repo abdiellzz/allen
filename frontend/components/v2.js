@@ -202,11 +202,11 @@ export function achievementPanel(progress={},results=[]){
  const cards=achievements.map(a=>{const unlocked=a.test(progress,results);return `<article class="v2-achievement ${unlocked?'unlocked':'locked'}"><b>${a.icon}</b><span><strong>${esc(a.name)}</strong><small>${unlocked?'Desbloqueado':'Sigue aprendiendo para descubrirlo'}</small></span></article>`;}).join('');
  const subjects=(progress.subjects||[]).slice().sort((a,b)=>(b.seconds||0)-(a.seconds||0));
  const maxSubject=Math.max(1,...subjects.map(s=>s.seconds||0));
- const subjectBars=subjects.length?subjects.slice(0,6).map(s=>`<div class="v2-subject-bar"><div class="row spaced"><span>${esc(s.subject)}</span><small>${Math.max(1,Math.round((s.seconds||0)/60))} min</small></div><div><i style="width:${Math.max(6,Math.round((s.seconds||0)/maxSubject*100))}%"></i></div></div>`).join(''):'<p class="muted">Cuando estudies, aquí aparecerán tus temas más explorados.</p>';
+ const subjectBars=subjects.length?subjects.slice(0,6).map(s=>`<div class="v2-subject-bar"><div class="row spaced"><span>${esc(s.subject)}</span><small>${Math.max(1,Math.round((s.seconds||0)/60))} min</small></div><div><i data-progress-width="${Math.max(6,Math.round((s.seconds||0)/maxSubject*100))}"></i></div></div>`).join(''):'<p class="muted">Cuando estudies, aquí aparecerán tus temas más explorados.</p>';
  const week=progress.week||[];
  const maxDay=Math.max(1,...week.map(d=>d.seconds||0));
  const labels=['D','L','M','X','J','V','S'];
- const weekBars=week.length?week.map(d=>{const day=new Date(d.day+'T12:00:00');const height=Math.max(7,Math.round((d.seconds||0)/maxDay*100));return `<div class="v2-week-day" title="${Math.round((d.seconds||0)/60)} min"><div><i style="height:${height}%"></i></div><span>${labels[day.getDay()]}</span></div>`;}).join(''):'';
+ const weekBars=week.length?week.map(d=>{const day=new Date(d.day+'T12:00:00');const height=Math.max(7,Math.round((d.seconds||0)/maxDay*100));return `<div class="v2-week-day" title="${Math.round((d.seconds||0)/60)} min"><div><i data-progress-height="${height}"></i></div><span>${labels[day.getDay()]}</span></div>`;}).join(''):'';
  const rec=subjects.length?recommendFor(subjects[0]?.subject):'Empieza con una pregunta y completa tu primer reto.';
  return `<section class="v2-progress-section"><div class="section-head"><h2>Tus logros</h2><p>Reconocen constancia y exploración, no competencia.</p></div><div class="v2-achievements">${cards}</div></section>
  <section class="v2-progress-insights">

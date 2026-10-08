@@ -1,11 +1,13 @@
 import sqlite3
 import os
+from contextvars import ContextVar
 from contextlib import contextmanager
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from .migrations import apply_migrations, LATEST_SCHEMA_VERSION
 from .recovery import ensure_pre_migration_snapshot, create_snapshot, list_snapshots, integrity_report, restore_snapshot
+from .time_utils import local_day, local_day_from_iso, utc_now_iso
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, name TEXT NOT NULL, age INTEGER, level TEXT, avatar TEXT);
@@ -56,12 +58,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_study_session_unique_day ON study_sessions
 '''
 
 def now():
-    return datetime.now(timezone.utc).isoformat()
+    return utc_now_iso()
 
 class Database:
     def __init__(self, path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._active_transaction = ContextVar(f"allen_tx_{id(self)}", default=None)
         previous_version=0
         if self.path.exists() and self.path.stat().st_size:
             try:
@@ -107,10 +110,36 @@ class Database:
         db.row_factory = sqlite3.Row
         db.execute('PRAGMA foreign_keys=ON')
         db.execute('PRAGMA secure_delete=ON')
+        db.execute('PRAGMA journal_mode=WAL')
+        db.execute('PRAGMA synchronous=NORMAL')
         try:
             with db:
                 yield db
         finally:
+            db.close()
+
+    @contextmanager
+    def transaction(self):
+        existing=self._active_transaction.get()
+        if existing is not None:
+            yield existing
+            return
+        db=sqlite3.connect(self.path,timeout=10)
+        db.row_factory=sqlite3.Row
+        db.execute('PRAGMA foreign_keys=ON')
+        db.execute('PRAGMA secure_delete=ON')
+        db.execute('PRAGMA journal_mode=WAL')
+        db.execute('PRAGMA synchronous=NORMAL')
+        token=self._active_transaction.set(db)
+        try:
+            db.execute('BEGIN IMMEDIATE')
+            yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            self._active_transaction.reset(token)
             db.close()
 
     def schema_version(self):
@@ -134,6 +163,9 @@ class Database:
         return result
 
     def all(self, sql, args=()):
+        active=self._active_transaction.get()
+        if active is not None:
+            return [dict(r) for r in active.execute(sql,args).fetchall()]
         with self.connect() as db:
             return [dict(r) for r in db.execute(sql, args).fetchall()]
 
@@ -142,6 +174,9 @@ class Database:
         return rows[0] if rows else None
 
     def execute(self, sql, args=()):
+        active=self._active_transaction.get()
+        if active is not None:
+            return active.execute(sql,args).lastrowid
         with self.connect() as db:
             return db.execute(sql, args).lastrowid
 
@@ -166,12 +201,12 @@ class Database:
 
     def award(self, user, kind, subject, xp, reference):
         self.execute('INSERT OR IGNORE INTO progress(user_id,kind,subject,xp,day,reference) VALUES(?,?,?,?,?,?)',
-                     (user, kind, subject, xp, date.today().isoformat(), reference))
+                     (user, kind, subject, xp, local_day().isoformat(), reference))
 
     def progress(self, user):
         events = self.all('SELECT * FROM progress WHERE user_id=?', (user,))
         days = {e['day'] for e in events}
-        day = date.today()
+        day = local_day()
         if day.isoformat() not in days:
             day -= timedelta(days=1)
         streak = 0
@@ -180,11 +215,17 @@ class Database:
             day -= timedelta(days=1)
         xp = sum(e['xp'] for e in events)
         sessions = self.all('SELECT subject,SUM(seconds) seconds FROM learning_sessions WHERE user_id=? GROUP BY subject', (user,))
-        daily_rows = self.all("SELECT substr(created,1,10) day,SUM(seconds) seconds FROM learning_sessions WHERE user_id=? GROUP BY substr(created,1,10)", (user,))
-        daily = {row['day']: row['seconds'] for row in daily_rows}
+        daily = {}
+        for row in self.all('SELECT created,seconds FROM learning_sessions WHERE user_id=?', (user,)):
+            try:
+                key=local_day_from_iso(row['created']).isoformat()
+            except (TypeError, ValueError):
+                continue
+            daily[key]=daily.get(key,0)+int(row['seconds'] or 0)
         week = []
+        today = local_day()
         for offset in range(6,-1,-1):
-            current = date.today() - timedelta(days=offset)
+            current = today - timedelta(days=offset)
             week.append(dict(day=current.isoformat(), seconds=daily.get(current.isoformat(),0)))
         adventures_done=self.one("SELECT count(*) n FROM adventure_sessions WHERE user_id=? AND status='completed'",(user,))['n']
         adventure_active=self.one("SELECT count(*) n FROM adventure_sessions WHERE user_id=? AND status IN ('active','paused')",(user,))['n']

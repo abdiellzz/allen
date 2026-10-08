@@ -108,6 +108,7 @@ class LocalAI:
                 async with client.stream('POST',settings.ai_server+'/v1/chat/completions',json=payload) as response:
                     response.raise_for_status()
                     pending=''
+                    safety_tail=''
                     total=0
                     async for line in response.aiter_lines():
                         if not line.startswith('data:'):
@@ -136,11 +137,15 @@ class LocalAI:
                                 chunk += '\n\n'
                             else:
                                 chunk,pending=pending,''
-                            safe=safe_reply(chunk)
+                            safe=safe_reply(safety_tail+chunk)
                             yield {'type':'delta','text':safe or chunk}
                             if safe:
                                 return
+                            safety_tail=(safety_tail+chunk)[-240:]
                     if pending:
-                        yield {'type':'delta','text':safe_reply(pending) or pending}
+                        safe=safe_reply(safety_tail+pending)
+                        yield {'type':'delta','text':safe or pending}
+                        if safe:
+                            return
         finished=time.monotonic(); duration=max(0.001,finished-started)
         self.metrics.update(time_to_first_token=round((first_token_at-started),3) if first_token_at else None,generation_duration=round(duration,3),estimated_tokens=estimated_tokens,estimated_tokens_per_second=round(estimated_tokens/duration,2) if estimated_tokens else None,queue_state='done')

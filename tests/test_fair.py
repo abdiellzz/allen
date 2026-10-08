@@ -14,7 +14,8 @@ class FairTests(unittest.TestCase):
         self.ai=LocalAI(httpx.MockTransport(lambda request:httpx.Response(503)))
         self.app=create_app(Path(self.temp.name)/'fair.sqlite3',self.ai)
         self.client=TestClient(self.app)
-        self.client.headers['X-Allen-Token']=self.client.get('/api/bootstrap').json()['token']
+        self.client.get('/api/bootstrap')
+        self.client.headers['X-Allen-Token']=self.client.get('/api/fair/token').json()['token']
         self.sid=self.client.post('/api/fair/sessions',json={}).json()['session']
     def tearDown(self):
         self.client.close();self.temp.cleanup()

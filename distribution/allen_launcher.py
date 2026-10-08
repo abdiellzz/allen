@@ -50,6 +50,8 @@ def self_test() -> int:
         app = create_app()
         if not getattr(app, "state", None) or not app.state.db.path.parent.exists():
             return 3
+        if not callable(getattr(app.state, "issue_launch_key", None)):
+            return 4
     return 0
 
 
@@ -62,7 +64,6 @@ def run_gui() -> int:
 
     from backend.app import app
     from backend.version import ALLEN_VERSION
-    from start_local_ai import main as start_local_ai
 
     server_holder = {"server": None}
     stop_event = threading.Event()
@@ -86,7 +87,7 @@ def run_gui() -> int:
     buttons.pack(fill="x")
 
     def open_allen():
-        webbrowser.open("http://127.0.0.1:8787/?access="+app.state.access_key)
+        webbrowser.open("http://127.0.0.1:8787/?access="+app.state.issue_launch_key())
 
     ttk.Button(buttons, text="Abrir ALLEN", command=open_allen).pack(side="left")
 
@@ -106,12 +107,6 @@ def run_gui() -> int:
     ).pack(anchor="w", pady=(22, 0))
 
     root.protocol("WM_DELETE_WINDOW", close_allen)
-
-    def model_worker():
-        try:
-            start_local_ai()
-        except Exception:
-            pass
 
     def server_worker():
         if health_ready():
@@ -136,7 +131,6 @@ def run_gui() -> int:
             time.sleep(0.25)
         root.after(0, lambda: status.set("No se pudo iniciar. Comprueba si el puerto 8787 está ocupado."))
 
-    threading.Thread(target=model_worker, daemon=True).start()
     threading.Thread(target=server_worker, daemon=True).start()
     threading.Thread(target=readiness_worker, daemon=True).start()
 

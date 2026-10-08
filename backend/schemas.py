@@ -144,6 +144,20 @@ class StudyPlanCreate(Strict):
     subject: str = Field(min_length=1,max_length=80)
     topics: list[str] = Field(min_length=1,max_length=12)
     deadline: str = Field(min_length=10,max_length=10)
+    @field_validator('deadline')
+    @classmethod
+    def bounded_deadline(cls,value):
+        from datetime import date, datetime, timedelta
+        try:
+            target=datetime.strptime(value,"%Y-%m-%d").date()
+        except ValueError as exc:
+            raise ValueError('Fecha objetivo no válida') from exc
+        today=date.today()
+        if target < today:
+            raise ValueError('La fecha objetivo no puede estar en el pasado.')
+        if target > today + timedelta(days=365):
+            raise ValueError('La fecha objetivo no puede superar 365 días.')
+        return value
     minutes_per_day: int = Field(ge=10,le=240)
     level: Literal['Primaria','Premedia','Media','Universidad / Técnico'] = 'Premedia'
     goal: str = Field(min_length=1,max_length=160)
@@ -249,3 +263,7 @@ class RecoveryRestore(Strict):
 
 class LicenseActivation(Strict):
     content: str = Field(min_length=20, max_length=64000)
+
+
+class TeacherPin(Strict):
+    pin: str = Field(min_length=4, max_length=12, pattern=r'^\d{4,12}$')

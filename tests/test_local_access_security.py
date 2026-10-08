@@ -19,8 +19,9 @@ def test_local_api_requires_ephemeral_launch_secret(tmp_path):
         wrong = client.get("/?access=wrong-secret", follow_redirects=False)
         assert wrong.status_code == 403
 
+        launch_secret = app.state.issue_launch_key()
         launch = client.get(
-            "/?access=" + app.state.access_key,
+            "/?access=" + launch_secret,
             follow_redirects=False,
         )
         assert launch.status_code == 303
@@ -31,6 +32,12 @@ def test_local_api_requires_ephemeral_launch_secret(tmp_path):
         allowed = client.get("/api/bootstrap")
         assert allowed.status_code == 200
         assert "token" in allowed.json()
+
+        replay = TestClient(app).get(
+            "/?access=" + launch_secret,
+            follow_redirects=False,
+        )
+        assert replay.status_code == 403
 
 
 def test_security_headers_are_applied_to_blocked_responses(tmp_path):
