@@ -47,28 +47,28 @@ function licenseGate(status){
  document.body.classList.add('license-locked');
  $('#breadcrumb').textContent='Activación';
  $('#profile-select').closest('label')?.classList.add('hidden');
- content.innerHTML=\`
+ content.innerHTML=`
  <section class="license-gate" aria-labelledby="license-title">
   <div class="license-card">
-   <div class="license-mark">\${icon('key-round',28)}</div>
+   <div class="license-mark">${icon('key-round',28)}</div>
    <span class="eyebrow">ACTIVACIÓN OFFLINE</span>
    <h1 id="license-title">Activa ALLEN</h1>
    <p>Esta instalación necesita un archivo de licencia válido. La verificación ocurre completamente en este equipo y no requiere Internet.</p>
    <div class="license-machine">
     <span>ID DE ESTE EQUIPO</span>
-    <code id="machine-id">\${machine}</code>
+    <code id="machine-id">${machine}</code>
     <button id="copy-machine-id" type="button">Copiar ID</button>
    </div>
    <label class="license-file button-like">
     Seleccionar archivo .license
     <input id="license-file" type="file" accept=".license,application/json" hidden>
    </label>
-   <div id="license-feedback" class="license-feedback \${status?.state==='expired'||status?.state==='invalid'?'error':''}" role="status">
-    \${esc(status?.message||'Solicita una licencia para este Machine ID.')}
+   <div id="license-feedback" class="license-feedback ${status?.state==='expired'||status?.state==='invalid'?'error':''}" role="status">
+    ${esc(status?.message||'Solicita una licencia para este Machine ID.')}
    </div>
    <p class="muted">La licencia no limita la cantidad de perfiles, estudiantes o profesores dentro de esta instalación.</p>
   </div>
- </section>\`;
+ </section>`;
  $('#copy-machine-id').onclick=async()=>{try{await navigator.clipboard.writeText(status.machine_id);toast('Machine ID copiado.');}catch{toast('Copia el Machine ID manualmente.');}};
  $('#license-file').onchange=async e=>{
   const file=e.target.files?.[0];if(!file)return;
