@@ -742,3 +742,5 @@ body.license-locked main{min-height:calc(100vh - 120px);display:grid;place-items
 
 .backup-illustration{width:150px;border-radius:16px}
 .recovery-illustration{width:140px}
+
+.reader-aside-image{width:100%;border-radius:14px}
