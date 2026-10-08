@@ -19,6 +19,8 @@ Este directorio es la fuente oficial de documentación del proyecto.
 
 - [Arquitectura](ARCHITECTURE.md)
 - [Guía de desarrollo](DEVELOPMENT.md)
+- [Proceso de release](RELEASE_PROCESS.md)
+- [Landing pública](WEB_LANDING.md)
 - [Teacher Studio](TEACHER_STUDIO.md)
 - [Learning Intelligence](LEARNING_INTELLIGENCE.md)
 - [Reliability Core](RELIABILITY_CORE.md)
