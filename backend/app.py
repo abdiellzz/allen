@@ -191,8 +191,6 @@ def create_app(db_path=None, ai=None):
 
     @app.post('/api/profiles')
     def create_profile(value:Profile):
-        if len(db.all('SELECT id FROM users'))>=20:
-            raise HTTPException(400,'Este dispositivo ya tiene 20 perfiles.')
         uid=db.execute('INSERT INTO users(name,age,level,avatar) VALUES(?,?,?,?)',(value.name,value.age,value.level,value.avatar))
         db.remember(uid,onboarded=True)
         return user(uid)
