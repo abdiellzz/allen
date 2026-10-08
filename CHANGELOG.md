@@ -2,6 +2,17 @@
 
 Todos los cambios relevantes de ALLEN se documentan aquí.
 
+## [Unreleased]
+
+### Repositorio y documentación
+- Limpieza de scripts raíz obsoletos anteriores a la distribución 1.2.0.
+- Documentación reorganizada bajo `docs/`.
+- Nuevas guías de instalación, arquitectura, desarrollo, operación, releases y troubleshooting.
+- Tutorial operativo ampliado para License Manager en Windows y Linux.
+- Workflow de tests simplificado a `main` y pull requests.
+- Reglas de higiene para impedir secretos, licencias emitidas y artefactos generados.
+- Prueba automática de estructura/documentación del repositorio.
+
 ## [1.2.0] — 2026-10-07
 
 ### Licencias offline
