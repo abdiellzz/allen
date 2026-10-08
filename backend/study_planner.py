@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from .time_utils import local_day, local_day_iso
 
 TECHNIQUES=("Descubre","Recupera","Explica","Mezcla","Representa","Revisa")
