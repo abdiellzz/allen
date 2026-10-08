@@ -94,6 +94,7 @@ function studentAvatar(){const palette=['🐵','🦊','🐼','🐸','🦉'].inde
 function updateProfiles(){try{localStorage.setItem('allen-active-profile',String(state.profile));}catch{}const select=$('#profile-select');select.innerHTML=state.profiles.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');select.value=state.profile;const button=$('.sidebar-bottom [data-page="Perfil"]');if(button)button.innerHTML=studentAvatar()+`<span class="nav-text">${esc(profile().name)}</span>`;}
 function network(){ $('#network').innerHTML=icon('shield-check',16)+' Privado y offline';$('#network').title='Allen procesa las conversaciones dentro de este dispositivo.'; }
 addEventListener('online',network);addEventListener('offline',network);network();
+window.addEventListener('allen-license-required',()=>guarded(async()=>{await bootstrap();}));
 const navGroups=[
  ['INICIO','student',[['Inicio','house','Inicio']]],
  ['APRENDER','student',[['Aprender','book-open','Aprender'],['Cursos','library','Cursos'],['Método Allen','sparkles','Método Allen'],['Plan Allen','notebook-tabs','Plan Allen'],['Biblioteca','library','Biblioteca']]],
