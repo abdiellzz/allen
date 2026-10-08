@@ -41,11 +41,11 @@ from .licensing import LicenseManager, LicenseError
 
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))
 
-def create_app(db_path=None, ai=None):
+def create_app(db_path=None, ai=None, require_license=None):
     local_root=Path(os.environ.get('ALLEN_DATA_ROOT') or (Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'))
     db=Database(db_path or os.environ.get('ALLEN_DB_PATH',local_root/'allen.sqlite3'))
     licensing=LicenseManager(local_root, ROOT/'config/license_public_key.pem')
-    licensing_required = db_path is None and os.environ.get('ALLEN_LICENSE_BYPASS') != '1'
+    licensing_required = (db_path is None) if require_license is None else bool(require_license)
     library=Library(ROOT/'data/library')
     engine=ai or LocalAI()
     token=secrets.token_urlsafe(32)
