@@ -21,7 +21,7 @@ from .ai import LocalAI
 from .database import Database, now
 from .education import catalog, generate, grade
 from .library import Library
-from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport, CourseHelp, CourseExamProgress, CourseVersionImport, RecoveryRestore
+from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport, CourseHelp, CourseExamProgress, CourseVersionImport, RecoveryRestore, LicenseActivation
 from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
@@ -37,12 +37,15 @@ from .question_bank import sync_course_questions, stats_for_course
 from .learning_intelligence import mastery_evidence, due_reviews, diagnostic_questions, score_diagnostic, recommended_start
 from .course_versioning import compare_versions, seed_initial_version, apply_version, history as course_version_history
 from .version import ALLEN_VERSION
+from .licensing import LicenseManager, LicenseError
 
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))
 
-def create_app(db_path=None, ai=None):
+def create_app(db_path=None, ai=None, require_license=None):
     local_root=Path(os.environ.get('ALLEN_DATA_ROOT') or (Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'))
     db=Database(db_path or os.environ.get('ALLEN_DB_PATH',local_root/'allen.sqlite3'))
+    licensing=LicenseManager(local_root, ROOT/'config/license_public_key.pem')
+    licensing_required = (db_path is None) if require_license is None else bool(require_license)
     library=Library(ROOT/'data/library')
     engine=ai or LocalAI()
     token=secrets.token_urlsafe(32)
@@ -61,6 +64,7 @@ def create_app(db_path=None, ai=None):
 
     app=FastAPI(title='ALLEN local',version=ALLEN_VERSION,docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
     app.state.db=db
+    app.state.licensing=licensing
     app.add_middleware(TrustedHostMiddleware,allowed_hosts=['127.0.0.1','localhost','[::1]']+(['testserver'] if db_path else []))
 
     @app.middleware('http')
@@ -73,6 +77,16 @@ def create_app(db_path=None, ai=None):
         if request.method in ('POST','PUT','DELETE','PATCH'):
             if not secrets.compare_digest(request.headers.get('x-allen-token',''),token):
                 return JSONResponse({'error':'Recarga Allen para continuar.'},403)
+        if licensing_required and request.url.path.startswith('/api/'):
+            allowed = {
+                '/api/bootstrap',
+                '/api/health',
+                '/api/license/status',
+                '/api/license/machine-id',
+                '/api/license/activate',
+            }
+            if request.url.path not in allowed and not licensing.status().get('active'):
+                return JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402)
             max_body=12_500_000 if request.url.path=='/api/teacher/import' or request.url.path.endswith('/versions') else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 5_500_000 if request.url.path.startswith('/api/backup/') else 200000
             try:
                 if int(request.headers.get('content-length','0'))>max_body:
@@ -113,7 +127,41 @@ def create_app(db_path=None, ai=None):
     @app.get('/api/bootstrap')
     def bootstrap():
         db.prune()
-        return dict(version=ALLEN_VERSION,token=token,profiles=[user(p['id']) for p in db.all('SELECT id FROM users')],settings=db.settings().model_dump(),catalog=catalog())
+        license_status = licensing.status() if licensing_required else {
+            'required': False,
+            'active': True,
+            'state': 'development',
+            'machine_id': 'TEST-DEVELOPMENT',
+            'message': 'Licensing desactivado para pruebas.'
+        }
+        return dict(
+            version=ALLEN_VERSION,
+            token=token,
+            license=license_status,
+            profiles=[user(p['id']) for p in db.all('SELECT id FROM users')],
+            settings=db.settings().model_dump(),
+            catalog=catalog(),
+        )
+
+    @app.get('/api/license/status')
+    def license_status():
+        if not licensing_required:
+            return {'required':False,'active':True,'state':'development','machine_id':'TEST-DEVELOPMENT'}
+        return licensing.status()
+
+    @app.get('/api/license/machine-id')
+    def license_machine_id():
+        status = licensing.status() if licensing_required else {'machine_id':'TEST-DEVELOPMENT'}
+        return {'machine_id':status['machine_id']}
+
+    @app.post('/api/license/activate')
+    def activate_license(value:LicenseActivation):
+        if not licensing_required:
+            return {'required':False,'active':True,'state':'development','machine_id':'TEST-DEVELOPMENT'}
+        try:
+            return licensing.install(value.content)
+        except LicenseError as exc:
+            raise HTTPException(422,str(exc))
 
     @app.get('/api/fair/token')
     def fair_token():
@@ -143,8 +191,6 @@ def create_app(db_path=None, ai=None):
 
     @app.post('/api/profiles')
     def create_profile(value:Profile):
-        if len(db.all('SELECT id FROM users'))>=20:
-            raise HTTPException(400,'Este dispositivo ya tiene 20 perfiles.')
         uid=db.execute('INSERT INTO users(name,age,level,avatar) VALUES(?,?,?,?)',(value.name,value.age,value.level,value.avatar))
         db.remember(uid,onboarded=True)
         return user(uid)

@@ -1,6 +1,6 @@
 # ALLEN — aprende, incluso sin Internet
 
-> **Release estable actual: ALLEN 1.1.1** · 7 de octubre de 2026  
+> **Release estable actual: ALLEN 1.2.0** · 7 de octubre de 2026  
 > Consulta [CHANGELOG.md](CHANGELOG.md) y [docs/RELEASE_1.0.0.md](docs/RELEASE_1.0.0.md).
 
 ## Main
@@ -24,12 +24,27 @@ La guía separa el flujo del estudiante, el flujo docente y las funciones de man
 
 Sin modelo puedes usar quizzes, ejercicios, biblioteca, perfiles, tarjetas manuales y progreso. Las respuestas abiertas muestran **MODO DEMO** y nunca fingen ser una IA conectada.
 
+## Licencia offline
+
+ALLEN 1.2.0 requiere un archivo `.license` válido en instalaciones comerciales. La activación se verifica completamente en el dispositivo y no necesita Internet.
+
+1. ALLEN muestra un **Machine ID**.
+2. El cliente envía ese Machine ID al proveedor.
+3. **ALLEN License Manager** genera un archivo firmado para ese equipo.
+4. El cliente importa el archivo desde la pantalla de activación.
+5. La licencia funciona hasta la fecha firmada en el archivo.
+6. Para renovar, se importa un nuevo archivo sin reinstalar ALLEN ni perder datos.
+
+La licencia no limita la cantidad de perfiles, estudiantes, profesores, cursos o progreso dentro de esa instalación. Reinstalar ALLEN no reinicia el periodo porque las fechas están firmadas dentro del archivo.
+
+La clave privada de emisión nunca debe incluirse en ALLEN, en el instalador ni en el repositorio. Consulta **[docs/LICENSING.md](docs/LICENSING.md)**.
+
 ## Descargar para Windows
 
-ALLEN 1.1.1 genera dos paquetes listos para usar:
+ALLEN 1.2.0 genera dos paquetes listos para usar:
 
-- **Portable:** `ALLEN-1.1.1-Portable-Windows-x64.zip`. Extrae la carpeta completa y ejecuta `ALLEN.exe`. No requiere instalar Python. Los datos se guardan dentro de `ALLEN-Data`, por lo que puedes mover la carpeta completa a otra PC o memoria USB.
-- **Instalador:** `ALLEN-1.1.1-Setup-Windows-x64.exe`. Instala ALLEN para el usuario actual, crea acceso en el menú Inicio y puede crear un acceso directo en el escritorio. Tampoco requiere Python.
+- **Portable:** `ALLEN-1.2.0-Portable-Windows-x64.zip`. Extrae la carpeta completa y ejecuta `ALLEN.exe`. No requiere instalar Python. Los datos se guardan dentro de `ALLEN-Data`, por lo que puedes mover la carpeta completa a otra PC o memoria USB.
+- **Instalador:** `ALLEN-1.2.0-Setup-Windows-x64.exe`. Instala ALLEN para el usuario actual, crea acceso en el menú Inicio y puede crear un acceso directo en el escritorio. Tampoco requiere Python.
 
 Consulta **[docs/WINDOWS_DISTRIBUTION.md](docs/WINDOWS_DISTRIBUTION.md)** para conocer el proceso de construcción, almacenamiento de datos y desinstalación.
 
@@ -65,7 +80,7 @@ El constructor determinista no finge que un texto generado es automáticamente c
 
 ## Alcance de plataforma
 
-ALLEN 1.1.1 está diseñado primero para **Windows en escritorio y laptop**. La experiencia principal se valida en 1920×1080, 1440×900 y 1366×768.
+ALLEN 1.2.0 está diseñado primero para **Windows en escritorio y laptop**. La experiencia principal se valida en 1920×1080, 1440×900 y 1366×768.
 
 La interfaz también se prueba para 900×800, 640×900 y 390×844 para evitar overflow horizontal y mantener utilizables los flujos esenciales en pantallas pequeñas. Esto no convierte a ALLEN en una app móvil dedicada: no hay APK ni navegación móvil independiente; el objetivo principal sigue siendo escritorio/laptop.
 

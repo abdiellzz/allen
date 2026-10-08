@@ -37,7 +37,7 @@ def test_desktop_guided_learning_smoke_and_viewports():
         port=_free_port()
         env={**os.environ,"ALLEN_DB_PATH":str(db_path)}
         process=subprocess.Popen(
-            [sys.executable,"-m","uvicorn","backend.app:app","--host","127.0.0.1","--port",str(port),"--log-level","error"],
+            [sys.executable,"-m","uvicorn","tests.e2e_server:app","--host","127.0.0.1","--port",str(port),"--log-level","error"],
             env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL
         )
         try:

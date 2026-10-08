@@ -13,3 +13,7 @@ allen_training/.venv/
 allen_training/output/*
 !allen_training/output/.gitkeep
 *.safetensors
+
+# Private/commercial licensing material
+license_private_key.pem
+*.license

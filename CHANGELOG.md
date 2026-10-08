@@ -2,6 +2,20 @@
 
 Todos los cambios relevantes de ALLEN se documentan aquí.
 
+## [1.2.0] — 2026-10-07
+
+### Licencias offline
+- Activación obligatoria mediante archivo `.license` firmado con Ed25519.
+- La instalación muestra un Machine ID estable y privado.
+- Cada licencia queda vinculada a un Machine ID específico.
+- Fechas de inicio y vencimiento firmadas: reinstalar ALLEN no reinicia la licencia.
+- Renovación mediante un nuevo archivo sin reinstalar ni perder datos.
+- Detección básica de retroceso del reloj del sistema.
+- Perfiles, estudiantes y profesores sin límite por instalación.
+- Nuevo panel de licencia en Configuración.
+- Nuevo ALLEN License Manager privado para crear y renovar licencias.
+- La clave privada no se incluye en ALLEN ni en el repositorio.
+
 ## [1.1.1] — 2026-10-07
 
 ### Eliminación completa

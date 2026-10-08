@@ -1,12 +1,12 @@
 # Distribución de ALLEN para Windows
 
-ALLEN 1.1.1 produce dos artefactos para Windows x64 a partir del mismo build congelado.
+ALLEN 1.2.0 produce dos artefactos para Windows x64 a partir del mismo build congelado.
 
 ## 1. Portable
 
 Archivo esperado:
 
-\`ALLEN-1.1.1-Portable-Windows-x64.zip\`
+\`ALLEN-1.2.0-Portable-Windows-x64.zip\`
 
 Características:
 
@@ -25,7 +25,7 @@ El archivo \`portable.flag\` activa este comportamiento. No debe eliminarse del 
 
 Archivo esperado:
 
-\`ALLEN-1.1.1-Setup-Windows-x64.exe\`
+\`ALLEN-1.2.0-Setup-Windows-x64.exe\`
 
 Características:
 

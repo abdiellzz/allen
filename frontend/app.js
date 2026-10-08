@@ -30,13 +30,60 @@ const modules=[
 let rememberedProfile=1;try{rememberedProfile=Number(localStorage.getItem('allen-active-profile'))||1;}catch{}
 const storedTheme=localStorage.getItem('allen-theme')||'light';
 document.documentElement.dataset.theme=storedTheme;
-let state={profiles:[],settings:{},catalog:{},profile:rememberedProfile,page:'Inicio',model:null};
+let state={profiles:[],settings:{},catalog:{},profile:rememberedProfile,page:'Inicio',model:null,license:null};
 let chat={messages:[],id:null,controller:null},quiz=null,pageEpoch=0;
 let lastActivity=Date.now();
 document.addEventListener('pointerdown',()=>lastActivity=Date.now());
 document.addEventListener('keydown',()=>lastActivity=Date.now());
 function toast(text){$('#toast').textContent=text;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').textContent='',6000);}
 function profile(){return state.profiles.find(p=>p.id===state.profile)||state.profiles[0];}
+function licenseDate(value){
+ if(!value)return '—';
+ try{return new Intl.DateTimeFormat('es-PA',{day:'numeric',month:'short',year:'numeric'}).format(new Date(value+'T12:00:00'));}
+ catch{return value;}
+}
+function licenseGate(status){
+ const machine=esc(status?.machine_id||'—');
+ document.body.classList.add('license-locked');
+ $('#breadcrumb').textContent='Activación';
+ $('#profile-select').closest('label')?.classList.add('hidden');
+ content.innerHTML=`
+ <section class="license-gate" aria-labelledby="license-title">
+  <div class="license-card">
+   <div class="license-mark">${icon('key-round',28)}</div>
+   <span class="eyebrow">ACTIVACIÓN OFFLINE</span>
+   <h1 id="license-title">Activa ALLEN</h1>
+   <p>Esta instalación necesita un archivo de licencia válido. La verificación ocurre completamente en este equipo y no requiere Internet.</p>
+   <div class="license-machine">
+    <span>ID DE ESTE EQUIPO</span>
+    <code id="machine-id">${machine}</code>
+    <button id="copy-machine-id" type="button">Copiar ID</button>
+   </div>
+   <label class="license-file button-like">
+    Seleccionar archivo .license
+    <input id="license-file" type="file" accept=".license,application/json" hidden>
+   </label>
+   <div id="license-feedback" class="license-feedback ${status?.state==='expired'||status?.state==='invalid'?'error':''}" role="status">
+    ${esc(status?.message||'Solicita una licencia para este Machine ID.')}
+   </div>
+   <p class="muted">La licencia no limita la cantidad de perfiles, estudiantes o profesores dentro de esta instalación.</p>
+  </div>
+ </section>`;
+ $('#copy-machine-id').onclick=async()=>{try{await navigator.clipboard.writeText(status.machine_id);toast('Machine ID copiado.');}catch{toast('Copia el Machine ID manualmente.');}};
+ $('#license-file').onchange=async e=>{
+  const file=e.target.files?.[0];if(!file)return;
+  const feedback=$('#license-feedback');feedback.classList.remove('error');feedback.textContent='Verificando licencia…';
+  try{
+   const raw=await file.text();
+   const result=await api('/license/activate','POST',{content:raw});
+   state.license=result;
+   toast('Licencia activada.');
+   const ready=await bootstrap();
+   if(ready){state.page=decodeURIComponent(location.hash.slice(1))||'Inicio';await render();state.model=await api('/model/status').catch(()=>null);}
+  }catch(error){feedback.classList.add('error');feedback.textContent=error.message||'No se pudo activar esta licencia.';}
+ };
+}
+
 function options(values,selected){return values.map(v=>`<option value="${esc(v)}" ${v===selected?'selected':''}>${esc(v)}</option>`).join('');}
 function field(label,id,values,selected){return `<label>${label}<select id="${id}">${options(values,selected)}</select></label>`;}
 function heading(title,sub){return `<div class="page-heading"><div><div class="eyebrow">TU ESPACIO PARA CRECER</div><h1>${title}</h1><p class="muted">${sub}</p></div><span class="pill ai-state ${state.model?.connected?'green':''}">${esc(state.model?.connected?'IA LOCAL ACTIVA':state.model?'IA local sin conectar':'Comprobando IA…')}</span></div>`;}
@@ -47,6 +94,7 @@ function studentAvatar(){const palette=['🐵','🦊','🐼','🐸','🦉'].inde
 function updateProfiles(){try{localStorage.setItem('allen-active-profile',String(state.profile));}catch{}const select=$('#profile-select');select.innerHTML=state.profiles.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');select.value=state.profile;const button=$('.sidebar-bottom [data-page="Perfil"]');if(button)button.innerHTML=studentAvatar()+`<span class="nav-text">${esc(profile().name)}</span>`;}
 function network(){ $('#network').innerHTML=icon('shield-check',16)+' Privado y offline';$('#network').title='Allen procesa las conversaciones dentro de este dispositivo.'; }
 addEventListener('online',network);addEventListener('offline',network);network();
+window.addEventListener('allen-license-required',()=>guarded(async()=>{await bootstrap();}));
 const navGroups=[
  ['INICIO','student',[['Inicio','house','Inicio']]],
  ['APRENDER','student',[['Aprender','book-open','Aprender'],['Cursos','library','Cursos'],['Método Allen','sparkles','Método Allen'],['Plan Allen','notebook-tabs','Plan Allen'],['Biblioteca','library','Biblioteca']]],
@@ -281,7 +329,12 @@ async function progressPage(){
 }
 function bindProgress(){}
 
-async function settingsPage(){const health=await api('/health'),s=state.settings,p=profile();return heading('A tu manera','Tu perfil, tu espacio y el cerebro local de Allen.')+`
+async function settingsPage(){const health=await api('/health'),license=await api('/license/status'),s=state.settings,p=profile();return heading('A tu manera','Tu perfil, tu espacio y el cerebro local de Allen.')+`
+ <section class="panel license-settings"><div class="row spaced"><div><span class="eyebrow">LICENCIA OFFLINE</span><h2>Licencia y suscripción</h2></div><span class="pill ${license.active?'green':''}">${license.active?'ACTIVA':'REQUIERE RENOVACIÓN'}</span></div>
+ <div class="license-summary"><div><span>Cliente</span><b>${esc(license.customer||'—')}</b></div><div><span>Plan</span><b>${esc(license.plan||'—')}</b></div><div><span>Licencia</span><b>${esc(license.license_id||'—')}</b></div><div><span>Válida hasta</span><b>${esc(licenseDate(license.valid_until))}</b></div><div><span>Días restantes</span><b>${license.days_remaining??'—'}</b></div><div><span>Perfiles</span><b>Sin límite</b></div></div>
+ <div class="license-machine compact"><span>MACHINE ID</span><code>${esc(license.machine_id||'—')}</code></div>
+ <div class="row"><label class="button-like">Importar renovación<input id="license-renew-file" type="file" accept=".license,application/json" hidden></label></div>
+ <p id="license-renew-feedback" class="muted">Renovar no requiere reinstalar ALLEN y no elimina ningún dato.</p></section>
  <section class="panel"><h2>Modo Feria</h2><p>Retos, microlecciones y conversaciones temporales para visitantes.</p><a class="primary" href="/fair">Abrir Modo Feria</a></section>
  <div class="panel"><h2>Tu perfil local</h2><form id="profile-form" class="stack"><div class="field-grid"><label>Nombre o apodo<input id="profile-name" maxlength="40" value="${esc(p.name)}" required></label>${field('Nivel educativo','profile-level',levels,p.level)}<label>Edad (opcional)<input type="number" id="profile-age" min="5" max="120" value="${p.age??''}"></label>${field('Avatar','profile-avatar',['🐵','🦊','🐼','🐸','🦉'],p.avatar)}</div><div class="row"><button class="primary">Guardar perfil</button><button type="button" id="add-profile">Crear otro perfil con estos datos</button></div></form></div>
  <div class="panel"><h2>Preferencias del dispositivo</h2><p class="muted">Conecta el cerebro de Allen en este dispositivo. No hace falta una cuenta ni una API de pago.</p><form id="settings-form" class="stack"><details class="advanced"><summary>Avanzado · modelo local</summary><div class="field-grid"><label>Dirección local<input id="ai-server" value="${esc(s.ai_server)}" required></label><label>Modelo (vacío = detectar automáticamente)<input id="model" value="${esc(s.model)}" maxlength="200" list="models"><datalist id="models">${options(state.model?.models||[])}</datalist></label><label>Creatividad · 0 a 1.5<input id="temperature" type="number" min="0" max="1.5" step="0.1" value="${s.temperature}" required></label><label>Contexto · 2048 a 32768<input id="context" type="number" min="2048" max="32768" value="${s.context_size}" required></label><label>Respuesta máxima · 64 a 4096 tokens<input id="max-tokens" type="number" min="64" max="4096" value="${s.max_tokens}" required></label></div><p class="muted">El contexto también debe configurarse al iniciar llama.cpp con -c. Elegir un nombre aquí no descarga ni carga otro modelo.</p><label class="check"><input id="demo" type="checkbox" ${s.demo?'checked':''}>Usar siempre modo demo</label></details><div class="field-grid">${field('Rendimiento de la IA','performance',['Rápido','Equilibrado','Detallado'],s.performance||'Equilibrado')}<label>Conservar conversaciones (días)<input id="retention" type="number" min="1" max="90" value="${s.retention_days}" required></label></div><div class="row"><label class="check"><input id="save-history" type="checkbox" ${s.save_history?'checked':''}>Guardar historial</label></div><h2>Accesibilidad</h2><div class="field-grid">${field('Tamaño del texto','font-size',['normal','grande','muy grande'],s.font_size)}<label class="check"><input id="contrast" type="checkbox" ${s.high_contrast?'checked':''}>Alto contraste</label></div><div><button class="primary">Guardar configuración</button></div></form></div>
@@ -302,6 +355,13 @@ async function profilePage(){
 }
 function bindProfile(){bindSettings();bindMemory();}
 function bindSettings(){
+ if($('#license-renew-file'))$('#license-renew-file').onchange=e=>guarded(async()=>{
+  const file=e.target.files?.[0];if(!file)return;
+  const box=$('#license-renew-feedback');box.textContent='Verificando renovación…';
+  const result=await api('/license/activate','POST',{content:await file.text()});
+  state.license=result;box.textContent='Licencia renovada hasta '+licenseDate(result.valid_until)+'.';toast('Licencia renovada.');
+  setTimeout(()=>render(),700);
+ });
  function profileData(){return {name:$('#profile-name').value,age:$('#profile-age').value?Number($('#profile-age').value):null,level:$('#profile-level').value,avatar:$('#profile-avatar').value};}
  async function saveProfile(create){const p=await api('/profiles'+(create?'':'/'+state.profile),create?'POST':'PUT',profileData());if(create){state.profiles.push(p);chat={messages:[],id:null,controller:null};quiz=null;}else state.profiles=state.profiles.map(old=>old.id===p.id?p:old);state.profile=p.id;updateProfiles();toast('Perfil guardado.');render();}
  if($('#profile-form'))$('#profile-form').onsubmit=e=>{e.preventDefault();guarded(()=>saveProfile(false));};if($('#add-profile'))$('#add-profile').onclick=()=>{if($('#profile-form').reportValidity())guarded(()=>saveProfile(true));};
@@ -324,6 +384,19 @@ function bindMemory(){const form=$('#learning-preferences');if(!form)return;form
 function bindHomeLearning(){const form=$('#daily-goal');if(form)form.onsubmit=e=>{e.preventDefault();guarded(async()=>{await saveMemory({daily_goal:$('#goal-input').value,set_goal:true});toast('Objetivo guardado. Vamos juntos.');});};content.querySelectorAll('[data-resume]').forEach(b=>b.onclick=()=>guarded(async()=>{const row=await api('/conversations/'+b.dataset.resume+'?profile_id='+state.profile);chat={messages:row.messages,id:row.id,controller:null,state:row.conversation_state||null};go('Preguntar');}));}
 function bindSaved(){content.querySelectorAll('[data-delete-saved]').forEach(b=>b.onclick=()=>{if(confirm('¿Quitar esta respuesta de tus guardados?'))guarded(async()=>{await api('/saved/'+b.dataset.deleteSaved+'?profile_id='+state.profile,'DELETE');render();});});}
 async function guarded(fn){try{return await fn();}catch(error){toast(error.message||'Algo no salió bien. Inténtalo de nuevo.');}}
-async function bootstrap(){const data=await api('/bootstrap');setToken(data.token);state.profiles=data.profiles;state.settings=data.settings;state.catalog=data.catalog;if(!state.profiles.some(p=>p.id===state.profile))state.profile=state.profiles[0].id;updateProfiles();applyAppearance();}
+async function bootstrap(){
+ const data=await api('/bootstrap');
+ setToken(data.token);
+ state.license=data.license||null;
+ state.profiles=data.profiles||[];
+ state.settings=data.settings||{};
+ state.catalog=data.catalog||{};
+ if(state.license?.required&&!state.license?.active){licenseGate(state.license);return false;}
+ document.body.classList.remove('license-locked');
+ $('#profile-select').closest('label')?.classList.remove('hidden');
+ if(!state.profiles.length)throw new Error('ALLEN no encontró perfiles locales.');
+ if(!state.profiles.some(p=>p.id===state.profile))state.profile=state.profiles[0].id;
+ updateProfiles();applyAppearance();return true;
+}
 setInterval(()=>{if(!document.hidden&&Date.now()-lastActivity<60000&&!['Inicio','Configuración','Privacidad','Progreso','Docente'].includes(state.page)){api('/study','POST',{profile_id:state.profile,subject:state.page==='Tutor'?($('#chat-subject')?.value||'Tutor'):state.page,seconds:30}).catch(()=>{});}},30000);
-await guarded(async()=>{await bootstrap();state.page=decodeURIComponent(location.hash.slice(1))||'Inicio';await render();state.model=await api('/model/status');document.querySelectorAll('.ai-state').forEach(el=>{el.textContent=state.model.connected?'IA LOCAL ACTIVA':'IA local sin conectar';el.classList.toggle('green',state.model.connected);});if(state.model.connected)document.querySelector('.model-notice')?.remove();if($('#model-health'))$('#model-health').textContent=state.model.state;document.querySelectorAll('.model-description').forEach(el=>el.textContent=state.model.connected?'Tu modelo local está listo.':'Las respuestas libres necesitan conectar un modelo local.');});
+await guarded(async()=>{const ready=await bootstrap();if(!ready)return;state.page=decodeURIComponent(location.hash.slice(1))||'Inicio';await render();state.model=await api('/model/status');document.querySelectorAll('.ai-state').forEach(el=>{el.textContent=state.model.connected?'IA LOCAL ACTIVA':'IA local sin conectar';el.classList.toggle('green',state.model.connected);});if(state.model.connected)document.querySelector('.model-notice')?.remove();if($('#model-health'))$('#model-health').textContent=state.model.state;document.querySelectorAll('.model-description').forEach(el=>el.textContent=state.model.connected?'Tu modelo local está listo.':'Las respuestas libres necesitan conectar un modelo local.');});
