@@ -266,7 +266,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             profiles=[user(p['id']) for p in db.all('SELECT id FROM users')],
             settings=db.settings().model_dump(),
             catalog=catalog(),
-            teacher_security={'configured':teacher_configured()},
+            teacher_security={'required':teacher_auth_required,'configured':teacher_configured()},
         )
 
     @app.get('/api/license/status')
