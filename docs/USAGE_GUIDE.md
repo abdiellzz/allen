@@ -22,7 +22,7 @@ La forma recomendada es usar el instalador o Portable de la release actual. No n
 
 ### Desarrollo desde código
 
-Para ejecutar el proyecto desde el repositorio consulta [DEVELOPMENT.md](DEVELOPMENT.md). No uses los antiguos scripts `start_allen.bat` o `install_allen.bat`: ya no forman parte del proyecto.
+Para ejecutar el proyecto desde el repositorio consulta [DEVELOPMENT.md](DEVELOPMENT.md). Los scripts heredados de arranque e instalación ya no forman parte del proyecto; usa la guía de desarrollo actual.
 
 ## 2. Perfiles
 
