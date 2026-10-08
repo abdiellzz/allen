@@ -54,6 +54,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     token=secrets.token_urlsafe(32)
     fair_token_value=secrets.token_urlsafe(32)
     teacher_session=secrets.token_urlsafe(32)
+    teacher_failures=[]
     access_key=secrets.token_urlsafe(32)
     launch_token=secrets.token_urlsafe(32)
     launch_token_used=False
@@ -114,6 +115,8 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             if not cookie_key or not secrets.compare_digest(cookie_key,access_key):
                 return security_headers(JSONResponse({'error':'Abre ALLEN desde su aplicación de escritorio.'},403))
         fair_mode=request.cookies.get('allen_mode')=='fair'
+        if fair_mode and request.url.path=='/api/fair/sessions' and request.method=='POST' and teacher_auth_required and not teacher_configured():
+            return security_headers(JSONResponse({'error':'Configura un PIN de profesor antes de iniciar el Modo Feria.','teacher_setup_required':True},409))
         if fair_mode and request.url.path.startswith('/api/'):
             fair_allowed=(
                 request.url.path.startswith('/api/fair/')
@@ -289,12 +292,18 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
 
     @app.post('/api/teacher/security/unlock')
     def teacher_security_unlock(value:TeacherPin):
+        now_mono=time.monotonic()
+        teacher_failures[:]=[attempt for attempt in teacher_failures if now_mono-attempt<60]
+        if len(teacher_failures)>=5:
+            raise HTTPException(429,'Demasiados intentos de PIN. Espera un minuto.')
         row=db.one("SELECT salt,pin_hash FROM teacher_security WHERE id=1")
         if not row:
             raise HTTPException(409,'Configura primero un PIN de profesor desde la aplicación principal.')
         candidate=pin_digest(value.pin,row['salt'])
         if not secrets.compare_digest(candidate,row['pin_hash']):
+            teacher_failures.append(now_mono)
             raise HTTPException(403,'PIN de profesor incorrecto.')
+        teacher_failures.clear()
         response=JSONResponse({'configured':True,'unlocked':True})
         response.set_cookie('allen_teacher',teacher_session,httponly=True,samesite='strict',secure=False,path='/')
         return response
