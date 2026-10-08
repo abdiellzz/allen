@@ -4,7 +4,7 @@ from .time_utils import local_day, local_day_iso
 
 TECHNIQUES=("Descubre","Recupera","Explica","Mezcla","Representa","Revisa")
 
-def _parse_deadline(value:str)->date:
+def _parse_deadline(value:str):
     target=datetime.strptime(value,"%Y-%m-%d").date()
     if target < local_day():
         raise ValueError("La fecha objetivo no puede estar en el pasado.")
@@ -25,7 +25,7 @@ def _weak_topics(quiz_rows, topics):
     return scores
 
 def _due_topics(cards, topics):
-    today=date.today().isoformat()
+    today=local_day_iso()
     due={t:0 for t in topics}
     for card in cards or []:
         if card.get("due","9999-12-31")<=today:
@@ -43,7 +43,7 @@ def build_plan(subject,topics,deadline,minutes_per_day,level,goal,quiz_rows=None
     ranked=sorted(topics,key=lambda t:(weak.get(t,0)+due.get(t,0),-topics.index(t)),reverse=True)
     plan_days=[]
     for i in range(days):
-        current=date.today()+timedelta(days=i)
+        current=local_day()+timedelta(days=i)
         is_last=current==target
         budget=minutes_per_day
         activities=[]
