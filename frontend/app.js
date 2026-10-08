@@ -444,7 +444,7 @@ async function bootstrap(){
  state.settings=data.settings||{};
  state.catalog=data.catalog||{};
  if(state.license?.required&&!state.license?.active){licenseGate(state.license);return false;}
- if(data.teacher_security && data.teacher_security.configured===false){teacherSetupGate();return false;}
+ if(data.teacher_security?.required&&data.teacher_security.configured===false){teacherSetupGate();return false;}
  document.body.classList.remove('license-locked');
  $('#profile-select').closest('label')?.classList.remove('hidden');
  if(!state.profiles.length)throw new Error('ALLEN no encontró perfiles locales.');
