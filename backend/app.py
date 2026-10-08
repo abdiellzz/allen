@@ -293,6 +293,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
 
     @app.post('/api/teacher/security/unlock')
     def teacher_security_unlock(value:TeacherPin):
+        nonlocal teacher_session
         now_mono=time.monotonic()
         teacher_failures[:]=[attempt for attempt in teacher_failures if now_mono-attempt<60]
         if len(teacher_failures)>=5:
@@ -305,12 +306,15 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             teacher_failures.append(now_mono)
             raise HTTPException(403,'PIN de profesor incorrecto.')
         teacher_failures.clear()
+        teacher_session=secrets.token_urlsafe(32)
         response=JSONResponse({'configured':True,'unlocked':True})
         response.set_cookie('allen_teacher',teacher_session,httponly=True,samesite='strict',secure=False,path='/')
         return response
 
     @app.post('/api/teacher/security/lock')
     def teacher_security_lock():
+        nonlocal teacher_session
+        teacher_session=secrets.token_urlsafe(32)
         response=JSONResponse({'configured':teacher_configured(),'unlocked':False})
         response.delete_cookie('allen_teacher',path='/')
         return response
