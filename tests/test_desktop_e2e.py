@@ -46,6 +46,8 @@ def test_desktop_guided_learning_smoke_and_viewports():
             with sync_playwright() as p:
                 browser=p.chromium.launch()
                 page=browser.new_page(viewport={"width":1366,"height":768})
+                console_security_errors=[]
+                page.on("console",lambda msg: console_security_errors.append(msg.text) if "Refused to apply inline style" in msg.text or "Content Security Policy" in msg.text else None)
                 page.goto(base,wait_until="networkidle")
                 page.get_by_role("heading",name="¿Qué quieres descubrir hoy?").wait_for()
                 assert page.locator(".brand-mascot").count()==1
@@ -120,10 +122,15 @@ def test_desktop_guided_learning_smoke_and_viewports():
                 page.locator(".allen-step-rail").wait_for()
                 assert page.locator(".guided-course-shell").count()==1
 
+                page.locator('[data-page="Tarjetas"]').first.click()
+                page.get_by_text("¡Todo al día!").wait_for()
+                assert "${AllenMascot" not in page.locator("#content").inner_text()
+
                 page.locator('[data-page="Configuración"]').first.click()
                 page.get_by_text("PROTECCIÓN DE DATOS").wait_for()
                 page.get_by_role("button",name="Comprobar estado").click()
                 page.get_by_text("Base íntegra").wait_for()
+                assert console_security_errors==[], console_security_errors
                 browser.close()
         finally:
             process.terminate()
