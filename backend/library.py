@@ -1,5 +1,6 @@
 import json
 import re
+import time
 from pathlib import Path
 from .security import normalized
 
@@ -9,13 +10,35 @@ class Library:
     """Keyword retriever; replace search() with local embeddings later."""
     def __init__(self, root):
         self.root = Path(root).resolve()
+        self._documents_cache = None
+        self._cache_fingerprint = None
+        self._last_scan = 0.0
+
+    def _fingerprint(self):
+        items=[]
+        for path in sorted(self.root.rglob('*')):
+            if path.suffix.lower() not in ('.json','.md','.txt') or not path.is_file():
+                continue
+            try:
+                stat=path.stat()
+            except OSError:
+                continue
+            items.append((path.relative_to(self.root).as_posix(),stat.st_mtime_ns,stat.st_size))
+        return tuple(items)
 
     def documents(self):
+        now=time.monotonic()
+        fingerprint=self._cache_fingerprint
+        if self._documents_cache is not None and now-self._last_scan<30:
+            return self._documents_cache
+        current=self._fingerprint()
+        self._last_scan=now
+        if self._documents_cache is not None and current==fingerprint:
+            return self._documents_cache
         result = []
-        for path in sorted(self.root.rglob('*')):
-            if path.suffix.lower() not in ('.json', '.md', '.txt') or not path.is_file():
-                continue
-            if not path.resolve().is_relative_to(self.root) or path.stat().st_size > 300_000:
+        for relative,_,size in current:
+            path=(self.root/relative).resolve()
+            if not path.is_relative_to(self.root) or size>300_000:
                 continue
             try:
                 text = path.read_text(encoding='utf-8')
@@ -28,6 +51,8 @@ class Library:
                                            subject=str(item.get('subject',SUBJECT_NAMES.get(path.parent.name,path.parent.name)))[:60], content=item['content'][:20000]))
             except (ValueError, OSError, TypeError):
                 continue
+        self._cache_fingerprint=current
+        self._documents_cache=result
         return result
 
     def search(self, query='', limit=30, extra=()):

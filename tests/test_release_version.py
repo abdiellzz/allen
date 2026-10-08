@@ -5,7 +5,7 @@ from backend.version import ALLEN_VERSION
 
 
 def test_release_version_is_stable():
-    assert ALLEN_VERSION == "1.2.2"
+    assert ALLEN_VERSION == "1.2.3"
 
 
 def test_health_exposes_release_version(tmp_path):
@@ -13,4 +13,4 @@ def test_health_exposes_release_version(tmp_path):
     with TestClient(app) as client:
         response=client.get("/api/health")
         assert response.status_code == 200
-        assert response.json()["version"] == "1.2.2"
+        assert response.json()["version"] == "1.2.3"

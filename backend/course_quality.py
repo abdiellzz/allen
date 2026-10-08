@@ -23,7 +23,9 @@ def evaluate_course(structure):
         else: issues.append({"severity":"error","code":"missing_source","location":loc,"message":"Tema sin fuente verificable."})
         objective=(t.get("objective") or "").lower()
         checks+=1
-        if any(v in objective for v in MEASURABLE): passed+=1
+        boilerplate=bool(re.fullmatch(r"explicar y aplicar .+ usando el material del curso\.?",(t.get("objective") or "").strip(),re.I))
+        if any(v in objective for v in MEASURABLE) and not boilerplate: passed+=1
+        elif boilerplate: issues.append({"severity":"warning","code":"generic_objective","location":loc,"message":"El objetivo usa la plantilla genérica; el docente debe concretar qué evidencia demostrará dominio."})
         else: issues.append({"severity":"warning","code":"weak_objective","location":loc,"message":"El objetivo no usa un verbo claramente medible."})
         questions=t.get("questions") or []
         checks+=1
@@ -48,6 +50,21 @@ def evaluate_course(structure):
     checks+=1
     if exam: passed+=1
     else: issues.append({"severity":"warning","code":"no_final_exam","message":"El curso no tiene examen final."})
+    known_correct={str(q.get("correct","")).strip() for q in exam if q.get("correct")}
+    for idx,q in enumerate(exam):
+        options=[str(x).strip() for x in q.get("options",[]) if str(x).strip()]
+        correct=str(q.get("correct","")).strip()
+        checks+=1
+        if len(options)>=3 and correct in options and len(set(options))==len(options):
+            passed+=1
+        else:
+            issues.append({"severity":"error","code":"invalid_exam_options","location":f"Examen · Pregunta {idx+1}","message":"La pregunta necesita opciones únicas e incluir una respuesta correcta."})
+        foreign=[option for option in options if option!=correct and option in known_correct]
+        checks+=1
+        if not foreign:
+            passed+=1
+        else:
+            issues.append({"severity":"warning","code":"cross_topic_distractor","location":f"Examen · Pregunta {idx+1}","message":"Una opción incorrecta coincide con la respuesta correcta de otra pregunta y puede ser verdadera."})
 
     score=round((passed/max(1,checks))*100)
     blocking=sum(1 for i in issues if i["severity"]=="error")
