@@ -801,34 +801,41 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.post('/api/courses/{cid}/exam/submit')
     def submit_course_exam(cid:int,value:Submission):
         user(value.profile_id)
-        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
-        if not course: raise HTTPException(404,'Ese curso no está publicado.')
-        enrollment=db.one("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id))
-        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
-        structure=json.loads(course['structure_json'])
-        questions=structure.get('final_exam',[])
-        if len(value.answers)!=len(questions): raise HTTPException(422,'Responde todas las preguntas del examen.')
-        feedback=[];score=0
-        for q,answer in zip(questions,value.answers):
-            correct=answer==q.get('correct')
-            score+=int(correct)
-            feedback.append({'topic':q.get('topic',''),'correct':correct,'answer':answer,'correct_answer':q.get('correct',''),'source':q.get('source',{})})
-            record_event(db,value.profile_id,'question_answered',course['subject'],q.get('topic',''),reference_type='course_exam',reference_id=cid,metadata={'correct':correct,'difficulty':'Normal'})
-            bank=db.one("SELECT id FROM question_bank WHERE course_id=? AND topic=? AND prompt=? LIMIT 1",(cid,q.get('topic',''),q.get('prompt','')))
-            if bank: db.execute("UPDATE question_bank SET attempts=attempts+1,correct_count=correct_count+?,incorrect_count=incorrect_count+? WHERE id=?",(int(correct),int(not correct),bank['id']))
-        total=len(questions)
-        weak=list(dict.fromkeys(x['topic'] for x in feedback if not x['correct']))
-        strong=list(dict.fromkeys(x['topic'] for x in feedback if x['correct']))
-        result={'score':score,'total':total,'percentage':round(score/max(1,total)*100),'strong_topics':strong,'weak_topics':weak,'feedback':feedback}
-        passed=result['percentage']>=70
-        result['passed']=passed
-        db.execute("INSERT INTO course_exam_results(course_id,user_id,answers_json,result_json,created_at) VALUES(?,?,?,?,?)",(cid,value.profile_id,json.dumps(value.answers,ensure_ascii=False),json.dumps(result,ensure_ascii=False),now()))
-        db.execute("DELETE FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
-        if passed:
-            db.execute("UPDATE course_enrollments SET status='completed',completed_at=?,updated_at=? WHERE course_id=? AND user_id=?",(now(),now(),cid,value.profile_id))
-            db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
-        else:
-            db.execute("UPDATE course_enrollments SET status='active',completed_at=NULL,updated_at=? WHERE course_id=? AND user_id=?",(now(),cid,value.profile_id))
+        question_events=[]
+        with db.connect() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            course=conn.execute("SELECT * FROM courses WHERE id=? AND status='published'",(cid,)).fetchone()
+            if not course: raise HTTPException(404,'Ese curso no está publicado.')
+            enrollment=conn.execute("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id)).fetchone()
+            if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+            structure=json.loads(course['structure_json'])
+            questions=structure.get('final_exam',[])
+            if len(value.answers)!=len(questions): raise HTTPException(422,'Responde todas las preguntas del examen.')
+            feedback=[];score=0
+            for q,answer in zip(questions,value.answers):
+                correct=answer==q.get('correct')
+                score+=int(correct)
+                feedback.append({'topic':q.get('topic',''),'correct':correct,'answer':answer,'correct_answer':q.get('correct',''),'source':q.get('source',{})})
+                question_events.append((q.get('topic',''),correct))
+                bank=conn.execute("SELECT id FROM question_bank WHERE course_id=? AND topic=? AND prompt=? LIMIT 1",(cid,q.get('topic',''),q.get('prompt',''))).fetchone()
+                if bank:
+                    conn.execute("UPDATE question_bank SET attempts=attempts+1,correct_count=correct_count+?,incorrect_count=incorrect_count+? WHERE id=?",(int(correct),int(not correct),bank['id']))
+            total=len(questions)
+            weak=list(dict.fromkeys(x['topic'] for x in feedback if not x['correct']))
+            strong=list(dict.fromkeys(x['topic'] for x in feedback if x['correct']))
+            result={'score':score,'total':total,'percentage':round(score/max(1,total)*100),'strong_topics':strong,'weak_topics':weak,'feedback':feedback}
+            passed=result['percentage']>=70
+            result['passed']=passed
+            timestamp=now()
+            conn.execute("INSERT INTO course_exam_results(course_id,user_id,answers_json,result_json,created_at) VALUES(?,?,?,?,?)",(cid,value.profile_id,json.dumps(value.answers,ensure_ascii=False),json.dumps(result,ensure_ascii=False),timestamp))
+            conn.execute("DELETE FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+            if passed:
+                conn.execute("UPDATE course_enrollments SET status='completed',completed_at=?,updated_at=? WHERE course_id=? AND user_id=?",(timestamp,timestamp,cid,value.profile_id))
+                conn.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
+            else:
+                conn.execute("UPDATE course_enrollments SET status='active',completed_at=NULL,updated_at=? WHERE course_id=? AND user_id=?",(timestamp,cid,value.profile_id))
+        for topic,correct in question_events:
+            record_event(db,value.profile_id,'question_answered',course['subject'],topic,reference_type='course_exam',reference_id=cid,metadata={'correct':correct,'difficulty':'Normal'})
         record_event(db,value.profile_id,'quiz_completed',course['subject'],'Examen final',reference_type='course_exam',reference_id=cid,metadata={'score':score,'total':total,'difficulty':'Normal'})
         return result
 
