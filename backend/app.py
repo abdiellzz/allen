@@ -43,7 +43,7 @@ from .time_utils import local_day, local_day_iso
 
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))
 
-def create_app(db_path=None, ai=None, require_license=None, require_local_access=None):
+def create_app(db_path=None, ai=None, require_license=None, require_local_access=None, require_teacher_auth=None):
     local_root=Path(os.environ.get('ALLEN_DATA_ROOT') or (Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'))
     db=Database(db_path or os.environ.get('ALLEN_DB_PATH',local_root/'allen.sqlite3'))
     licensing=LicenseManager(local_root, ROOT/'config/license_public_key.pem')
@@ -57,6 +57,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     launch_token=secrets.token_urlsafe(32)
     launch_token_used=False
     local_access_required = (db_path is None) if require_local_access is None else bool(require_local_access)
+    teacher_auth_required = (db_path is None) if require_teacher_auth is None else bool(require_teacher_auth)
     privacy_epoch=0
     logger=logging.getLogger('allen')
     if not logger.handlers:
@@ -140,7 +141,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             or request.url.path.startswith('/api/backup/')
             or request.url.path.startswith('/api/recovery/')
         )
-        if protected_teacher and request.url.path not in teacher_security_paths and not teacher_unlocked(request):
+        if teacher_auth_required and protected_teacher and request.url.path not in teacher_security_paths and not teacher_unlocked(request):
             return security_headers(JSONResponse({'error':'Se requiere autorización de profesor.','teacher_auth_required':True},403))
         if licensing_required and request.url.path.startswith('/api/'):
             allowed = {
