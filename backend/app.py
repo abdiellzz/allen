@@ -793,12 +793,17 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             total=len(questions)
             weak=list(dict.fromkeys(x['topic'] for x in feedback if not x['correct']))
             strong=list(dict.fromkeys(x['topic'] for x in feedback if x['correct']))
-            result={'score':score,'total':total,'percentage':round(score/max(1,total)*100),'strong_topics':strong,'weak_topics':weak,'feedback':feedback}
+            percentage=round(score/max(1,total)*100)
+            passed=percentage>=70
+            result={'score':score,'total':total,'percentage':percentage,'passed':passed,'strong_topics':strong,'weak_topics':weak,'feedback':feedback}
             db.execute("INSERT INTO course_exam_results(course_id,user_id,answers_json,result_json,created_at) VALUES(?,?,?,?,?)",(cid,value.profile_id,json.dumps(value.answers,ensure_ascii=False),json.dumps(result,ensure_ascii=False),now()))
             db.execute("DELETE FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
-            db.execute("UPDATE course_enrollments SET status='completed',completed_at=?,updated_at=? WHERE course_id=? AND user_id=?",(now(),now(),cid,value.profile_id))
-            db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
-            record_event(db,value.profile_id,'quiz_completed',course['subject'],'Examen final',reference_type='course_exam',reference_id=cid,metadata={'score':score,'total':total,'difficulty':'Normal'})
+            if passed:
+                db.execute("UPDATE course_enrollments SET status='completed',completed_at=?,updated_at=? WHERE course_id=? AND user_id=?",(now(),now(),cid,value.profile_id))
+                db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
+            else:
+                db.execute("UPDATE course_enrollments SET status='active',completed_at=NULL,updated_at=? WHERE course_id=? AND user_id=?",(now(),cid,value.profile_id))
+            record_event(db,value.profile_id,'quiz_completed',course['subject'],'Examen final',reference_type='course_exam',reference_id=cid,metadata={'score':score,'total':total,'difficulty':'Normal','passed':passed})
         return result
 
     @app.post('/api/courses/{cid}/help')
