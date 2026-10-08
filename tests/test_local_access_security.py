@@ -19,14 +19,20 @@ def test_local_api_requires_ephemeral_launch_secret(tmp_path):
         wrong = client.get("/?access=wrong-secret", follow_redirects=False)
         assert wrong.status_code == 403
 
+        launch_token = app.state.issue_launch_token()
         launch = client.get(
-            "/?access=" + app.state.access_key,
+            "/?access=" + launch_token,
             follow_redirects=False,
         )
         assert launch.status_code == 303
         cookie = launch.headers.get("set-cookie", "")
         assert "HttpOnly" in cookie
         assert "SameSite=strict" in cookie
+        assert launch_token not in cookie
+
+        replay_client = TestClient(app)
+        replay = replay_client.get("/?access=" + launch_token, follow_redirects=False)
+        assert replay.status_code == 403
 
         allowed = client.get("/api/bootstrap")
         assert allowed.status_code == 200
