@@ -24,6 +24,9 @@ on:
       - "VERSION"
       - ".github/workflows/windows-distribution.yml"
 
+permissions:
+  contents: read
+
 jobs:
   build-windows:
     runs-on: windows-latest
