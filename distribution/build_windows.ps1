@@ -27,12 +27,16 @@ $portable = "build\distribution\ALLEN-Portable"
 Copy-Item $built $portable -Recurse
 New-Item -ItemType File -Path (Join-Path $portable "portable.flag") | Out-Null
 Copy-Item "distribution\PORTABLE_README.txt" (Join-Path $portable "LEEME-PORTABLE.txt")
+Copy-Item "distribution\remove_allen.ps1" (Join-Path $portable "remove_allen.ps1")
+Copy-Item "distribution\Eliminar ALLEN completamente.bat" (Join-Path $portable "Eliminar ALLEN completamente.bat")
 
 $portableZip = "artifacts\ALLEN-$version-Portable-Windows-x64.zip"
 Compress-Archive -Path "$portable\*" -DestinationPath $portableZip -CompressionLevel Optimal
 
 $installerSource = "build\distribution\ALLEN-Installer"
 Copy-Item $built $installerSource -Recurse
+Copy-Item "distribution\remove_allen.ps1" (Join-Path $installerSource "remove_allen.ps1")
+Copy-Item "distribution\Eliminar ALLEN completamente.bat" (Join-Path $installerSource "Eliminar ALLEN completamente.bat")
 
 $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup *\ISCC.exe" -ErrorAction SilentlyContinue |
   Sort-Object FullName -Descending |
