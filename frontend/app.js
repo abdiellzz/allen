@@ -105,6 +105,12 @@ async function ensureTeacherSession(){
  return true;
 }
 window.addEventListener('allen-license-required',()=>guarded(async()=>{await bootstrap();}));
+function applyDynamicStyles(root=document){
+ root.querySelectorAll?.('[data-progress-width]').forEach(el=>el.style.setProperty('width',Math.max(0,Math.min(100,Number(el.dataset.progressWidth)||0))+'%'));
+ root.querySelectorAll?.('[data-progress-height]').forEach(el=>el.style.setProperty('height',Math.max(0,Math.min(100,Number(el.dataset.progressHeight)||0))+'%'));
+}
+new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{if(node.nodeType===1)applyDynamicStyles(node);}))).observe(content,{childList:true,subtree:true});
+
 const navGroups=[
  ['INICIO','student',[['Inicio','house','Inicio']]],
  ['APRENDER','student',[['Aprender','book-open','Aprender'],['Cursos','library','Cursos'],['Método Allen','sparkles','Método Allen'],['Plan Allen','notebook-tabs','Plan Allen'],['Biblioteca','library','Biblioteca']]],
@@ -284,7 +290,7 @@ async function bindLibrary(){
   reader.innerHTML=`<section class="v2-reading-shell">
    <aside class="v2-reading-index"><span class="eyebrow">ÍNDICE</span>${headings.map((h,i)=>`<button type="button" data-reader-anchor="${i}">${esc(h)}</button>`).join('')}<hr><button type="button" id="reader-focus">Modo concentración</button><div class="row"><button type="button" data-reader-size="-1">A−</button><button type="button" data-reader-size="1">A+</button></div></aside>
    <article class="v2-reading-main" id="reader-main"><div class="row spaced"><div><span class="eyebrow">${esc(doc.subject||'Lectura')}</span><h1>${esc(doc.title)}</h1></div><span class="pill">≈ ${minutes} min</span></div><progress value="1" max="1" aria-label="Lectura abierta"></progress><div class="reading">${markdown(doc.content)}</div></article>
-   <aside class="v2-reading-aside"><img src="${libraryVisual(doc.subject)}" alt="" style="width:100%;border-radius:14px"><h3>Aprende haciendo</h3><button type="button" id="reader-ask">Preguntar a Allen</button><button type="button" id="reader-quiz">Hazme preguntas</button><button type="button" data-page="Tarjetas">Crear tarjeta</button></aside>
+   <aside class="v2-reading-aside"><img src="${libraryVisual(doc.subject)}" alt="" class="reader-aside-image"><h3>Aprende haciendo</h3><button type="button" id="reader-ask">Preguntar a Allen</button><button type="button" id="reader-quiz">Hazme preguntas</button><button type="button" data-page="Tarjetas">Crear tarjeta</button></aside>
   </section>`;
   let size=1;
   $('#reader-focus').onclick=()=>{$('.v2-reading-main').classList.toggle('focus');document.querySelector('.v2-reading-index').classList.toggle('hidden');document.querySelector('.v2-reading-aside').classList.toggle('hidden');};
