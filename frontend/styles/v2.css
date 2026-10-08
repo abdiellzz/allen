@@ -739,3 +739,6 @@ body.license-locked main{min-height:calc(100vh - 120px);display:grid;place-items
  .license-machine{grid-template-columns:1fr}
  .license-summary{grid-template-columns:1fr 1fr}
 }
+
+.backup-illustration{width:150px;border-radius:16px}
+.recovery-illustration{width:140px}
