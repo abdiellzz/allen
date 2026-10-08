@@ -54,20 +54,33 @@ def _windows_machine_guid() -> str | None:
         return None
 
 
-def machine_id() -> str:
-    """Return a privacy-preserving stable identifier for this Windows install."""
-    source = _windows_machine_guid()
-    if not source:
-        source = "|".join(
-            [
-                platform.system(),
-                platform.machine(),
-                platform.node(),
-                str(uuid.getnode()),
-            ]
-        )
+def _format_machine_source(source: str) -> str:
     digest = hashlib.sha256(("ALLEN-LICENSE|" + source).encode("utf-8")).hexdigest().upper()[:24]
     return "-".join(digest[i : i + 4] for i in range(0, len(digest), 4))
+
+
+def legacy_machine_id() -> str:
+    """Identifier used by ALLEN 1.2.0/1.2.1 for backwards-compatible licenses."""
+    source=_windows_machine_guid()
+    if source:
+        return _format_machine_source(source)
+    source="|".join([platform.system(),platform.machine(),platform.node(),str(uuid.getnode())])
+    return _format_machine_source(source)
+
+
+def machine_id() -> str:
+    """Prefer two stable local factors while preserving the old ID as fallback."""
+    guid=_windows_machine_guid()
+    node=uuid.getnode()
+    # Python marks a randomly generated node by setting the multicast bit.
+    stable_node = None if ((node >> 40) & 1) else f"{node:012X}"
+    if guid and stable_node:
+        return _format_machine_source(f"{guid}|{platform.machine()}|{stable_node}")
+    return legacy_machine_id()
+
+
+def machine_id_candidates() -> set[str]:
+    return {machine_id(),legacy_machine_id()}
 
 
 class LicenseManager:
@@ -213,7 +226,7 @@ class LicenseManager:
             "renewal_number": payload["renewal_number"],
             "unlimited_profiles": True,
         }
-        if payload["machine_id"] != machine:
+        if payload["machine_id"] not in machine_id_candidates():
             return {
                 **base,
                 **public,
@@ -238,7 +251,7 @@ class LicenseManager:
         state = self._read_state()
         if (
             state.get("license_id") == payload["license_id"]
-            and state.get("machine_id") == machine
+            and state.get("machine_id") == payload["machine_id"]
             and isinstance(state.get("last_seen"), str)
         ):
             try:
@@ -275,7 +288,7 @@ class LicenseManager:
         payload, signature = self._decode(raw)
         start, end = self._dates(payload)
         current_machine = machine_id()
-        if payload["machine_id"] != current_machine:
+        if payload["machine_id"] not in machine_id_candidates():
             raise LicenseError("Esta licencia fue emitida para otro equipo.")
         if today < start:
             raise LicenseError(f"Esta licencia todavía no está activa. Comienza el {start.isoformat()}.")
