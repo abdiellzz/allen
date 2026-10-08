@@ -271,6 +271,8 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
 
     @app.get('/api/teacher/security/status')
     def teacher_security_status(request:Request):
+        if not teacher_auth_required:
+            return {'configured':teacher_configured(),'unlocked':True}
         return {'configured':teacher_configured(),'unlocked':teacher_unlocked(request)}
 
     @app.post('/api/teacher/security/setup')
