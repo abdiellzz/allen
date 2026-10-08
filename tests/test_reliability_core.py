@@ -42,9 +42,9 @@ def test_numbered_migration_upgrades_v8_and_keeps_pre_migration_snapshot():
         assert db.schema_version()==11
         assert db.one("SELECT value FROM legacy_marker")["value"]=="keep me"
         versions={row["version"] for row in db.all("SELECT version FROM schema_migrations")}
-        assert {9,10}.issubset(versions)
+        assert {9,10,11}.issubset(versions)
         assert db.one("SELECT name FROM sqlite_master WHERE type='table' AND name='course_versions'")
-        assert any("pre-migration-v8-to-v10" in row["name"] for row in db.snapshots())
+        assert any("pre-migration-v8-to-v11" in row["name"] for row in db.snapshots())
 
 
 def test_recovery_snapshot_roundtrip_and_integrity():
