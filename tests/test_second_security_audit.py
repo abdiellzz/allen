@@ -1,5 +1,7 @@
 import base64
 import io
+import hashlib
+import secrets
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -190,3 +192,36 @@ def test_windows_workflow_pins_inno_setup():
     root=Path(__file__).resolve().parent.parent
     workflow=(root/".github/workflows/windows-distribution.yml").read_text(encoding="utf-8")
     assert "innosetup --version=6.7.1" in workflow
+
+
+def test_new_teacher_pin_requires_eight_digits(tmp_path):
+    _,client=_client(tmp_path,teacher=True)
+    response=client.post("/api/teacher/security/setup",json={"pin":"123456"})
+    assert response.status_code==422
+    client.close()
+
+
+def test_legacy_six_digit_teacher_pin_is_upgraded(tmp_path):
+    app,client=_client(tmp_path,teacher=True)
+    salt=secrets.token_bytes(16).hex()
+    legacy_pin="123456"
+    legacy_hash=hashlib.scrypt(
+        legacy_pin.encode(),
+        salt=bytes.fromhex(salt),
+        n=2**14,
+        r=8,
+        p=1,
+        dklen=32,
+    ).hex()
+    app.state.db.execute(
+        "INSERT INTO teacher_security(id,salt,pin_hash,kdf_n,updated_at) VALUES(1,?,?,16384,?)",
+        (salt,legacy_hash,"2026-10-08T00:00:00+00:00"),
+    )
+
+    unlocked=client.post("/api/teacher/security/unlock",json={"pin":legacy_pin})
+    assert unlocked.status_code==200
+    row=app.state.db.one("SELECT kdf_n,salt,pin_hash FROM teacher_security WHERE id=1")
+    assert row["kdf_n"]==65536
+    assert row["salt"]!=salt
+    assert row["pin_hash"]!=legacy_hash
+    client.close()
