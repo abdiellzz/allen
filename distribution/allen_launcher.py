@@ -86,7 +86,7 @@ def run_gui() -> int:
     buttons.pack(fill="x")
 
     def open_allen():
-        webbrowser.open("http://127.0.0.1:8787")
+        webbrowser.open("http://127.0.0.1:8787/?access="+app.state.access_key)
 
     ttk.Button(buttons, text="Abrir ALLEN", command=open_allen).pack(side="left")
 

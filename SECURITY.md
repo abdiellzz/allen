@@ -39,6 +39,8 @@ El servidor de ALLEN escucha solamente en:
 
 `127.0.0.1:8787`
 
+Además, las instalaciones normales usan un secreto aleatorio por ejecución. El launcher abre el navegador con ese secreto una sola vez y ALLEN establece una cookie de sesión `HttpOnly` + `SameSite=Strict`. Esto evita que otro proceso local pueda leer `/api/bootstrap` y obtener el token de mutación simplemente por conocer el puerto.
+
 La conexión al modelo local debe permanecer igualmente en loopback.
 
 No abras estos servicios a la LAN o Internet sin un diseño de autenticación, autorización y transporte adecuado.
@@ -58,7 +60,10 @@ Entre las defensas del producto:
 - Markdown sin HTML activo;
 - sin ejecución de código del estudiante;
 - logs sin conversaciones;
-- licencia firmada Ed25519.
+- licencia firmada Ed25519;
+- secreto efímero de acceso local por ejecución;
+- auditoría de dependencias con `pip-audit` en CI;
+- GitHub Actions fijadas a SHAs inmutables y token del workflow con `contents: read`.
 
 Estos controles reducen riesgo; no convierten ALLEN en un sistema certificado.
 

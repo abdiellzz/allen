@@ -2,7 +2,7 @@
 
 **Tutor educativo local, privado y offline.**
 
-Release estable: **1.2.0**
+Release estable: **1.2.1**
 
 ALLEN combina aprendizaje guiado, quizzes, tarjetas, planes de estudio, cursos creados por docentes, progreso local, backups, recuperación y una IA local opcional. La aplicación principal funciona en el dispositivo y no requiere una cuenta cloud.
 
@@ -23,11 +23,11 @@ ALLEN combina aprendizaje guiado, quizzes, tarjetas, planes de estudio, cursos c
 
 La forma recomendada para usuarios es el instalador Windows generado por GitHub Actions:
 
-`ALLEN-1.2.0-Setup-Windows-x64.exe`
+`ALLEN-1.2.1-Setup-Windows-x64.exe`
 
 También existe un Portable:
 
-`ALLEN-1.2.0-Portable-Windows-x64.zip`
+`ALLEN-1.2.1-Portable-Windows-x64.zip`
 
 **Ninguno requiere Python instalado.**
 
@@ -35,7 +35,7 @@ Consulta [Instalación y primera ejecución](docs/INSTALLATION.md).
 
 ## Licencia offline
 
-ALLEN 1.2.0 requiere una licencia firmada para la instalación comercial.
+ALLEN 1.2.1 requiere una licencia firmada para la instalación comercial.
 
 ```text
 ALLEN muestra Machine ID

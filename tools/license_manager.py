@@ -17,6 +17,7 @@ import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
 
 
@@ -38,6 +39,8 @@ def load_private_key(path: Path | None = None):
     target = path or key_path()
     try:
         raw = target.read_bytes()
+        if os.name != "nt":
+            target.chmod(0o600)
         key = serialization.load_pem_private_key(raw, password=None)
     except (OSError, ValueError) as exc:
         raise RuntimeError(
@@ -66,15 +69,41 @@ def sign_document(payload: dict, private_key) -> dict:
     }
 
 
-def parse_existing(path: Path) -> dict:
+def parse_existing(path: Path, private_key) -> dict:
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
-        payload = document["payload"]
-        if not isinstance(payload, dict):
+        if not isinstance(document, dict) or set(document) != {"payload", "signature"}:
             raise TypeError
+        payload = document["payload"]
+        signature = document["signature"]
+        if not isinstance(payload, dict) or not isinstance(signature, str):
+            raise TypeError
+        required = {
+            "schema",
+            "license_id",
+            "customer",
+            "plan",
+            "machine_id",
+            "valid_from",
+            "valid_until",
+            "issued_at",
+            "renewal_number",
+            "unlimited_profiles",
+        }
+        if set(payload) != required or payload.get("schema") != 1 or payload.get("unlimited_profiles") is not True:
+            raise TypeError
+        if not isinstance(payload.get("renewal_number"), int) or payload["renewal_number"] < 1:
+            raise TypeError
+        normalized_machine(str(payload["machine_id"]))
+        date.fromisoformat(str(payload["valid_from"]))
+        date.fromisoformat(str(payload["valid_until"]))
+        signature_bytes = base64.b64decode(signature, validate=True)
+        private_key.public_key().verify(signature_bytes, canonical(payload))
         return payload
-    except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
-        raise RuntimeError("No se pudo leer la licencia seleccionada.") from exc
+    except InvalidSignature as exc:
+        raise RuntimeError("La licencia seleccionada no tiene una firma válida de ALLEN.") from exc
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+        raise RuntimeError("No se pudo validar la licencia seleccionada.") from exc
 
 
 def normalized_machine(value: str) -> str:
@@ -233,7 +262,8 @@ class LicenseManagerUI:
         if not filename:
             return
         try:
-            payload = parse_existing(Path(filename))
+            key = load_private_key()
+            payload = parse_existing(Path(filename), key)
             normalized_machine(str(payload["machine_id"]))
             self.loaded_payload = payload
             for widget, value in (
