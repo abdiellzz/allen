@@ -3,7 +3,7 @@ import base64
 import io
 import json
 import re
-from datetime import datetime, timezone
+from .time_utils import utc_now_iso
 from pathlib import Path
 
 from pypdf import PdfReader
@@ -219,7 +219,7 @@ def build_course(title:str,subject:str,level:str,pages:list[dict],source_text:st
         "level":level,
         "version":1,
         "status":"draft",
-        "generated_at":datetime.now(timezone.utc).isoformat(),
+        "generated_at":utc_now_iso(),
         "keywords":keywords,
         "units":units,
         "final_exam":final_exam,
