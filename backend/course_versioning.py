@@ -1,7 +1,8 @@
 from __future__ import annotations
 import json
 import re
-from datetime import datetime, timezone
+from .database import now
+from .time_utils import local_day
 
 def _key(text):
     return re.sub(r"[^a-z0-9áéíóúüñ]+"," ",(text or "").lower()).strip()
@@ -41,19 +42,19 @@ def seed_initial_version(db,course_id,source_document_id,structure,status="draft
     exists=db.one("SELECT id FROM course_versions WHERE course_id=? AND version_number=?",(course_id,version))
     if not exists:
         db.execute("""INSERT INTO course_versions(course_id,version_number,source_document_id,structure_json,diff_json,status,created_at)
-            VALUES(?,?,?,?,?,?,datetime('now'))""",(course_id,version,source_document_id,json.dumps(structure,ensure_ascii=False),json.dumps({"summary":{"initial":True}},ensure_ascii=False),status))
+            VALUES(?,?,?,?,?,?,?)""",(course_id,version,source_document_id,json.dumps(structure,ensure_ascii=False),json.dumps({"summary":{"initial":True}},ensure_ascii=False),status,now()))
 
 def apply_version(db,course,source_document_id,new_structure,diff):
     next_version=int(course["version"])+1
     db.execute("""INSERT INTO course_versions(course_id,version_number,source_document_id,structure_json,diff_json,status,created_at)
-        VALUES(?,?,?,?,?,'draft',datetime('now'))""",(course["id"],next_version,source_document_id,json.dumps(new_structure,ensure_ascii=False),json.dumps(diff,ensure_ascii=False)))
+        VALUES(?,?,?,?,?,'draft',?)""",(course["id"],next_version,source_document_id,json.dumps(new_structure,ensure_ascii=False),json.dumps(diff,ensure_ascii=False),now()))
     db.execute("""UPDATE courses SET source_document_id=?,version=?,structure_json=?,status='draft',updated_at=?,published_at=NULL WHERE id=?""",
-               (source_document_id,next_version,json.dumps(new_structure,ensure_ascii=False),datetime.now(timezone.utc).isoformat(),course["id"]))
+               (source_document_id,next_version,json.dumps(new_structure,ensure_ascii=False),now(),course["id"]))
     modified_titles={x["after"]["title"] for x in diff["modified"]}
     for title in modified_titles:
-        db.execute("""UPDATE topic_mastery SET status='reviewing',next_review=date('now')
+        db.execute("""UPDATE topic_mastery SET status='reviewing',next_review=?
             WHERE subject=? AND topic=? AND user_id IN (SELECT user_id FROM course_enrollments WHERE course_id=?)""",
-            (course["subject"],title,course["id"]))
+            (local_day().isoformat(),course["subject"],title,course["id"]))
     # Keep enrollment progress when the exact topic survives; otherwise move to the nearest valid location.
     new_by_key={x["key"]:x for x in _topics(new_structure)}
     old_topics=_topics(json.loads(course["structure_json"]))
@@ -62,10 +63,10 @@ def apply_version(db,course,source_document_id,new_structure,diff):
         old=old_by_pos.get((enrollment["unit_index"],enrollment["topic_index"]))
         mapped=new_by_key.get(old["key"]) if old else None
         if mapped:
-            db.execute("UPDATE course_enrollments SET unit_index=?,topic_index=?,step_index=0,status='active',updated_at=datetime('now'),completed_at=NULL WHERE id=?",
-                       (mapped["unit_index"],mapped["topic_index"],enrollment["id"]))
+            db.execute("UPDATE course_enrollments SET unit_index=?,topic_index=?,step_index=0,status='active',updated_at=?,completed_at=NULL WHERE id=?",
+                       (mapped["unit_index"],mapped["topic_index"],now(),enrollment["id"]))
         else:
-            db.execute("UPDATE course_enrollments SET unit_index=0,topic_index=0,step_index=0,status='active',updated_at=datetime('now'),completed_at=NULL WHERE id=?",(enrollment["id"],))
+            db.execute("UPDATE course_enrollments SET unit_index=0,topic_index=0,step_index=0,status='active',updated_at=datetime('now'),completed_at=NULL WHERE id=?",(now(),enrollment["id"]))
     return next_version
 
 def history(db,course_id):
