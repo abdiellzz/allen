@@ -14,7 +14,7 @@ function stage(m,session){
  const i=Math.min(session.current_step||0,m.steps.length-1),step=m.steps[i],pct=Math.round((i/m.steps.length)*100);
  return `<section class="persistent-adventure" data-session-id="${session.id}" data-adventure-id="${esc(m.id)}" data-step="${i}">
   <div class="row spaced"><div><span class="eyebrow">AVENTURA EN CURSO</span><h2>${esc(m.title)}</h2><p>${esc(m.subject)} · Paso ${i+1}/${m.steps.length}</p></div><button class="quiet danger-soft" data-finish-adventure>Finalizar aventura</button></div>
-  <div class="continuity-progress"><i style="width:${pct}%"></i></div>
+  <div class="continuity-progress"><i data-progress-width="${pct}"></i></div>
   <article class="v2-stage-card">
    <span class="eyebrow">PASO ${i+1}</span><h2>${esc(step.title)}</h2><p class="v2-stage-question">${esc(step.text)}</p>
    <div class="v2-stage-options">${step.options.map((o,n)=>`<button data-adventure-answer="${n}">${esc(o)}</button>`).join('')}</div>
