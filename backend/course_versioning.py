@@ -66,7 +66,7 @@ def apply_version(db,course,source_document_id,new_structure,diff):
             db.execute("UPDATE course_enrollments SET unit_index=?,topic_index=?,step_index=0,status='active',updated_at=?,completed_at=NULL WHERE id=?",
                        (mapped["unit_index"],mapped["topic_index"],now(),enrollment["id"]))
         else:
-            db.execute("UPDATE course_enrollments SET unit_index=0,topic_index=0,step_index=0,status='active',updated_at=datetime('now'),completed_at=NULL WHERE id=?",(now(),enrollment["id"]))
+            db.execute("UPDATE course_enrollments SET unit_index=0,topic_index=0,step_index=0,status='active',updated_at=?,completed_at=NULL WHERE id=?",(now(),enrollment["id"]))
     return next_version
 
 def history(db,course_id):
