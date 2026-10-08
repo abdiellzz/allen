@@ -1149,8 +1149,10 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             row=db.one('SELECT messages FROM conversations WHERE id=? AND user_id=?',(value.conversation_id,value.profile_id))
             if not row:
                 raise HTTPException(404,'La conversación ya no está disponible. Inicia una nueva.')
-            if not value.history and not value.regenerate:
-                value=Chat.model_validate({**value.model_dump(),'history':json.loads(row['messages'])})
+            stored_history=json.loads(row['messages'])
+            if value.regenerate and len(stored_history)>=2 and stored_history[-1].get('role')=='assistant' and stored_history[-2].get('role')=='user':
+                stored_history=stored_history[:-2]
+            value=Chat.model_validate({**value.model_dump(),'history':stored_history})
         stored=db.one('SELECT value FROM conversation_states WHERE conversation_id=?',(value.conversation_id,)) if value.conversation_id else None
         value=prepare(value,json.loads(stored['value']) if stored else None)
         sources=library.search(value.message,2,custom_documents(value.profile_id)) if value.use_library else []
