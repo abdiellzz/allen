@@ -94,3 +94,77 @@ El ejecutable **no contiene la clave privada**. Debe existir un archivo:
 junto al ejecutable, o definirse mediante `ALLEN_LICENSE_PRIVATE_KEY`.
 
 Nunca se debe subir esa clave al repositorio ni entregarla a clientes.
+
+
+## Tutorial operativo: emitir una licencia
+
+### 1. Obtener Machine ID
+
+El cliente abre ALLEN sin licencia y copia el identificador mostrado.
+
+Ejemplo:
+
+`ABCD-1234-EF56-7890-ABCD-1234`
+
+### 2. Abrir License Manager
+
+Windows:
+
+`ALLEN-License-Manager.exe`
+
+Linux:
+
+```bash
+export ALLEN_LICENSE_PRIVATE_KEY="/ruta/privada/license_private_key.pem"
+python tools/license_manager.py
+```
+
+### 3. Completar datos
+
+- Cliente.
+- Machine ID.
+- Plan.
+- Duración en días.
+
+El `license_id` se genera automáticamente.
+
+### 4. Entregar
+
+Envía únicamente el archivo:
+
+`ALLEN-XXXXXXXXXXXX-R1.license`
+
+No envíes:
+
+- clave privada;
+- License Manager con una copia accidental de la clave dentro;
+- registros administrativos internos.
+
+## Tutorial operativo: renovar
+
+1. abre License Manager;
+2. pulsa **Cargar para renovar**;
+3. selecciona la licencia previa;
+4. indica los días nuevos;
+5. genera el archivo;
+6. envíalo al cliente;
+7. cliente abre **Configuración → Licencia y suscripción**;
+8. importa renovación.
+
+Si la licencia aún está activa, los días se agregan al vencimiento actual. Si expiró, la nueva vigencia comienza al emitir la renovación.
+
+## Uso desde Linux
+
+El generador está escrito en Python y puede usarse desde Linux.
+
+El EXE generado por CI es para Windows; en Linux es preferible ejecutar `tools/license_manager.py` nativamente.
+
+La licencia resultante puede activar un ALLEN en Windows porque la firma Ed25519 no depende del sistema operativo donde se generó.
+
+## Límites del modelo offline
+
+Un esquema 100% offline no puede consultar un servidor central para saber si un archivo se usó en otro lugar.
+
+ALLEN resuelve esto vinculando la licencia al Machine ID.
+
+La protección de reloj y estado local es disuasoria. Un atacante con control total del equipo y capacidad de parchear binarios siempre puede intentar evadir DRM local; el objetivo del sistema es control comercial razonable sin convertir el producto en un servicio online.
