@@ -16,6 +16,9 @@ on:
       - "requirements.txt"
       - ".github/workflows/license-manager-windows.yml"
 
+permissions:
+  contents: read
+
 jobs:
   build-license-manager:
     runs-on: windows-latest
