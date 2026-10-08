@@ -45,7 +45,11 @@ from .time_utils import local_day
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))
 
 def create_app(db_path=None, ai=None, require_license=None, require_local_access=None, require_teacher_auth=None):
-    local_root=Path(os.environ.get('ALLEN_DATA_ROOT') or (Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'))
+    configured_root=os.environ.get('ALLEN_DATA_ROOT')
+    if db_path is not None and not configured_root:
+        local_root=Path(db_path).resolve().parent/'allen-runtime'
+    else:
+        local_root=Path(configured_root or (Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'))
     db=Database(db_path or os.environ.get('ALLEN_DB_PATH',local_root/'allen.sqlite3'))
     licensing=LicenseManager(local_root, ROOT/'config/license_public_key.pem')
     licensing_required = (db_path is None) if require_license is None else bool(require_license)
