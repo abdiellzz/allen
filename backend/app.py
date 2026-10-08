@@ -262,7 +262,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     def teacher_auth_status(request:Request):
         cookie=request.cookies.get('allen_teacher','')
         authenticated=bool(cookie and secrets.compare_digest(cookie,teacher_auth.session_token))
-        return {'configured':teacher_auth.configured(),'authenticated':authenticated}
+        return {'required':teacher_auth_required,'configured':teacher_auth.configured(),'authenticated':authenticated or not teacher_auth_required}
 
     @app.post('/api/teacher/auth/setup')
     def teacher_auth_setup(value:TeacherPin):
