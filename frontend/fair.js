@@ -122,7 +122,7 @@ function bind(){
  main.querySelectorAll('[data-photo]').forEach(button=>button.addEventListener('click',()=>{photo=!photo;document.body.classList.toggle('photo',photo);render();}));
  main.querySelector('[data-stats]')?.addEventListener('click',loadStats);
  main.querySelector('[data-lock]')?.addEventListener('click',()=>{if(locked&&!confirm('¿Desbloquear la salida del Modo Feria?'))return;locked=!locked;localStorage.setItem('allen-fair-lock',String(locked));render();});
- main.querySelector('[data-exit]')?.addEventListener('click',async()=>{if(!locked){await reset();location.href='/';}});
+ main.querySelector('[data-exit]')?.addEventListener('click',async()=>{if(locked)return;const pin=prompt('Introduce el PIN docente para salir del Modo Feria.');if(!pin)return;try{await api('/fair/exit','POST',{pin});await reset();location.href='/';}catch(e){toast(e.message||'PIN docente incorrecto.');}});
  main.querySelector('#sounds')?.addEventListener('change',e=>{sounds=e.target.checked;sound(sounds);});
  main.querySelector('#tts')?.addEventListener('change',e=>{tts.enabled=e.target.checked;if(!tts.enabled)tts.stop();});
  main.querySelector('#auto')?.addEventListener('change',e=>autoSpeak=e.target.checked);
