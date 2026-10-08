@@ -108,7 +108,7 @@ def test_teacher_session_expires_after_idle_timeout(tmp_path, monkeypatch):
     clock={"now":1000.0}
     monkeypatch.setattr(app_module.time,"monotonic",lambda:clock["now"])
     _,client=_client(tmp_path,teacher=True)
-    assert client.post("/api/teacher/security/setup",json={"pin":"123456"}).status_code==200
+    assert client.post("/api/teacher/security/setup",json={"pin":"12345678"}).status_code==200
     assert client.get("/api/system/integrity").status_code==200
 
     clock["now"]+=901
