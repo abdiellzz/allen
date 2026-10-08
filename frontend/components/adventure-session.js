@@ -51,9 +51,9 @@ export function bindAdventureContinuity(root,profileId,{api,toast,refresh=()=>{}
   }
   const answer=e.target.closest('[data-adventure-answer]');
   if(answer){
-   const choice=Number(answer.dataset.adventureAnswer),correct=choice===step.correct;
-   await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:index,event:'answer',answer:step.options[choice],correct});
-   if(!correct){shell.querySelector('.v2-stage-feedback').innerHTML=`<div class="v2-feedback retry"><strong>Vamos a reforzarlo.</strong><p>${esc(step.explanation)}</p></div>`;return;}
+   const choice=Number(answer.dataset.adventureAnswer);
+   const answered=await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:index,event:'answer',answer:step.options[choice]});
+   if(!answered.correct){shell.querySelector('.v2-stage-feedback').innerHTML=`<div class="v2-feedback retry"><strong>Vamos a reforzarlo.</strong><p>${esc(step.explanation)}</p></div>`;return;}
    if(index<mission.steps.length-1){
     const updated=await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:index+1,event:'advance',answer:'',correct:null});
     stageRoot.innerHTML=stage(mission,updated);
