@@ -1,6 +1,7 @@
 """Native Windows launcher for packaged ALLEN builds."""
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 import sys
@@ -53,6 +54,14 @@ def runtime_components():
     return tk, ttk, uvicorn, app, ALLEN_VERSION
 
 
+def release_log_files() -> None:
+    # Windows cannot delete a temporary data folder while allen.log is still open.
+    logger = logging.getLogger("allen")
+    for handler in list(logger.handlers):
+        handler.close()
+        logger.removeHandler(handler)
+
+
 def self_test() -> int:
     root = configure_distribution_mode()
     bundle_root = Path(getattr(sys, "_MEIPASS", root))
@@ -65,33 +74,39 @@ def self_test() -> int:
         return 2
     with tempfile.TemporaryDirectory(prefix="allen-self-test-") as tmp:
         os.environ["ALLEN_DATA_ROOT"] = tmp
-        from backend.app import create_app
-        app = create_app()
-        if not getattr(app, "state", None) or not app.state.db.path.parent.exists():
-            return 3
-        # Import the same runtime dependencies used by run_gui so packaging cannot
-        # hide a missing launcher import until a customer opens ALLEN.
-        runtime_components()
+        try:
+            from backend.app import create_app
+            app = create_app()
+            if not getattr(app, "state", None) or not app.state.db.path.parent.exists():
+                return 3
+            # Import the same runtime dependencies used by run_gui so packaging cannot
+            # hide a missing launcher import until a customer opens ALLEN.
+            runtime_components()
+        finally:
+            release_log_files()
     return 0
 
 
 def server_smoke_test() -> int:
     with tempfile.TemporaryDirectory(prefix="allen-server-smoke-") as tmp:
         os.environ["ALLEN_DATA_ROOT"] = tmp
-        tk, ttk, uvicorn, app, _ = runtime_components()
-        config=uvicorn.Config(app,host="127.0.0.1",port=8787,access_log=False,log_level="warning")
-        server=uvicorn.Server(config)
-        thread=threading.Thread(target=server.run,daemon=True)
-        thread.start()
-        ready=False
-        for _ in range(80):
-            if health_ready(expected_instance=app.state.instance_id):
-                ready=True
-                break
-            time.sleep(0.25)
-        server.should_exit=True
-        thread.join(timeout=5)
-        return 0 if ready else 4
+        try:
+            tk, ttk, uvicorn, app, _ = runtime_components()
+            config=uvicorn.Config(app,host="127.0.0.1",port=8787,access_log=False,log_level="warning")
+            server=uvicorn.Server(config)
+            thread=threading.Thread(target=server.run,daemon=True)
+            thread.start()
+            ready=False
+            for _ in range(80):
+                if health_ready(expected_instance=app.state.instance_id):
+                    ready=True
+                    break
+                time.sleep(0.25)
+            server.should_exit=True
+            thread.join(timeout=5)
+            return 0 if ready else 4
+        finally:
+            release_log_files()
 
 
 def run_gui() -> int:
