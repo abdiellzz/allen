@@ -949,6 +949,8 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.get('/api/backup/export')
     def backup_export(profile_id:int=1):
         user(profile_id)
+        if teacher_auth_required:
+            raise HTTPException(409,'En la aplicación distribuida los respaldos deben exportarse cifrados.')
         return export_backup(db)
 
     @app.post('/api/backup/export-encrypted')
