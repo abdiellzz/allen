@@ -31,10 +31,12 @@ def decode_source(filename:str,mime:str,content_base64:str):
             reader=PdfReader(io.BytesIO(raw))
         except Exception as exc:
             raise ValueError('No pudimos abrir este PDF.') from exc
+        if getattr(reader,"is_encrypted",False):
+            raise ValueError("Los PDF protegidos con contraseña no son compatibles.")
         if len(reader.pages)>250:
             raise ValueError("El PDF tiene demasiadas páginas para esta versión.")
         for idx,page in enumerate(reader.pages,1):
-            text=_clean(page.extract_text() or "")
+            text=_clean(page.extract_text() or "")[:20000]
             if text:
                 pages.append({"page":idx,"text":text})
     elif ext in (".txt",".md") or mime in ("text/plain","text/markdown"):
