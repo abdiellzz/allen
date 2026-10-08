@@ -4,6 +4,20 @@ Todos los cambios relevantes de ALLEN se documentan aquí.
 
 ## [Unreleased]
 
+## [1.2.4] — 2026-10-08
+
+### Seguridad y robustez
+- Protege el launcher contra procesos locales que intenten suplantar ALLEN en el puerto 8787.
+- Reduce /api/health a una identidad efímera de readiness, sin exponer versión ni metadatos del producto.
+- Obliga a configurar el PIN docente antes del primer uso comercial.
+- Protege eliminación de perfiles y cambios globales sensibles con sesión docente.
+- Añade límites de profundidad, tamaño y complejidad a Course Packs/estructuras importadas.
+- Rechaza PDF cifrado y limita texto extraído por página.
+- Elimina SQL dinámico evitable detectado por Bandit y documenta únicamente los identificadores dinámicos cerrados por allowlist.
+- Añade Bandit SAST y pruebas de material secreto al CI.
+- Añade regresiones para secuestro de puerto, primer PIN, privilegios administrativos y estructuras maliciosas.
+
+
 ## [1.2.3] — 2026-10-08
 
 ### Segunda auditoría técnica
