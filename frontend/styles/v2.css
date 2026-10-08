@@ -744,3 +744,16 @@ body.license-locked main{min-height:calc(100vh - 120px);display:grid;place-items
 .recovery-illustration{width:140px}
 
 .reader-aside-image{width:100%;border-radius:14px}
+
+.game-confetti .confetti-0{--i:0}
+.game-confetti .confetti-1{--i:1}
+.game-confetti .confetti-2{--i:2}
+.game-confetti .confetti-3{--i:3}
+.game-confetti .confetti-4{--i:4}
+.game-confetti .confetti-5{--i:5}
+.game-confetti .confetti-6{--i:6}
+.game-confetti .confetti-7{--i:7}
+.game-confetti .confetti-8{--i:8}
+.game-confetti .confetti-9{--i:9}
+.game-confetti .confetti-10{--i:10}
+.game-confetti .confetti-11{--i:11}
