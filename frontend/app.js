@@ -30,13 +30,60 @@ const modules=[
 let rememberedProfile=1;try{rememberedProfile=Number(localStorage.getItem('allen-active-profile'))||1;}catch{}
 const storedTheme=localStorage.getItem('allen-theme')||'light';
 document.documentElement.dataset.theme=storedTheme;
-let state={profiles:[],settings:{},catalog:{},profile:rememberedProfile,page:'Inicio',model:null};
+let state={profiles:[],settings:{},catalog:{},profile:rememberedProfile,page:'Inicio',model:null,license:null};
 let chat={messages:[],id:null,controller:null},quiz=null,pageEpoch=0;
 let lastActivity=Date.now();
 document.addEventListener('pointerdown',()=>lastActivity=Date.now());
 document.addEventListener('keydown',()=>lastActivity=Date.now());
 function toast(text){$('#toast').textContent=text;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').textContent='',6000);}
 function profile(){return state.profiles.find(p=>p.id===state.profile)||state.profiles[0];}
+function licenseDate(value){
+ if(!value)return '—';
+ try{return new Intl.DateTimeFormat('es-PA',{day:'numeric',month:'short',year:'numeric'}).format(new Date(value+'T12:00:00'));}
+ catch{return value;}
+}
+function licenseGate(status){
+ const machine=esc(status?.machine_id||'—');
+ document.body.classList.add('license-locked');
+ $('#breadcrumb').textContent='Activación';
+ $('#profile-select').closest('label')?.classList.add('hidden');
+ content.innerHTML=\`
+ <section class="license-gate" aria-labelledby="license-title">
+  <div class="license-card">
+   <div class="license-mark">\${icon('key-round',28)}</div>
+   <span class="eyebrow">ACTIVACIÓN OFFLINE</span>
+   <h1 id="license-title">Activa ALLEN</h1>
+   <p>Esta instalación necesita un archivo de licencia válido. La verificación ocurre completamente en este equipo y no requiere Internet.</p>
+   <div class="license-machine">
+    <span>ID DE ESTE EQUIPO</span>
+    <code id="machine-id">\${machine}</code>
+    <button id="copy-machine-id" type="button">Copiar ID</button>
+   </div>
+   <label class="license-file button-like">
+    Seleccionar archivo .license
+    <input id="license-file" type="file" accept=".license,application/json" hidden>
+   </label>
+   <div id="license-feedback" class="license-feedback \${status?.state==='expired'||status?.state==='invalid'?'error':''}" role="status">
+    \${esc(status?.message||'Solicita una licencia para este Machine ID.')}
+   </div>
+   <p class="muted">La licencia no limita la cantidad de perfiles, estudiantes o profesores dentro de esta instalación.</p>
+  </div>
+ </section>\`;
+ $('#copy-machine-id').onclick=async()=>{try{await navigator.clipboard.writeText(status.machine_id);toast('Machine ID copiado.');}catch{toast('Copia el Machine ID manualmente.');}};
+ $('#license-file').onchange=async e=>{
+  const file=e.target.files?.[0];if(!file)return;
+  const feedback=$('#license-feedback');feedback.classList.remove('error');feedback.textContent='Verificando licencia…';
+  try{
+   const raw=await file.text();
+   const result=await api('/license/activate','POST',{content:raw});
+   state.license=result;
+   toast('Licencia activada.');
+   const ready=await bootstrap();
+   if(ready){state.page=decodeURIComponent(location.hash.slice(1))||'Inicio';await render();state.model=await api('/model/status').catch(()=>null);}
+  }catch(error){feedback.classList.add('error');feedback.textContent=error.message||'No se pudo activar esta licencia.';}
+ };
+}
+
 function options(values,selected){return values.map(v=>`<option value="${esc(v)}" ${v===selected?'selected':''}>${esc(v)}</option>`).join('');}
 function field(label,id,values,selected){return `<label>${label}<select id="${id}">${options(values,selected)}</select></label>`;}
 function heading(title,sub){return `<div class="page-heading"><div><div class="eyebrow">TU ESPACIO PARA CRECER</div><h1>${title}</h1><p class="muted">${sub}</p></div><span class="pill ai-state ${state.model?.connected?'green':''}">${esc(state.model?.connected?'IA LOCAL ACTIVA':state.model?'IA local sin conectar':'Comprobando IA…')}</span></div>`;}
@@ -324,6 +371,19 @@ function bindMemory(){const form=$('#learning-preferences');if(!form)return;form
 function bindHomeLearning(){const form=$('#daily-goal');if(form)form.onsubmit=e=>{e.preventDefault();guarded(async()=>{await saveMemory({daily_goal:$('#goal-input').value,set_goal:true});toast('Objetivo guardado. Vamos juntos.');});};content.querySelectorAll('[data-resume]').forEach(b=>b.onclick=()=>guarded(async()=>{const row=await api('/conversations/'+b.dataset.resume+'?profile_id='+state.profile);chat={messages:row.messages,id:row.id,controller:null,state:row.conversation_state||null};go('Preguntar');}));}
 function bindSaved(){content.querySelectorAll('[data-delete-saved]').forEach(b=>b.onclick=()=>{if(confirm('¿Quitar esta respuesta de tus guardados?'))guarded(async()=>{await api('/saved/'+b.dataset.deleteSaved+'?profile_id='+state.profile,'DELETE');render();});});}
 async function guarded(fn){try{return await fn();}catch(error){toast(error.message||'Algo no salió bien. Inténtalo de nuevo.');}}
-async function bootstrap(){const data=await api('/bootstrap');setToken(data.token);state.profiles=data.profiles;state.settings=data.settings;state.catalog=data.catalog;if(!state.profiles.some(p=>p.id===state.profile))state.profile=state.profiles[0].id;updateProfiles();applyAppearance();}
+async function bootstrap(){
+ const data=await api('/bootstrap');
+ setToken(data.token);
+ state.license=data.license||null;
+ state.profiles=data.profiles||[];
+ state.settings=data.settings||{};
+ state.catalog=data.catalog||{};
+ if(state.license?.required&&!state.license?.active){licenseGate(state.license);return false;}
+ document.body.classList.remove('license-locked');
+ $('#profile-select').closest('label')?.classList.remove('hidden');
+ if(!state.profiles.length)throw new Error('ALLEN no encontró perfiles locales.');
+ if(!state.profiles.some(p=>p.id===state.profile))state.profile=state.profiles[0].id;
+ updateProfiles();applyAppearance();return true;
+}
 setInterval(()=>{if(!document.hidden&&Date.now()-lastActivity<60000&&!['Inicio','Configuración','Privacidad','Progreso','Docente'].includes(state.page)){api('/study','POST',{profile_id:state.profile,subject:state.page==='Tutor'?($('#chat-subject')?.value||'Tutor'):state.page,seconds:30}).catch(()=>{});}},30000);
-await guarded(async()=>{await bootstrap();state.page=decodeURIComponent(location.hash.slice(1))||'Inicio';await render();state.model=await api('/model/status');document.querySelectorAll('.ai-state').forEach(el=>{el.textContent=state.model.connected?'IA LOCAL ACTIVA':'IA local sin conectar';el.classList.toggle('green',state.model.connected);});if(state.model.connected)document.querySelector('.model-notice')?.remove();if($('#model-health'))$('#model-health').textContent=state.model.state;document.querySelectorAll('.model-description').forEach(el=>el.textContent=state.model.connected?'Tu modelo local está listo.':'Las respuestas libres necesitan conectar un modelo local.');});
+await guarded(async()=>{const ready=await bootstrap();if(!ready)return;state.page=decodeURIComponent(location.hash.slice(1))||'Inicio';await render();state.model=await api('/model/status');document.querySelectorAll('.ai-state').forEach(el=>{el.textContent=state.model.connected?'IA LOCAL ACTIVA':'IA local sin conectar';el.classList.toggle('green',state.model.connected);});if(state.model.connected)document.querySelector('.model-notice')?.remove();if($('#model-health'))$('#model-health').textContent=state.model.state;document.querySelectorAll('.model-description').forEach(el=>el.textContent=state.model.connected?'Tu modelo local está listo.':'Las respuestas libres necesitan conectar un modelo local.');});
