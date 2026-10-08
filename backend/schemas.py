@@ -2,6 +2,7 @@ from typing import Literal
 from datetime import date, datetime, timedelta
 from urllib.parse import urlsplit
 from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
+from .time_utils import local_day
 
 LEVELS = ['Primaria', 'Premedia', 'Media', 'Universidad / Técnico']
 SUBJECTS = ['Matemáticas', 'Ciencias', 'Español', 'Inglés', 'Tecnología', 'Programación', 'Historia', 'Geografía']
@@ -161,7 +162,7 @@ class StudyPlanCreate(Strict):
             target=datetime.strptime(value,"%Y-%m-%d").date()
         except ValueError as exc:
             raise ValueError('Usa una fecha válida en formato AAAA-MM-DD.') from exc
-        today=date.today()
+        today=local_day()
         if target < today:
             raise ValueError('La fecha objetivo no puede estar en el pasado.')
         if target > today + timedelta(days=365):
