@@ -129,9 +129,9 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 return security_headers(JSONResponse({'error':'Modo Feria aislado: esta API no está disponible.','fair_restricted':True},403))
         origin=request.headers.get('origin')
         if origin and origin != str(request.base_url).rstrip('/'):
-            return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
+            return security_headers(JSONResponse({'error':'Abre Allen desde su dirección local.'},403))
         if request.headers.get('sec-fetch-site')=='cross-site':
-            return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
+            return security_headers(JSONResponse({'error':'Abre Allen desde su dirección local.'},403))
         if request.method in ('POST','PUT','DELETE','PATCH'):
             fair_auth_path=request.url.path.startswith('/api/fair/') or (fair_mode and request.url.path=='/api/teacher/security/unlock')
             expected_token=fair_token_value if fair_auth_path else token
@@ -160,7 +160,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 '/api/license/activate',
             }
             if request.url.path not in allowed and not licensing.status().get('active'):
-                return JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402)
+                return security_headers(JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402))
         if teacher_auth_required and request.url.path.startswith('/api/') and not teacher_configured():
             setup_allowed={
                 '/api/bootstrap',
@@ -360,8 +360,13 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         return db.settings().model_dump()
 
     @app.put('/api/settings')
-    def update_settings(value:Settings):
+    def update_settings(value:Settings,request:Request):
         nonlocal privacy_epoch
+        current=db.settings()
+        sensitive=('ai_server','model','temperature','context_size','max_tokens','save_history','retention_days','demo','performance')
+        changed_sensitive=any(getattr(current,key)!=getattr(value,key) for key in sensitive)
+        if teacher_auth_required and changed_sensitive and not teacher_unlocked(request):
+            raise HTTPException(403,'Se requiere autorización de profesor para cambiar ajustes globales.')
         if not value.save_history:
             privacy_epoch+=1
         db.execute('INSERT OR REPLACE INTO settings VALUES(1,?)',(value.model_dump_json(),))
