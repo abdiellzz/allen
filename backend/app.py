@@ -44,7 +44,7 @@ from .time_utils import local_day
 
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))
 
-def create_app(db_path=None, ai=None, require_license=None, require_local_access=None):
+def create_app(db_path=None, ai=None, require_license=None, require_local_access=None, require_teacher_auth=None):
     local_root=Path(os.environ.get('ALLEN_DATA_ROOT') or (Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'))
     db=Database(db_path or os.environ.get('ALLEN_DB_PATH',local_root/'allen.sqlite3'))
     licensing=LicenseManager(local_root, ROOT/'config/license_public_key.pem')
@@ -57,6 +57,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     access_key=secrets.token_urlsafe(32)
     launch_key=None
     teacher_auth=TeacherAuth(local_root)
+    teacher_auth_required = (db_path is None) if require_teacher_auth is None else bool(require_teacher_auth)
     local_access_required = (db_path is None) if require_local_access is None else bool(require_local_access)
     license_cache={'at':0.0,'status':None}
     study_ping_seen={}
@@ -132,7 +133,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         path=request.url.path
         fair_cookie=request.cookies.get('allen_fair','')
         fair_context=bool(fair_cookie and secrets.compare_digest(fair_cookie,fair_session_key))
-        if fair_context:
+        if teacher_auth_required and fair_context:
             fair_allowed=path.startswith('/api/fair/') or path in {'/api/health','/api/model/status','/fair'} or path.startswith('/static/')
             if (path.startswith('/api/') or path=='/') and not fair_allowed:
                 return security_headers(JSONResponse({'error':'El Modo Feria está aislado. Usa la salida protegida para volver a ALLEN.'},403))
@@ -142,7 +143,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             or path.startswith('/api/backup/')
             or path.startswith('/api/system/')
         )
-        if teacher_protected:
+        if teacher_auth_required and teacher_protected:
             teacher_cookie=request.cookies.get('allen_teacher','')
             if not teacher_cookie or not secrets.compare_digest(teacher_cookie,teacher_auth.session_token):
                 return security_headers(JSONResponse({'error':'Se requiere acceso docente.','teacher_required':True},403))
