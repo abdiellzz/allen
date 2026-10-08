@@ -11,7 +11,7 @@ from .time_utils import utc_now_iso, local_day, local_day_iso, local_day_from_ti
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, name TEXT NOT NULL, age INTEGER, level TEXT, avatar TEXT);
 CREATE TABLE IF NOT EXISTS settings(id INTEGER PRIMARY KEY CHECK(id=1), value TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS teacher_security(id INTEGER PRIMARY KEY CHECK(id=1), salt TEXT NOT NULL, pin_hash TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS teacher_security(id INTEGER PRIMARY KEY CHECK(id=1), salt TEXT NOT NULL, pin_hash TEXT NOT NULL, kdf_n INTEGER NOT NULL DEFAULT 65536, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS conversations(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, title TEXT, messages TEXT NOT NULL, updated TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS progress(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, kind TEXT, subject TEXT, xp INTEGER, day TEXT, reference TEXT, UNIQUE(user_id,kind,reference));
 CREATE TABLE IF NOT EXISTS quiz_results(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, config TEXT, questions TEXT, result TEXT, created TEXT);
@@ -95,6 +95,9 @@ class Database:
             }
             for column,sql in sim_migrations.items():
                 if column not in sim_existing: db.execute(sql)
+            teacher_existing={row['name'] for row in db.execute("PRAGMA table_info(teacher_security)").fetchall()}
+            if 'kdf_n' not in teacher_existing:
+                db.execute("ALTER TABLE teacher_security ADD COLUMN kdf_n INTEGER NOT NULL DEFAULT 16384")
             apply_migrations(db)
             # Backfill a baseline history row for courses created before numbered migrations existed.
             if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='course_versions'").fetchone():
