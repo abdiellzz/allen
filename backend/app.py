@@ -5,6 +5,7 @@ from logging.handlers import RotatingFileHandler
 import os
 import secrets
 import sys
+import time
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
@@ -57,11 +58,22 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     launch_key=None
     teacher_auth=TeacherAuth(local_root)
     local_access_required = (db_path is None) if require_local_access is None else bool(require_local_access)
+    license_cache={'at':0.0,'status':None}
+    study_ping_seen={}
 
     def issue_launch_key():
         nonlocal launch_key
         launch_key=secrets.token_urlsafe(32)
         return launch_key
+
+    def cached_license_status(force=False):
+        if not licensing_required:
+            return {'required':False,'active':True,'state':'development','machine_id':'TEST-DEVELOPMENT'}
+        current=time.monotonic()
+        if force or license_cache['status'] is None or current-license_cache['at']>=60:
+            license_cache['status']=licensing.status()
+            license_cache['at']=current
+        return license_cache['status']
     privacy_epoch=0
     logger=logging.getLogger('allen')
     if not logger.handlers:
@@ -159,7 +171,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 '/api/license/machine-id',
                 '/api/license/activate',
             }
-            if path not in allowed and not licensing.status().get('active'):
+            if path not in allowed and not cached_license_status().get('active'):
                 return security_headers(JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402))
 
         response=await call_next(request)
@@ -204,7 +216,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.get('/api/bootstrap')
     def bootstrap():
         db.prune()
-        license_status = licensing.status() if licensing_required else {
+        license_status = cached_license_status() if licensing_required else {
             'required': False,
             'active': True,
             'state': 'development',
@@ -222,9 +234,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
 
     @app.get('/api/license/status')
     def license_status():
-        if not licensing_required:
-            return {'required':False,'active':True,'state':'development','machine_id':'TEST-DEVELOPMENT'}
-        return licensing.status()
+        return cached_license_status()
 
     @app.get('/api/license/machine-id')
     def license_machine_id():
@@ -236,7 +246,10 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         if not licensing_required:
             return {'required':False,'active':True,'state':'development','machine_id':'TEST-DEVELOPMENT'}
         try:
-            return licensing.install(value.content)
+            result=licensing.install(value.content)
+            license_cache['status']=result
+            license_cache['at']=time.monotonic()
+            return result
         except LicenseError as exc:
             raise HTTPException(422,str(exc))
 
@@ -372,9 +385,14 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.post('/api/study')
     def study(value:Study):
         user(value.profile_id)
+        current=time.monotonic()
+        previous=study_ping_seen.get(value.profile_id,0.0)
+        if current-previous < 25:
+            return {'ok':True,'ignored':True}
+        study_ping_seen[value.profile_id]=current
         db.execute('INSERT INTO learning_sessions(user_id,subject,seconds,created) VALUES(?,?,?,?)',(value.profile_id,value.subject,value.seconds,now()))
         db.award(value.profile_id,'study',value.subject,5,local_day().isoformat())
-        return {'ok':True}
+        return {'ok':True,'ignored':False}
 
 
     @app.post('/api/study-plans')
@@ -995,9 +1013,17 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.post('/api/simulations')
     def create_simulation(value:SimulationCreate):
         user(value.profile_id)
-        topic=value.topics[0]
-        request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=value.question_count,kind='multiple')
-        questions=generate(request)
+        questions=[]
+        try:
+            for index in range(value.question_count):
+                topic=value.topics[index % len(value.topics)]
+                request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=1,kind='multiple')
+                generated=generate(request)
+                if not generated:
+                    raise ValueError(f'No hay preguntas disponibles para {topic}.')
+                questions.append(generated[0])
+        except ValueError as exc:
+            raise HTTPException(422,str(exc))
         sid=db.execute("INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at,status,answers,updated_at,remaining_seconds) VALUES(?,?,?,?,NULL,?,?,'active','[]',?,?)",(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),(value.minutes if value.timed else 0),now(),now(),(value.minutes*60 if value.timed else 0)))
         db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'simulation',sid,value.subject,value.topics[0] if value.topics else '','active',now()))
         return dict(id=sid,subject=value.subject,topics=value.topics,questions=safe_questions(questions),minutes=(value.minutes if value.timed else 0),timed=value.timed)
