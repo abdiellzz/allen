@@ -11,15 +11,22 @@ class FakeResponse:
     def __init__(self,payload,status=200):
         self.status=status
         self.payload=payload
-    def __enter__(self): return self
-    def __exit__(self,*args): return False
     def read(self): return json.dumps(self.payload).encode("utf-8")
 
 
+class FakeConnection:
+    payload={"ok":True,"instance":"attacker"}
+    def __init__(self,*args,**kwargs): pass
+    def request(self,*args,**kwargs): pass
+    def getresponse(self): return FakeResponse(self.payload)
+    def close(self): pass
+
+
 def test_launcher_rejects_foreign_process_on_allen_port(monkeypatch):
-    monkeypatch.setattr(allen_launcher.urllib.request,"urlopen",lambda *a,**k:FakeResponse({"ok":True,"instance":"attacker"}))
+    monkeypatch.setattr(allen_launcher.http.client,"HTTPConnection",FakeConnection)
+    FakeConnection.payload={"ok":True,"instance":"attacker"}
     assert allen_launcher.health_ready(expected_instance="real-instance") is False
-    monkeypatch.setattr(allen_launcher.urllib.request,"urlopen",lambda *a,**k:FakeResponse({"ok":True,"instance":"real-instance"}))
+    FakeConnection.payload={"ok":True,"instance":"real-instance"}
     assert allen_launcher.health_ready(expected_instance="real-instance") is True
 
 
