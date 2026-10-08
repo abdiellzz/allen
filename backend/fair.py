@@ -5,7 +5,7 @@ import secrets
 import time
 import os
 from urllib.parse import urlsplit
-from datetime import date
+from .time_utils import local_day
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from pydantic import Field
@@ -44,7 +44,7 @@ def install_fair(app, db, engine):
     for table in ('fair_sessions','fair_questions','fair_quizzes','fair_challenges'):
         db.execute(f'CREATE TABLE IF NOT EXISTS {table}(day TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, seconds INTEGER NOT NULL DEFAULT 0)')
     def count(table, seconds=0, amount=1):
-        db.execute(f'INSERT INTO {table}(day,count,seconds) VALUES(?,?,?) ON CONFLICT(day) DO UPDATE SET count=count+excluded.count,seconds=seconds+excluded.seconds',(date.today().isoformat(),amount,seconds))
+        db.execute(f'INSERT INTO {table}(day,count,seconds) VALUES(?,?,?) ON CONFLICT(day) DO UPDATE SET count=count+excluded.count,seconds=seconds+excluded.seconds',(local_day().isoformat(),amount,seconds))
     def visitor(key):
         item=sessions.get(key)
         if not item or time.monotonic()-item['seen']>210:
@@ -95,7 +95,7 @@ def install_fair(app, db, engine):
         return {'ok':True}
     @router.get('/stats')
     def stats():
-        return {table:db.one(f'SELECT count,seconds FROM {table} WHERE day=?',(date.today().isoformat(),)) or {'count':0,'seconds':0} for table in ('fair_sessions','fair_questions','fair_quizzes','fair_challenges')}
+        return {table:db.one(f'SELECT count,seconds FROM {table} WHERE day=?',(local_day().isoformat(),)) or {'count':0,'seconds':0} for table in ('fair_sessions','fair_questions','fair_quizzes','fair_challenges')}
     @router.post('/challenge')
     def challenge(value:Challenge):
         item=visitor(value.session)
