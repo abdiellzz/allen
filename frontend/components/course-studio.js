@@ -39,8 +39,8 @@ function qualityView(q,graph){
  const b=q.breakdown||{},ratio=x=>x&&x.total?Math.round(x.ok/x.total*100):0;
  const metrics=[['Con fuente',ratio(b.source_grounding)],['Objetivos medibles',ratio(b.measurable_objectives)],['Temas evaluados',ratio(b.assessed_topics)],['Examen final',ratio(b.final_exam)]];
  return `<section class="course-quality panel v3-quality"><div class="row spaced"><div><span class="eyebrow">COURSE QUALITY</span><h2>${q.score}/100</h2><p>${q.passed}/${q.checks} checks superados · ${graph?.nodes?.length||0} conceptos · ${graph?.edges?.length||0} relaciones curriculares.</p></div><div class="quality-status"><span class="pill ${q.blocking_issues?'warn':'green'}">${q.blocking_issues? q.blocking_issues+' bloqueos':'Listo para publicar'}</span></div></div>
- <div class="quality-meter" aria-label="Calidad del curso ${q.score}%"><i style="width:${Math.max(0,Math.min(100,q.score))}%"></i></div>
- <div class="quality-breakdown">${metrics.map(([label,value])=>`<article><div class="row spaced"><span>${label}</span><b>${value}%</b></div><div class="mini-meter"><i style="width:${value}%"></i></div></article>`).join('')}</div>
+ <div class="quality-meter" aria-label="Calidad del curso ${q.score}%"><i data-progress-width="${Math.max(0,Math.min(100,q.score))}"></i></div>
+ <div class="quality-breakdown">${metrics.map(([label,value])=>`<article><div class="row spaced"><span>${label}</span><b>${value}%</b></div><div class="mini-meter"><i data-progress-width="${value}"></i></div></article>`).join('')}</div>
  ${q.issues.length?`<div class="quality-issues">${q.issues.slice(0,12).map(i=>`<article class="${i.severity}"><b>${esc(i.location||'Curso')}</b><span>${esc(i.message)}</span></article>`).join('')}</div>`:'<p class="success-copy">No encontramos problemas importantes antes de publicar.</p>'}
  </section>`;
 }
