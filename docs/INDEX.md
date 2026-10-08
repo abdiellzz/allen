@@ -18,6 +18,7 @@ Este directorio es la fuente oficial de documentación del proyecto.
 ## Desarrollo
 
 - [Arquitectura](ARCHITECTURE.md)
+- [Auditoría de ciberseguridad 2026-10-07](SECURITY_AUDIT_2026-10-07.md)
 - [Guía de desarrollo](DEVELOPMENT.md)
 - [Proceso de release](RELEASE_PROCESS.md)
 - [Landing pública](WEB_LANDING.md)
