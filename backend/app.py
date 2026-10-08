@@ -6,7 +6,7 @@ import os
 import secrets
 import sys
 from contextlib import asynccontextmanager
-from datetime import date, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 
@@ -38,6 +38,7 @@ from .learning_intelligence import mastery_evidence, due_reviews, diagnostic_que
 from .course_versioning import compare_versions, seed_initial_version, apply_version, history as course_version_history
 from .version import ALLEN_VERSION
 from .licensing import LicenseManager, LicenseError
+from .time_utils import local_day, local_day_iso
 
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))
 
@@ -50,6 +51,8 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     engine=ai or LocalAI()
     token=secrets.token_urlsafe(32)
     access_key=secrets.token_urlsafe(32)
+    launch_token=secrets.token_urlsafe(32)
+    launch_token_used=False
     local_access_required = (db_path is None) if require_local_access is None else bool(require_local_access)
     privacy_epoch=0
     logger=logging.getLogger('allen')
@@ -68,6 +71,14 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     app.state.db=db
     app.state.licensing=licensing
     app.state.access_key=access_key
+    def issue_launch_token():
+        nonlocal launch_token, launch_token_used
+        launch_token=secrets.token_urlsafe(32)
+        launch_token_used=False
+        app.state.launch_token=launch_token
+        return launch_token
+    app.state.launch_token=launch_token
+    app.state.issue_launch_token=issue_launch_token
     app.add_middleware(TrustedHostMiddleware,allowed_hosts=['127.0.0.1','localhost','[::1]']+(['testserver'] if db_path else []))
 
     def security_headers(response):
@@ -84,9 +95,11 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.middleware('http')
     async def local_guard(request,call_next):
         if local_access_required and request.url.path != '/api/health':
+            nonlocal launch_token_used
             launch_key=request.query_params.get('access','')
             cookie_key=request.cookies.get('allen_access','')
-            if request.method=='GET' and launch_key and secrets.compare_digest(launch_key,access_key):
+            if request.method=='GET' and launch_key and not launch_token_used and secrets.compare_digest(launch_key,launch_token):
+                launch_token_used=True
                 clean=[(k,v) for k,v in request.query_params.multi_items() if k!='access']
                 target=request.url.path+('?' + urlencode(clean) if clean else '')
                 response=RedirectResponse(target,status_code=303)
@@ -112,15 +125,16 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             }
             if request.url.path not in allowed and not licensing.status().get('active'):
                 return JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402)
+        if request.url.path.startswith('/api/'):
             max_body=12_500_000 if request.url.path=='/api/teacher/import' or request.url.path.endswith('/versions') else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 5_500_000 if request.url.path.startswith('/api/backup/') else 200000
             try:
                 if int(request.headers.get('content-length','0'))>max_body:
-                    return JSONResponse({'error':'El archivo o texto es demasiado largo.'},413)
+                    return security_headers(JSONResponse({'error':'El archivo o texto es demasiado largo.'},413))
             except ValueError:
-                return JSONResponse({'error':'Solicitud no válida.'},400)
+                return security_headers(JSONResponse({'error':'Solicitud no válida.'},400))
             body=await request.body()
             if len(body)>max_body:
-                return JSONResponse({'error':'El archivo o texto es demasiado largo.'},413)
+                return security_headers(JSONResponse({'error':'El archivo o texto es demasiado largo.'},413))
         response=await call_next(request)
         return security_headers(response)
 
@@ -269,7 +283,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     def update_memory(value:LearningMemory,profile_id:int=1):
         user(profile_id)
         memory=db.memory(profile_id)
-        goal_date=date.today().isoformat() if value.set_goal or value.daily_goal!=memory['daily_goal'] else memory['goal_date']
+        goal_date=local_day_iso() if value.set_goal or value.daily_goal!=memory['daily_goal'] else memory['goal_date']
         return db.remember(profile_id,**value.model_dump(exclude={'set_goal'}),goal_date=goal_date)
 
     @app.delete('/api/memory')
@@ -307,9 +321,18 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.post('/api/study')
     def study(value:Study):
         user(value.profile_id)
+        latest=db.one('SELECT created FROM learning_sessions WHERE user_id=? ORDER BY id DESC LIMIT 1',(value.profile_id,))
+        if latest and latest.get('created'):
+            try:
+                previous=datetime.fromisoformat(str(latest['created']).replace('Z','+00:00'))
+                if previous.tzinfo is None: previous=previous.replace(tzinfo=timezone.utc)
+                if (datetime.now(timezone.utc)-previous).total_seconds()<25:
+                    return {'ok':True,'deduplicated':True}
+            except ValueError:
+                pass
         db.execute('INSERT INTO learning_sessions(user_id,subject,seconds,created) VALUES(?,?,?,?)',(value.profile_id,value.subject,value.seconds,now()))
-        db.award(value.profile_id,'study',value.subject,5,date.today().isoformat())
-        return {'ok':True}
+        db.award(value.profile_id,'study',value.subject,5,local_day_iso())
+        return {'ok':True,'deduplicated':False}
 
 
     @app.post('/api/study-plans')
@@ -346,7 +369,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         user(profile_id)
         row=db.one('SELECT * FROM study_plans WHERE id=? AND user_id=?',(pid,profile_id))
         if not row: raise HTTPException(404,'No encontramos ese plan.')
-        today=date.today().isoformat()
+        today=local_day_iso()
         existing=db.one('SELECT * FROM study_sessions WHERE plan_id=? AND user_id=? AND day=?',(pid,profile_id,today))
         if existing: return existing
         sid=db.execute('INSERT INTO study_sessions(user_id,plan_id,day,status,started) VALUES(?,?,?,?,?)',(profile_id,pid,today,'active',now()))
@@ -708,10 +731,15 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         weak=list(dict.fromkeys(x['topic'] for x in feedback if not x['correct']))
         strong=list(dict.fromkeys(x['topic'] for x in feedback if x['correct']))
         result={'score':score,'total':total,'percentage':round(score/max(1,total)*100),'strong_topics':strong,'weak_topics':weak,'feedback':feedback}
+        passed=result['percentage']>=70
+        result['passed']=passed
         db.execute("INSERT INTO course_exam_results(course_id,user_id,answers_json,result_json,created_at) VALUES(?,?,?,?,?)",(cid,value.profile_id,json.dumps(value.answers,ensure_ascii=False),json.dumps(result,ensure_ascii=False),now()))
         db.execute("DELETE FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
-        db.execute("UPDATE course_enrollments SET status='completed',completed_at=?,updated_at=? WHERE course_id=? AND user_id=?",(now(),now(),cid,value.profile_id))
-        db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
+        if passed:
+            db.execute("UPDATE course_enrollments SET status='completed',completed_at=?,updated_at=? WHERE course_id=? AND user_id=?",(now(),now(),cid,value.profile_id))
+            db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
+        else:
+            db.execute("UPDATE course_enrollments SET status='active',completed_at=NULL,updated_at=? WHERE course_id=? AND user_id=?",(now(),cid,value.profile_id))
         record_event(db,value.profile_id,'quiz_completed',course['subject'],'Examen final',reference_type='course_exam',reference_id=cid,metadata={'score':score,'total':total,'difficulty':'Normal'})
         return result
 
@@ -756,6 +784,22 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         if value.topic_index>=len(topics): raise HTTPException(422,'Tema fuera de rango.')
         route=topics[value.topic_index].get('route',[])
         if value.step_index>=max(1,len(route)): raise HTTPException(422,'Paso fuera de rango.')
+        if value.status=='completed':
+            raise HTTPException(409,'El curso solo se completa al aprobar el examen final.')
+        positions=[]
+        for ui,unit in enumerate(units):
+            for ti,item in enumerate(unit.get('topics',[])):
+                steps=item.get('route',[]) or [{}]
+                positions.extend((ui,ti,si) for si in range(len(steps)))
+        current=(row['unit_index'],row['topic_index'],row['step_index'])
+        requested=(value.unit_index,value.topic_index,value.step_index)
+        try:
+            current_index=positions.index(current)
+            requested_index=positions.index(requested)
+        except ValueError:
+            raise HTTPException(422,'Posición de curso no válida.')
+        if requested_index < current_index or requested_index > current_index+1:
+            raise HTTPException(409,'Avanza un paso a la vez en tu ruta.')
         # Evaluate evidence from the step the student just completed, not the destination step.
         previous_topic=''
         previous_step_type=''
@@ -789,7 +833,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         plan=db.one("SELECT * FROM study_plans WHERE user_id=? ORDER BY id DESC LIMIT 1",(profile_id,))
         if plan:
             plan['topics']=json.loads(plan['topics']); plan['plan']=json.loads(plan['plan'])
-        due_cards=db.one("SELECT count(*) n FROM flashcards WHERE user_id=? AND due<=?",(profile_id,date.today().isoformat()))['n']
+        due_cards=db.one("SELECT count(*) n FROM flashcards WHERE user_id=? AND due<=?",(profile_id,local_day_iso()))['n']
         recommendation=build_recommendation(db,profile_id)
         mastery=db.all("SELECT * FROM topic_mastery WHERE user_id=? ORDER BY mastery_score ASC,last_seen DESC LIMIT 8",(profile_id,))
         topic_reviews=due_reviews(db,profile_id,5)
@@ -949,7 +993,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         if not row or not row['result']:raise HTTPException(409,'Completa el simulacro antes de crear el refuerzo.')
         result=json.loads(row['result']);weak=result.get('review',[])
         if not weak:return {'plan_id':None,'message':'No hay temas débiles destacados.'}
-        deadline=(date.today()+timedelta(days=3)).isoformat()
+        deadline=(local_day()+timedelta(days=3)).isoformat()
         quiz_rows=db.all('SELECT result FROM quiz_results WHERE user_id=? ORDER BY id DESC LIMIT 30',(profile_id,))
         cards=db.all('SELECT question,answer,due,interval FROM flashcards WHERE user_id=?',(profile_id,))
         plan=build_plan(row['subject'],weak,deadline,30,profile['level'],'Plan de refuerzo',quiz_rows,cards,db.progress(profile_id))
@@ -1167,7 +1211,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             conn.execute('UPDATE quiz_results SET result=? WHERE id=?',(json.dumps(result,ensure_ascii=False),qid))
             config=json.loads(row['config'])
             kind='exercise' if config['count']==1 else 'quiz'
-            conn.execute('INSERT OR IGNORE INTO progress(user_id,kind,subject,xp,day,reference) VALUES(?,?,?,?,?,?)',(value.profile_id,kind,config['subject'],10 if kind=='exercise' else 30,date.today().isoformat(),str(qid)))
+            conn.execute('INSERT OR IGNORE INTO progress(user_id,kind,subject,xp,day,reference) VALUES(?,?,?,?,?,?)',(value.profile_id,kind,config['subject'],10 if kind=='exercise' else 30,local_day_iso(),str(qid)))
         config=json.loads(row['config'])
         for item in result.get('feedback',[]):
             record_event(db,value.profile_id,'question_answered',config.get('subject',''),item.get('topic',config.get('topic','')),reference_type='quiz',reference_id=qid,metadata={'correct':item.get('correct'),'difficulty':config.get('difficulty','Normal')})
@@ -1187,7 +1231,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.post('/api/flashcards')
     def create_card(value:Card):
         user(value.profile_id)
-        cid=db.execute('INSERT INTO flashcards(user_id,question,answer,due) VALUES(?,?,?,?)',(value.profile_id,value.question,value.answer,date.today().isoformat()))
+        cid=db.execute('INSERT INTO flashcards(user_id,question,answer,due) VALUES(?,?,?,?)',(value.profile_id,value.question,value.answer,local_day_iso()))
         return {'id':cid}
 
     @app.post('/api/flashcards/generate')
@@ -1224,9 +1268,9 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         if not row:raise HTTPException(404,'No encontramos esa tarjeta.')
         interval={'No la sé':0,'Difícil':1,'Bien':max(3,row['interval']*2),'Fácil':max(7,row['interval']*3)}[value.rating]
         interval=min(interval,180)
-        due=(date.today()+timedelta(days=interval)).isoformat()
+        due=(local_day()+timedelta(days=interval)).isoformat()
         db.execute('UPDATE flashcards SET interval=?,due=?,reviews=reviews+1 WHERE id=?',(interval,due,cid))
-        db.award(value.profile_id,'card','Tarjetas',5,f'{cid}:{date.today().isoformat()}')
+        db.award(value.profile_id,'card','Tarjetas',5,f'{cid}:{local_day_iso()}')
         record_event(db,value.profile_id,'flashcard_reviewed','Tarjetas',row['question'][:80],reference_type='flashcard',reference_id=cid,metadata={'rating':value.rating})
         return {'due':due}
 
