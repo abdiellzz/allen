@@ -28,6 +28,7 @@ Este directorio es la fuente oficial de documentación del proyecto.
 
 ## Releases
 
+- [ALLEN 1.2.1 — Security hardening](releases/RELEASE_1.2.1.md)
 - [ALLEN 1.2.0](releases/RELEASE_1.2.0.md)
 - [ALLEN 1.0.0](releases/RELEASE_1.0.0.md)
 - [CHANGELOG](../CHANGELOG.md)
