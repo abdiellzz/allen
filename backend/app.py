@@ -42,6 +42,7 @@ from .course_versioning import compare_versions, seed_initial_version, apply_ver
 from .version import ALLEN_VERSION
 from .licensing import LicenseManager, LicenseError
 from .time_utils import local_day, local_day_iso
+from .adventure_catalog import adventure_step_count, answer_is_correct
 
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))
 
@@ -1031,6 +1032,9 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.post('/api/adventures/start')
     def start_adventure(value:AdventureStart):
         user(value.profile_id)
+        total_steps=adventure_step_count(value.adventure_id)
+        if not total_steps:
+            raise HTTPException(422,'La aventura seleccionada no existe.')
         current=db.one("SELECT * FROM adventure_sessions WHERE user_id=? AND adventure_id=? AND status IN ('active','paused') ORDER BY id DESC LIMIT 1",(value.profile_id,value.adventure_id))
         if current:
             db.execute("UPDATE adventure_sessions SET status='active',updated_at=? WHERE id=?",(now(),current['id']))
@@ -1053,22 +1057,65 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         user(value.profile_id)
         row=db.one('SELECT * FROM adventure_sessions WHERE id=? AND user_id=?',(sid,value.profile_id))
         if not row: raise HTTPException(404,'No encontramos esa aventura.')
-        answers=json.loads(row['answers'] or '[]'); mistakes=row['mistakes']; hints=row['hints_used']; status=row['status']; completed=row['completed_steps']; current=row['current_step']; completed_at=row['completed_at']
+        total_steps=adventure_step_count(row['adventure_id'])
+        if not total_steps:
+            raise HTTPException(409,'La aventura ya no es compatible con esta versión.')
+        if row['status'] in ('completed','abandoned') and value.event not in ('resume',):
+            raise HTTPException(409,'Esta aventura ya está finalizada.')
+        answers=json.loads(row['answers'] or '[]')
+        mistakes=row['mistakes']
+        hints=row['hints_used']
+        status=row['status']
+        completed=row['completed_steps']
+        current=row['current_step']
+        completed_at=row['completed_at']
+        computed_correct=None
+
         if value.event=='answer':
-            answers.append(dict(step=value.step,answer=value.answer,correct=value.correct))
-            if value.correct is False: mistakes+=1
-        elif value.event=='hint': hints+=1
-        elif value.event=='advance': current=max(current,value.step); completed=max(completed,value.step)
-        elif value.event=='pause': status='paused'
-        elif value.event=='resume': status='active'
-        elif value.event=='complete': status='completed'; completed_at=now()
-        elif value.event=='abandon': status='abandoned'; completed_at=now()
-        db.execute('INSERT INTO adventure_events(user_id,session_id,event,step,answer,correct,created) VALUES(?,?,?,?,?,?,?)',(value.profile_id,sid,value.event,value.step,value.answer,None if value.correct is None else int(value.correct),now()))
+            if value.step!=current:
+                raise HTTPException(409,'Responde el paso actual antes de continuar.')
+            if value.step<0 or value.step>=total_steps:
+                raise HTTPException(422,'Paso fuera de rango.')
+            computed_correct=answer_is_correct(row['adventure_id'],value.step,value.answer)
+            answers.append(dict(step=value.step,answer=value.answer,correct=computed_correct))
+            if not computed_correct:
+                mistakes+=1
+        elif value.event=='hint':
+            if value.step!=current:
+                raise HTTPException(409,'La pista debe corresponder al paso actual.')
+            hints+=1
+        elif value.event=='advance':
+            if value.step!=current+1 or value.step>=total_steps:
+                raise HTTPException(409,'Avanza únicamente al siguiente paso.')
+            solved=any(item.get('step')==current and item.get('correct') is True for item in answers)
+            if not solved:
+                raise HTTPException(409,'Primero responde correctamente el paso actual.')
+            current=value.step
+            completed=max(completed,value.step)
+        elif value.event=='pause':
+            status='paused'
+        elif value.event=='resume':
+            if status!='paused':
+                raise HTTPException(409,'La aventura no está pausada.')
+            status='active'
+        elif value.event=='complete':
+            solved=any(item.get('step')==total_steps-1 and item.get('correct') is True for item in answers)
+            if current!=total_steps-1 or value.step!=total_steps or not solved:
+                raise HTTPException(409,'Completa correctamente todos los pasos antes de finalizar.')
+            status='completed'
+            completed=total_steps
+            completed_at=now()
+        elif value.event=='abandon':
+            status='abandoned'
+            completed_at=now()
+
+        event_correct=computed_correct if value.event=='answer' else None
+        db.execute('INSERT INTO adventure_events(user_id,session_id,event,step,answer,correct,created) VALUES(?,?,?,?,?,?,?)',(value.profile_id,sid,value.event,value.step,value.answer,None if event_correct is None else int(event_correct),now()))
         db.execute('UPDATE adventure_sessions SET status=?,current_step=?,completed_steps=?,answers=?,mistakes=?,hints_used=?,updated_at=?,completed_at=? WHERE id=?',(status,current,completed,json.dumps(answers,ensure_ascii=False),mistakes,hints,now(),completed_at,sid))
         if value.event=='hint':
             record_event(db,value.profile_id,'hint_used',reference_type='adventure',reference_id=sid)
         if value.event=='answer':
-            record_event(db,value.profile_id,'question_answered',reference_type='adventure',reference_id=sid,metadata={'correct':value.correct})
+            record_event(db,value.profile_id,'question_answered',reference_type='adventure',reference_id=sid,metadata={'correct':computed_correct})
         if value.event=='complete':
             record_event(db,value.profile_id,'adventure_completed',reference_type='adventure',reference_id=sid)
             db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='adventure' AND reference_id=?",(value.profile_id,sid))
@@ -1076,7 +1123,10 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='adventure' AND reference_id=?",(value.profile_id,sid))
         else:
             db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'adventure',sid,'','',status,now()))
-        return db.one('SELECT * FROM adventure_sessions WHERE id=?',(sid,))
+        result=db.one('SELECT * FROM adventure_sessions WHERE id=?',(sid,))
+        if value.event=='answer':
+            result['correct']=computed_correct
+        return result
 
     @app.post('/api/simulations')
     def create_simulation(value:SimulationCreate):
