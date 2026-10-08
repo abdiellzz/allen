@@ -1,12 +1,12 @@
 # Instalación y primera ejecución
 
-ALLEN 1.2.0 está orientado primero a Windows 10/11 x64.
+ALLEN 1.2.1 está orientado primero a Windows 10/11 x64.
 
 ## Opción recomendada: instalador
 
 Descarga el artefacto `allen-installer` generado por GitHub Actions y ejecuta:
 
-`ALLEN-1.2.0-Setup-Windows-x64.exe`
+`ALLEN-1.2.1-Setup-Windows-x64.exe`
 
 No necesitas instalar Python.
 
