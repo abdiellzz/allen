@@ -168,3 +168,20 @@ def test_system_routes_are_teacher_protected(tmp_path):
     client.post("/api/teacher/security/setup",json={"pin":"123456"})
     assert client.get("/api/system/integrity").status_code==200
     client.close()
+
+
+def test_plaintext_backup_export_is_disabled_in_distributed_mode(tmp_path):
+    app=create_app(
+        tmp_path/"allen.sqlite3",
+        require_license=False,
+        require_local_access=False,
+        require_teacher_auth=True,
+    )
+    client=TestClient(app)
+    token=client.get("/api/bootstrap").json()["token"]
+    client.headers["X-Allen-Token"]=token
+    client.post("/api/teacher/security/setup",json={"pin":"123456"})
+    response=client.get("/api/backup/export?profile_id=1")
+    assert response.status_code==409
+    assert "cifrados" in response.json()["detail"]
+    client.close()
