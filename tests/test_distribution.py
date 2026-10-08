@@ -21,7 +21,8 @@ def test_distribution_files_define_both_windows_packages():
     assert "portable.flag" in build
     assert "ALLEN_DATA_ROOT" in launcher
     assert "PrivilegesRequired=lowest" in installer
-    assert "actions/upload-artifact@v4" in workflow
+    assert "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02" in workflow
+    assert "actions/upload-artifact@v4" not in workflow
 
 
 def test_complete_remover_is_packaged_and_guarded():
