@@ -8,12 +8,12 @@ import sys
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Query
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -41,7 +41,7 @@ from .licensing import LicenseManager, LicenseError
 
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))
 
-def create_app(db_path=None, ai=None, require_license=None):
+def create_app(db_path=None, ai=None, require_license=None, require_local_access=None):
     local_root=Path(os.environ.get('ALLEN_DATA_ROOT') or (Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'))
     db=Database(db_path or os.environ.get('ALLEN_DB_PATH',local_root/'allen.sqlite3'))
     licensing=LicenseManager(local_root, ROOT/'config/license_public_key.pem')
@@ -49,6 +49,8 @@ def create_app(db_path=None, ai=None, require_license=None):
     library=Library(ROOT/'data/library')
     engine=ai or LocalAI()
     token=secrets.token_urlsafe(32)
+    access_key=secrets.token_urlsafe(32)
+    local_access_required = (db_path is None) if require_local_access is None else bool(require_local_access)
     privacy_epoch=0
     logger=logging.getLogger('allen')
     if not logger.handlers:
@@ -65,10 +67,30 @@ def create_app(db_path=None, ai=None, require_license=None):
     app=FastAPI(title='ALLEN local',version=ALLEN_VERSION,docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
     app.state.db=db
     app.state.licensing=licensing
+    app.state.access_key=access_key
     app.add_middleware(TrustedHostMiddleware,allowed_hosts=['127.0.0.1','localhost','[::1]']+(['testserver'] if db_path else []))
+
+    def security_headers(response):
+        response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+        response.headers['X-Content-Type-Options']='nosniff'
+        response.headers['Referrer-Policy']='no-referrer'
+        response.headers['Cache-Control']='no-store'
+        response.headers['Permissions-Policy']='camera=(), microphone=(), geolocation=()'
+        return response
 
     @app.middleware('http')
     async def local_guard(request,call_next):
+        if local_access_required and request.url.path != '/api/health':
+            launch_key=request.query_params.get('access','')
+            cookie_key=request.cookies.get('allen_access','')
+            if request.method=='GET' and launch_key and secrets.compare_digest(launch_key,access_key):
+                clean=[(k,v) for k,v in request.query_params.multi_items() if k!='access']
+                target=request.url.path+('?' + urlencode(clean) if clean else '')
+                response=RedirectResponse(target,status_code=303)
+                response.set_cookie('allen_access',access_key,httponly=True,samesite='strict',secure=False,path='/')
+                return security_headers(response)
+            if not cookie_key or not secrets.compare_digest(cookie_key,access_key):
+                return security_headers(JSONResponse({'error':'Abre ALLEN desde su aplicación de escritorio.'},403))
         origin=request.headers.get('origin')
         if origin and origin != str(request.base_url).rstrip('/'):
             return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
@@ -97,11 +119,7 @@ def create_app(db_path=None, ai=None, require_license=None):
             if len(body)>max_body:
                 return JSONResponse({'error':'El archivo o texto es demasiado largo.'},413)
         response=await call_next(request)
-        response.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
-        response.headers['X-Content-Type-Options']='nosniff'
-        response.headers['Referrer-Policy']='no-referrer'
-        response.headers['Cache-Control']='no-store'
-        return response
+        return security_headers(response)
 
     @app.exception_handler(RequestValidationError)
     async def validation(request,exc):
