@@ -4,6 +4,16 @@ Todos los cambios relevantes de ALLEN se documentan aquí.
 
 ## [Unreleased]
 
+## [1.2.3] — 2026-10-08
+
+### Segunda auditoría técnica
+- Caché de biblioteca local con invalidación por cambios de archivos.
+- Course Quality detecta objetivos genéricos y distractores que reutilizan respuestas correctas de otros temas.
+- El generador de exámenes deja de usar fragmentos verdaderos de otros temas como opciones incorrectas.
+- Nuevas pruebas de regresión para rendimiento y calidad pedagógica.
+- Revisión completa de los hallazgos del informe técnico original contra main 1.2.2.
+
+
 ## [1.2.2] — 2026-10-08
 
 ### Auditoría y seguridad
