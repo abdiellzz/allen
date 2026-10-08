@@ -18,6 +18,9 @@ $built = Resolve-Path "dist\ALLEN"
 & "$built\ALLEN.exe" --self-test
 if ($LASTEXITCODE -ne 0) { throw "El ejecutable empaquetado no pasó el self-test." }
 
+& "$built\ALLEN.exe" --server-smoke-test
+if ($LASTEXITCODE -ne 0) { throw "El ejecutable empaquetado no pudo iniciar el servidor local." }
+
 Remove-Item "artifacts" -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path "artifacts" | Out-Null
 Remove-Item "build\distribution" -Recurse -Force -ErrorAction SilentlyContinue
