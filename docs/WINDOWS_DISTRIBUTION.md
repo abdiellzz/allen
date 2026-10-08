@@ -1,12 +1,12 @@
 # Distribución de ALLEN para Windows
 
-ALLEN 1.1.0 produce dos artefactos para Windows x64 a partir del mismo build congelado.
+ALLEN 1.1.1 produce dos artefactos para Windows x64 a partir del mismo build congelado.
 
 ## 1. Portable
 
 Archivo esperado:
 
-\`ALLEN-1.1.0-Portable-Windows-x64.zip\`
+\`ALLEN-1.1.1-Portable-Windows-x64.zip\`
 
 Características:
 
@@ -25,7 +25,7 @@ El archivo \`portable.flag\` activa este comportamiento. No debe eliminarse del 
 
 Archivo esperado:
 
-\`ALLEN-1.1.0-Setup-Windows-x64.exe\`
+\`ALLEN-1.1.1-Setup-Windows-x64.exe\`
 
 Características:
 
@@ -83,3 +83,26 @@ La instalación normal no define esa variable y conserva el comportamiento estab
 \`%LOCALAPPDATA%\ALLEN\`
 
 Los modelos GGUF, bases SQLite, logs y datos personales continúan fuera del repositorio.
+
+
+## Eliminación completa
+
+Ambos paquetes incluyen:
+
+- `Eliminar ALLEN completamente.bat`
+- `remove_allen.ps1`
+
+El flujo copia el script PowerShell a `%TEMP%`, por lo que puede eliminar la propia carpeta desde la que se ejecutó. Antes de borrar nada exige escribir exactamente `BORRAR`.
+
+Elimina:
+
+- `%LOCALAPPDATA%\ALLEN`;
+- `%LOCALAPPDATA%\Programs\ALLEN`;
+- instalaciones heredadas en `%LOCALAPPDATA%\ALLEN\app`;
+- `ALLEN-Data` del Portable;
+- accesos directos de ALLEN;
+- temporales cuyo nombre pertenece a ALLEN.
+
+Cuando existe `unins000.exe`, se ejecuta primero de forma silenciosa para retirar correctamente la entrada de desinstalación de Windows.
+
+No elimina automáticamente modelos `.gguf` ni llama.cpp externos.
