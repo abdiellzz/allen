@@ -1,10 +1,11 @@
 from .learning_engine import recommend_next_action
 from .learning_intelligence import due_reviews
+from .time_utils import local_day
 
 def build_recommendation(db,user_id):
     next_action=recommend_next_action(db,user_id)
     topic_reviews=due_reviews(db,user_id,5)
-    due=db.one("SELECT count(*) n FROM flashcards WHERE user_id=? AND due<=date('now')",(user_id,))["n"]
+    due=db.one("SELECT count(*) n FROM flashcards WHERE user_id=? AND due<=?",(user_id,local_day().isoformat()))["n"]
     active=db.one("SELECT * FROM profile_current_activity WHERE user_id=?",(user_id,))
     if active and active.get("status") in ("active","paused"):
         if active.get("activity_type")=="course" and active.get("reference_id"):
