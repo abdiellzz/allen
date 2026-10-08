@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 BASE_VERSION=8
-LATEST_SCHEMA_VERSION=10
+LATEST_SCHEMA_VERSION=11
 
 MIGRATIONS={
     9: (
@@ -30,6 +30,17 @@ MIGRATIONS={
             version INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
             applied_at TEXT NOT NULL
+        );
+        """
+    ),
+    11: (
+        "teacher_security",
+        """
+        CREATE TABLE IF NOT EXISTS teacher_security(
+            id INTEGER PRIMARY KEY CHECK(id=1),
+            salt TEXT NOT NULL,
+            pin_hash TEXT NOT NULL,
+            updated_at TEXT NOT NULL
         );
         """
     ),
