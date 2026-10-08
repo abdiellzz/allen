@@ -56,6 +56,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     token=secrets.token_urlsafe(32)
     fair_token_value=secrets.token_urlsafe(32)
     teacher_session=secrets.token_urlsafe(32)
+    teacher_session_until=0.0
     teacher_failures=[]
     access_key=secrets.token_urlsafe(32)
     launch_token=secrets.token_urlsafe(32)
@@ -128,7 +129,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 return security_headers(JSONResponse({'error':'Modo Feria aislado: esta API no está disponible.','fair_restricted':True},403))
         origin=request.headers.get('origin')
         if origin and origin != str(request.base_url).rstrip('/'):
-            return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
+            return security_headers(JSONResponse({'error':'Abre Allen desde su dirección local.'},403))
         if request.headers.get('sec-fetch-site')=='cross-site':
             return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
         if request.method in ('POST','PUT','DELETE','PATCH'):
@@ -148,7 +149,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             or request.url.path.startswith('/api/recovery/')
             or request.url.path.startswith('/api/system/')
         )
-        if teacher_auth_required and protected_teacher and request.url.path not in teacher_security_paths and not teacher_unlocked(request):
+        if teacher_auth_required and protected_teacher and request.url.path not in teacher_security_paths and not teacher_unlocked(request,touch=True):
             return security_headers(JSONResponse({'error':'Se requiere autorización de profesor.','teacher_auth_required':True},403))
         if licensing_required and request.url.path.startswith('/api/'):
             allowed = {
@@ -159,7 +160,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 '/api/license/activate',
             }
             if request.url.path not in allowed and not licensing.status().get('active'):
-                return JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402)
+                return security_headers(JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402))
         if request.url.path.startswith('/api/'):
             max_body=12_500_000 if request.url.path=='/api/teacher/import' or request.url.path.endswith('/versions') else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 8_000_000 if request.url.path.startswith('/api/backup/') else 200000
             try:
@@ -245,9 +246,17 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     def teacher_configured():
         return bool(db.one("SELECT id FROM teacher_security WHERE id=1"))
 
-    def teacher_unlocked(request):
+    def teacher_unlocked(request,touch=False):
+        nonlocal teacher_session_until
         value=request.cookies.get('allen_teacher','')
-        return bool(value and secrets.compare_digest(value,teacher_session))
+        valid=bool(
+            value
+            and secrets.compare_digest(value,teacher_session)
+            and time.monotonic()<teacher_session_until
+        )
+        if valid and touch:
+            teacher_session_until=time.monotonic()+900
+        return valid
 
     def pin_digest(pin,salt_hex):
         return hashlib.scrypt(pin.encode('utf-8'),salt=bytes.fromhex(salt_hex),n=2**14,r=8,p=1,dklen=32).hex()
@@ -300,18 +309,20 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
 
     @app.post('/api/teacher/security/setup')
     def teacher_security_setup(value:TeacherPin,request:Request):
+        nonlocal teacher_session_until
         if teacher_configured():
             raise HTTPException(409,'El PIN de profesor ya está configurado.')
         salt=secrets.token_bytes(16).hex()
         digest=pin_digest(value.pin,salt)
         db.execute("INSERT INTO teacher_security(id,salt,pin_hash,updated_at) VALUES(1,?,?,?)",(salt,digest,now()))
+        teacher_session_until=time.monotonic()+900
         response=JSONResponse({'configured':True,'unlocked':True})
         response.set_cookie('allen_teacher',teacher_session,httponly=True,samesite='strict',secure=False,path='/')
         return response
 
     @app.post('/api/teacher/security/unlock')
     def teacher_security_unlock(value:TeacherPin):
-        nonlocal teacher_session
+        nonlocal teacher_session, teacher_session_until
         now_mono=time.monotonic()
         teacher_failures[:]=[attempt for attempt in teacher_failures if now_mono-attempt<60]
         if len(teacher_failures)>=5:
@@ -325,14 +336,16 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             raise HTTPException(403,'PIN de profesor incorrecto.')
         teacher_failures.clear()
         teacher_session=secrets.token_urlsafe(32)
+        teacher_session_until=time.monotonic()+900
         response=JSONResponse({'configured':True,'unlocked':True})
         response.set_cookie('allen_teacher',teacher_session,httponly=True,samesite='strict',secure=False,path='/')
         return response
 
     @app.post('/api/teacher/security/lock')
     def teacher_security_lock():
-        nonlocal teacher_session
+        nonlocal teacher_session, teacher_session_until
         teacher_session=secrets.token_urlsafe(32)
+        teacher_session_until=0.0
         response=JSONResponse({'configured':teacher_configured(),'unlocked':False})
         response.delete_cookie('allen_teacher',path='/')
         return response
