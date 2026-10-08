@@ -183,5 +183,5 @@ def test_plaintext_backup_export_is_disabled_in_distributed_mode(tmp_path):
     client.post("/api/teacher/security/setup",json={"pin":"123456"})
     response=client.get("/api/backup/export?profile_id=1")
     assert response.status_code==409
-    assert "cifrados" in response.json()["detail"]
+    assert "cifrados" in response.json()["error"]
     client.close()
