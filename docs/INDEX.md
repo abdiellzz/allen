@@ -18,6 +18,7 @@ Este directorio es la fuente oficial de documentación del proyecto.
 ## Desarrollo
 
 - [Arquitectura](ARCHITECTURE.md)
+- [Auditoría de seguridad 2026-10-08](SECURITY_AUDIT_2026-10-08.md)
 - [Auditoría de ciberseguridad 2026-10-07](SECURITY_AUDIT_2026-10-07.md)
 - [Segunda auditoría técnica 2026-10-08](SECURITY_AUDIT_RECHECK_2026-10-08.md)
 - [Guía de desarrollo](DEVELOPMENT.md)
@@ -29,6 +30,7 @@ Este directorio es la fuente oficial de documentación del proyecto.
 
 ## Releases
 
+- [ALLEN 1.2.4 — Exploit resistance](releases/RELEASE_1.2.4.md)
 - [ALLEN 1.2.1 — Security hardening](releases/RELEASE_1.2.1.md)
 - [ALLEN 1.2.0](releases/RELEASE_1.2.0.md)
 - [ALLEN 1.0.0](releases/RELEASE_1.0.0.md)

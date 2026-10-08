@@ -7,7 +7,8 @@ import sys
 import tempfile
 import threading
 import time
-import urllib.request
+import http.client
+import json
 import webbrowser
 
 
@@ -26,12 +27,21 @@ def configure_distribution_mode() -> Path:
     return root
 
 
-def health_ready(url: str = "http://127.0.0.1:8787/api/health") -> bool:
+def health_ready(expected_instance: str | None = None) -> bool:
+    connection=http.client.HTTPConnection("127.0.0.1",8787,timeout=0.75)
     try:
-        with urllib.request.urlopen(url, timeout=0.75) as response:
-            return response.status == 200
-    except OSError:
+        connection.request("GET","/api/health",headers={"Host":"127.0.0.1:8787"})
+        response=connection.getresponse()
+        if response.status != 200:
+            return False
+        payload=json.loads(response.read().decode("utf-8"))
+        if payload.get("ok") is not True:
+            return False
+        return expected_instance is None or payload.get("instance")==expected_instance
+    except (OSError,ValueError,json.JSONDecodeError,http.client.HTTPException):
         return False
+    finally:
+        connection.close()
 
 
 def runtime_components():
@@ -75,7 +85,7 @@ def server_smoke_test() -> int:
         thread.start()
         ready=False
         for _ in range(80):
-            if health_ready():
+            if health_ready(expected_instance=app.state.instance_id):
                 ready=True
                 break
             time.sleep(0.25)
@@ -133,7 +143,7 @@ def run_gui() -> int:
     root.protocol("WM_DELETE_WINDOW", close_allen)
 
     def server_worker():
-        if health_ready():
+        if health_ready(expected_instance=app.state.instance_id):
             root.after(0, lambda: status.set("ALLEN ya está activo."))
             return
         config = uvicorn.Config(app, host="127.0.0.1", port=8787, access_log=False, log_level="warning")
@@ -148,7 +158,7 @@ def run_gui() -> int:
         for _ in range(80):
             if stop_event.is_set():
                 return
-            if health_ready():
+            if health_ready(expected_instance=app.state.instance_id):
                 root.after(0, lambda: status.set("ALLEN está listo."))
                 root.after(0, open_allen)
                 return

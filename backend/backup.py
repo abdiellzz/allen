@@ -2,11 +2,19 @@ from __future__ import annotations
 import json
 FORMAT="allen-backup"; VERSION=1
 TABLES=("users","progress","quiz_results","flashcards","learning_sessions","library_packs","student_memory","saved_answers","conversations","conversation_states","study_plans","study_sessions","study_session_events","adventure_sessions","adventure_events","simulation_results","topic_mastery","learning_events","profile_current_activity","teacher_documents","courses","course_enrollments","course_exam_results","course_exam_sessions","curriculum_edges","question_bank","course_quality_reviews","diagnostic_results","course_versions")
+TABLE_SET=frozenset(TABLES)
+
+def _safe_table(table):
+    if table not in TABLE_SET:
+        raise ValueError('Tabla de respaldo no permitida.')
+    return table
+
 
 def export_backup(db):
     data={"format":FORMAT,"version":VERSION,"tables":{}}
     for table in TABLES:
-        try:data["tables"][table]=db.all(f"SELECT * FROM {table}")
+        table=_safe_table(table)
+        try:data["tables"][table]=db.all(f"SELECT * FROM {table}")  # nosec B608: table is a closed allowlist
         except Exception:data["tables"][table]=[]
     try:data["settings"]=db.settings().model_dump()
     except Exception:data["settings"]={}
@@ -30,9 +38,11 @@ def restore_backup(db,payload):
         con.execute("PRAGMA foreign_keys=OFF")
         schema_columns={}
         for table in TABLES:
-            schema_columns[table]={row["name"] for row in con.execute(f"PRAGMA table_info({table})").fetchall()}
+            table=_safe_table(table)
+            schema_columns[table]={row["name"] for row in con.execute(f"PRAGMA table_info({table})").fetchall()}  # nosec B608: allowlisted table
         for table in reversed(TABLES):
-            con.execute(f"DELETE FROM {table}")
+            table=_safe_table(table)
+            con.execute(f"DELETE FROM {table}")  # nosec B608: allowlisted table
         for table in TABLES:
             rows=tables.get(table,[])
             if not isinstance(rows,list):
@@ -47,9 +57,11 @@ def restore_backup(db,payload):
                 cols=[c for c in row.keys() if c in allowed]
                 if not cols:
                     continue
+                if any(col not in allowed for col in cols):
+                    raise ValueError(f"El respaldo contiene columnas no válidas en {table}.")
                 values=[row[c] for c in cols]
                 q=",".join("?" for _ in cols)
-                con.execute(f"INSERT INTO {table}({','.join(cols)}) VALUES({q})",values)
+                con.execute(f"INSERT INTO {table}({','.join(cols)}) VALUES({q})",values)  # nosec B608: table allowlisted, columns verified against PRAGMA
         settings=payload.get("settings")
         if isinstance(settings,dict):
             from .schemas import Settings

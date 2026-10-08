@@ -39,7 +39,7 @@ El servidor de ALLEN escucha solamente en:
 
 `127.0.0.1:8787`
 
-Además, las instalaciones normales usan un secreto aleatorio por ejecución. El launcher abre el navegador con ese secreto una sola vez y ALLEN establece una cookie de sesión `HttpOnly` + `SameSite=Strict`. Esto evita que otro proceso local pueda leer `/api/bootstrap` y obtener el token de mutación simplemente por conocer el puerto.
+Además, las instalaciones normales usan un secreto aleatorio por ejecución. El launcher abre el navegador con ese secreto una sola vez y ALLEN establece una cookie de sesión `HttpOnly` + `SameSite=Strict`. Esto evita que otro proceso local pueda leer `/api/bootstrap` y obtener el token de mutación simplemente por conocer el puerto. El endpoint de readiness usa además una identidad efímera por proceso para que el launcher no confíe en otro servicio que haya ocupado el puerto 8787.
 
 La conexión al modelo local debe permanecer igualmente en loopback.
 
@@ -62,6 +62,11 @@ Entre las defensas del producto:
 - logs sin conversaciones;
 - licencia firmada Ed25519;
 - secreto efímero de acceso local por ejecución;
+- identidad efímera del proceso para detectar suplantación del puerto 8787;
+- PIN docente obligatorio antes del primer uso comercial;
+- privilegios docentes para borrado de perfiles y cambios globales sensibles;
+- límites estructurales para Course Packs y documentos importados;
+- Bandit SAST en CI;
 - auditoría de dependencias con `pip-audit` en CI;
 - GitHub Actions fijadas a SHAs inmutables y token del workflow con `contents: read`.
 

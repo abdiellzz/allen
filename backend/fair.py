@@ -42,10 +42,34 @@ class FairChat(Visitor):
 def install_fair(app, db, engine):
     router=APIRouter(prefix='/api/fair')
     sessions={}
-    for table in ('fair_sessions','fair_questions','fair_quizzes','fair_challenges'):
-        db.execute(f'CREATE TABLE IF NOT EXISTS {table}(day TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, seconds INTEGER NOT NULL DEFAULT 0)')
+    fair_sql={
+        'fair_sessions':{
+            'create':'CREATE TABLE IF NOT EXISTS fair_sessions(day TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, seconds INTEGER NOT NULL DEFAULT 0)',
+            'count':'INSERT INTO fair_sessions(day,count,seconds) VALUES(?,?,?) ON CONFLICT(day) DO UPDATE SET count=count+excluded.count,seconds=seconds+excluded.seconds',
+            'select':'SELECT count,seconds FROM fair_sessions WHERE day=?',
+        },
+        'fair_questions':{
+            'create':'CREATE TABLE IF NOT EXISTS fair_questions(day TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, seconds INTEGER NOT NULL DEFAULT 0)',
+            'count':'INSERT INTO fair_questions(day,count,seconds) VALUES(?,?,?) ON CONFLICT(day) DO UPDATE SET count=count+excluded.count,seconds=seconds+excluded.seconds',
+            'select':'SELECT count,seconds FROM fair_questions WHERE day=?',
+        },
+        'fair_quizzes':{
+            'create':'CREATE TABLE IF NOT EXISTS fair_quizzes(day TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, seconds INTEGER NOT NULL DEFAULT 0)',
+            'count':'INSERT INTO fair_quizzes(day,count,seconds) VALUES(?,?,?) ON CONFLICT(day) DO UPDATE SET count=count+excluded.count,seconds=seconds+excluded.seconds',
+            'select':'SELECT count,seconds FROM fair_quizzes WHERE day=?',
+        },
+        'fair_challenges':{
+            'create':'CREATE TABLE IF NOT EXISTS fair_challenges(day TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, seconds INTEGER NOT NULL DEFAULT 0)',
+            'count':'INSERT INTO fair_challenges(day,count,seconds) VALUES(?,?,?) ON CONFLICT(day) DO UPDATE SET count=count+excluded.count,seconds=seconds+excluded.seconds',
+            'select':'SELECT count,seconds FROM fair_challenges WHERE day=?',
+        },
+    }
+    for statements in fair_sql.values():
+        db.execute(statements['create'])
     def count(table, seconds=0, amount=1):
-        db.execute(f'INSERT INTO {table}(day,count,seconds) VALUES(?,?,?) ON CONFLICT(day) DO UPDATE SET count=count+excluded.count,seconds=seconds+excluded.seconds',(local_day_iso(),amount,seconds))
+        statements=fair_sql.get(table)
+        if not statements: raise ValueError('Contador de feria no válido.')
+        db.execute(statements['count'],(local_day_iso(),amount,seconds))
     def visitor(key):
         item=sessions.get(key)
         if not item or time.monotonic()-item['seen']>210:
@@ -96,7 +120,7 @@ def install_fair(app, db, engine):
         return {'ok':True}
     @router.get('/stats')
     def stats():
-        return {table:db.one(f'SELECT count,seconds FROM {table} WHERE day=?',(local_day_iso(),)) or {'count':0,'seconds':0} for table in ('fair_sessions','fair_questions','fair_quizzes','fair_challenges')}
+        return {table:db.one(fair_sql[table]['select'],(local_day_iso(),)) or {'count':0,'seconds':0} for table in fair_sql}
     @router.post('/challenge')
     def challenge(value:Challenge):
         item=visitor(value.session)

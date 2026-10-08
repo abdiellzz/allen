@@ -60,3 +60,20 @@ def test_public_and_local_app_are_separate():
     assert (ROOT / "public" / "index.html").is_file()
     assert (ROOT / "frontend" / "index.html").is_file()
     assert (ROOT / "vercel.json").is_file()
+
+
+def test_source_tree_contains_no_private_key_material():
+    roots=[ROOT/"backend",ROOT/"tools",ROOT/"distribution",ROOT/"config"]
+    forbidden=(
+        "-----BEGIN PRIVATE KEY-----",
+        "-----BEGIN ENCRYPTED PRIVATE KEY-----",
+        "github_pat_",
+        "ghp_",
+    )
+    for base in roots:
+        for path in base.rglob("*"):
+            if not path.is_file() or path.suffix.lower() not in {".py",".json",".txt",".md",".yml",".yaml",".pem"}:
+                continue
+            text=path.read_text(encoding="utf-8",errors="ignore")
+            for marker in forbidden:
+                assert marker not in text, f"possible secret material in {path.relative_to(ROOT)}"

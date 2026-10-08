@@ -42,6 +42,25 @@ function licenseDate(value){
  try{return new Intl.DateTimeFormat('es-PA',{day:'numeric',month:'short',year:'numeric'}).format(new Date(value+'T12:00:00'));}
  catch{return value;}
 }
+
+function teacherSetupGate(){
+ document.body.classList.add('license-locked');
+ $('#breadcrumb').textContent='Seguridad inicial';
+ $('#profile-select').closest('label')?.classList.add('hidden');
+ content.innerHTML=`
+ <section class="license-gate" aria-labelledby="teacher-setup-title">
+  <div class="license-card">
+   <div class="license-mark">${icon('shield-check',28)}</div>
+   <span class="eyebrow">CONFIGURACIÓN OBLIGATORIA</span>
+   <h1 id="teacher-setup-title">Protege el modo profesor</h1>
+   <p>Antes de usar ALLEN por primera vez, crea un PIN de profesor. Este PIN protege Teacher Studio, respaldos, recuperación y acciones administrativas.</p>
+   <button id="teacher-setup-start" type="button">Crear PIN de profesor</button>
+   <p class="muted">Usa entre 6 y 12 dígitos y guárdalo en un lugar seguro.</p>
+  </div>
+ </section>`;
+ $('#teacher-setup-start').onclick=()=>guarded(async()=>{if(await ensureTeacherAccess()){toast('Seguridad docente configurada.');await bootstrap();state.page='Inicio';await render();}});
+}
+
 function licenseGate(status){
  const machine=esc(status?.machine_id||'—');
  document.body.classList.add('license-locked');
@@ -425,6 +444,7 @@ async function bootstrap(){
  state.settings=data.settings||{};
  state.catalog=data.catalog||{};
  if(state.license?.required&&!state.license?.active){licenseGate(state.license);return false;}
+ if(data.teacher_security?.required&&data.teacher_security.configured===false){teacherSetupGate();return false;}
  document.body.classList.remove('license-locked');
  $('#profile-select').closest('label')?.classList.remove('hidden');
  if(!state.profiles.length)throw new Error('ALLEN no encontró perfiles locales.');

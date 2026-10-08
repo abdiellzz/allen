@@ -53,6 +53,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     library=Library(ROOT/'data/library')
     engine=ai or LocalAI()
     token=secrets.token_urlsafe(32)
+    instance_id=secrets.token_urlsafe(24)
     fair_token_value=secrets.token_urlsafe(32)
     teacher_session=secrets.token_urlsafe(32)
     teacher_failures=[]
@@ -76,6 +77,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
 
     app=FastAPI(title='ALLEN local',version=ALLEN_VERSION,docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
     app.state.db=db
+    app.state.instance_id=instance_id
     app.state.licensing=licensing
     app.state.access_key=access_key
     def issue_launch_token():
@@ -127,9 +129,9 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 return security_headers(JSONResponse({'error':'Modo Feria aislado: esta API no está disponible.','fair_restricted':True},403))
         origin=request.headers.get('origin')
         if origin and origin != str(request.base_url).rstrip('/'):
-            return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
+            return security_headers(JSONResponse({'error':'Abre Allen desde su dirección local.'},403))
         if request.headers.get('sec-fetch-site')=='cross-site':
-            return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
+            return security_headers(JSONResponse({'error':'Abre Allen desde su dirección local.'},403))
         if request.method in ('POST','PUT','DELETE','PATCH'):
             fair_auth_path=request.url.path.startswith('/api/fair/') or (fair_mode and request.url.path=='/api/teacher/security/unlock')
             expected_token=fair_token_value if fair_auth_path else token
@@ -158,7 +160,19 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 '/api/license/activate',
             }
             if request.url.path not in allowed and not licensing.status().get('active'):
-                return JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402)
+                return security_headers(JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402))
+        if teacher_auth_required and request.url.path.startswith('/api/') and not teacher_configured():
+            setup_allowed={
+                '/api/bootstrap',
+                '/api/health',
+                '/api/license/status',
+                '/api/license/machine-id',
+                '/api/license/activate',
+                '/api/teacher/security/status',
+                '/api/teacher/security/setup',
+            }
+            if request.url.path not in setup_allowed:
+                return security_headers(JSONResponse({'error':'Configura primero el PIN de profesor.','teacher_setup_required':True},428))
         if request.url.path.startswith('/api/'):
             max_body=12_500_000 if request.url.path=='/api/teacher/import' or request.url.path.endswith('/versions') else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 8_000_000 if request.url.path.startswith('/api/backup/') else 200000
             try:
@@ -252,6 +266,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             profiles=[user(p['id']) for p in db.all('SELECT id FROM users')],
             settings=db.settings().model_dump(),
             catalog=catalog(),
+            teacher_security={'required':teacher_auth_required,'configured':teacher_configured()},
         )
 
     @app.get('/api/license/status')
@@ -334,7 +349,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.get('/api/health')
     def health():
         db.one('SELECT 1')
-        return dict(version=ALLEN_VERSION,application=True,database=True,library=len(library.documents()),internet='No se consulta Internet; el navegador informa de la red.')
+        return {'ok':True,'instance':instance_id}
 
     @app.get('/api/model/status')
     async def model_status():
@@ -345,8 +360,13 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         return db.settings().model_dump()
 
     @app.put('/api/settings')
-    def update_settings(value:Settings):
+    def update_settings(value:Settings,request:Request):
         nonlocal privacy_epoch
+        current=db.settings()
+        sensitive=('ai_server','model','temperature','context_size','max_tokens','save_history','retention_days','demo','performance')
+        changed_sensitive=any(getattr(current,key)!=getattr(value,key) for key in sensitive)
+        if teacher_auth_required and changed_sensitive and not teacher_unlocked(request):
+            raise HTTPException(403,'Se requiere autorización de profesor para cambiar ajustes globales.')
         if not value.save_history:
             privacy_epoch+=1
         db.execute('INSERT OR REPLACE INTO settings VALUES(1,?)',(value.model_dump_json(),))
@@ -367,7 +387,9 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         return user(uid)
 
     @app.delete('/api/profiles/{uid}')
-    def delete_profile(uid:int):
+    def delete_profile(uid:int,request:Request):
+        if teacher_auth_required and not teacher_unlocked(request):
+            raise HTTPException(403,'Se requiere autorización de profesor para eliminar perfiles.')
         nonlocal privacy_epoch
         privacy_epoch+=1
         user(uid); db.erase_profile(uid)
@@ -483,7 +505,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         if not session: raise HTTPException(404,'No encontramos esa sesión.')
         db.execute('INSERT INTO study_session_events(user_id,session_id,kind,activity_index,note,created) VALUES(?,?,?,?,?,?)',
             (value.profile_id,sid,value.kind,value.activity_index,value.note,now()))
-        fields=['current_activity_index=?','last_activity_at=?']; args=[value.activity_index,now()]
+        timestamp=now()
         status=session['status']
         completed=session.get('activities_completed',0); skipped=session.get('activities_skipped',0); difficulties=session.get('difficulties',0); hints=session.get('hints_used',0)
         if value.kind=='completed': completed+=1; status='completed'
@@ -492,11 +514,12 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         elif value.kind=='hint': hints+=1
         elif value.kind=='paused': status='paused'
         if status!='completed' and value.kind not in ('completed','paused'): status='active'
-        fields += ['activities_completed=?','activities_skipped=?','difficulties=?','hints_used=?','status=?']
-        args += [completed,skipped,difficulties,hints,status]
-        if status=='completed': fields.append('completed=?'); args.append(now())
-        args.append(sid)
-        db.execute('UPDATE study_sessions SET '+','.join(fields)+' WHERE id=?',tuple(args))
+        completed_at=timestamp if status=='completed' else session.get('completed')
+        db.execute("""UPDATE study_sessions
+            SET current_activity_index=?,last_activity_at=?,activities_completed=?,activities_skipped=?,
+                difficulties=?,hints_used=?,status=?,completed=?
+            WHERE id=?""",
+            (value.activity_index,timestamp,completed,skipped,difficulties,hints,status,completed_at,sid))
         plan=db.one("SELECT subject FROM study_plans WHERE id=?",(session['plan_id'],))
         subject=plan['subject'] if plan else ''
         if value.kind=='hint': record_event(db,value.profile_id,'hint_used',subject,'',reference_type='study_session',reference_id=sid)
