@@ -153,7 +153,9 @@ def build_course(title:str,subject:str,level:str,pages:list[dict],source_text:st
         for topic in topic_names[:4]:
             evidence=next((x for x in sample if any(k in x.lower() for k in topic.lower().split())),sample[0] if sample else source_text[:300])
             ref=_source_ref(pages,evidence)
-            objective=f"Explicar y aplicar {topic.lower()} usando el material del curso."
+            verbs=("Identificar","Comparar","Analizar","Aplicar")
+            verb=verbs[(idx+len(topics))%len(verbs)]
+            objective=f"{verb} {topic.lower()} y justificar la respuesta con evidencia del material del curso."
             topics.append({
                 "title":topic,
                 "objective":objective,
@@ -180,20 +182,11 @@ def build_course(title:str,subject:str,level:str,pages:list[dict],source_text:st
     final_exam=[]
     for idx,topic in enumerate(flat_topics[:10]):
         correct=topic.get("source_excerpt","")[:220]
-        distractors=[]
-        for other in flat_topics:
-            candidate=other.get("source_excerpt","")[:220]
-            if other is not topic and candidate and candidate!=correct and candidate not in distractors:
-                distractors.append(candidate)
-            if len(distractors)>=3: break
-        fallbacks=[
-            "El material no presenta esta idea como definición del tema.",
-            "Esta afirmación pertenece a otro concepto y no describe este tema.",
-            "No hay evidencia suficiente en la fuente para sostener esta afirmación.",
+        distractors=[
+            f"Según el material, {topic['title']} no guarda relación con el concepto descrito.",
+            f"El texto indica que {topic['title']} funciona de manera opuesta a la afirmación correcta.",
+            f"La fuente no atribuye a {topic['title']} la propiedad descrita en esta opción.",
         ]
-        for fallback in fallbacks:
-            if len(distractors)>=3: break
-            if fallback not in distractors and fallback!=correct: distractors.append(fallback)
         options=[correct]+distractors[:3]
         # Rotate deterministically so the correct answer is not always first.
         shift=idx%len(options)
