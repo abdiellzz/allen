@@ -1,5 +1,6 @@
 from __future__ import annotations
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta
+from .time_utils import local_day, local_day_from_iso, utc_now_iso
 
 STATUSES=("new","learning","practicing","reviewing","mastered","needs_reinforcement")
 
@@ -16,8 +17,8 @@ def compute_mastery(attempts=0,correct=0,incorrect=0,hints=0,practice_count=0,qu
     recent_bonus=0
     if last_seen:
         try:
-            seen=datetime.fromisoformat(str(last_seen).replace("Z","+00:00")).date()
-            age=(date.today()-seen).days
+            seen=local_day_from_iso(last_seen)
+            age=(local_day()-seen).days
             recent_bonus=6 if age<=1 else 3 if age<=7 else 0
         except Exception:
             pass
@@ -25,14 +26,14 @@ def compute_mastery(attempts=0,correct=0,incorrect=0,hints=0,practice_count=0,qu
     confidence=round(_clamp(evidence*100))
     if score>=85 and confidence>=55: status="mastered"
     elif incorrect>=3 and score<45: status="needs_reinforcement"
-    elif next_review and str(next_review)<=date.today().isoformat(): status="reviewing"
+    elif next_review and str(next_review)<=local_day().isoformat(): status="reviewing"
     elif score>=55: status="practicing"
     else: status="learning"
     return dict(score=score,confidence=confidence,status=status)
 
 def next_review_date(score:int):
     days=1 if score<40 else 2 if score<60 else 4 if score<80 else 7
-    return (date.today()+timedelta(days=days)).isoformat()
+    return (local_day()+timedelta(days=days)).isoformat()
 
 def recommend_for_state(state):
     score=state.get("mastery_score",0)
@@ -63,7 +64,7 @@ def upsert_from_event(db,user_id,subject,topic,event_type,metadata=None):
     elif event_type=="explanation_requested":
         row["explanations_requested"]+=1
     row["difficulty"]=metadata.get("difficulty",row.get("difficulty") or "Normal")
-    row["last_seen"]=datetime.now(timezone.utc).isoformat()
+    row["last_seen"]=utc_now_iso()
     calculated=compute_mastery(row["attempts"],row["correct_answers"],row["incorrect_answers"],row["hints_used"],row["practice_count"],row["quiz_count"],row["last_seen"],row.get("next_review"),row["difficulty"])
     row["mastery_score"]=calculated["score"];row["confidence"]=calculated["confidence"];row["status"]=calculated["status"];row["next_review"]=next_review_date(calculated["score"])
     db.execute("""INSERT INTO topic_mastery(user_id,subject,topic,mastery_score,confidence,attempts,correct_answers,incorrect_answers,hints_used,explanations_requested,practice_count,quiz_count,last_seen,next_review,difficulty,status)
