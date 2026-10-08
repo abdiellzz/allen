@@ -265,9 +265,8 @@ class RecoveryRestore(Strict):
 
 
 class TeacherPin(Strict):
-    pin: str = Field(min_length=6,max_length=12,pattern=r'^\d{6,12}
-    content: str = Field(min_length=20, max_length=64000)
-)
+    pin: str = Field(min_length=6, max_length=12, pattern=r'^\d{6,12}$')
+
 
 class LicenseActivation(Strict):
     content: str = Field(min_length=20, max_length=64000)
