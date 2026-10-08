@@ -15,7 +15,7 @@ import re
 import secrets
 import sys
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
@@ -35,17 +35,28 @@ def key_path() -> Path:
     return Path(configured).expanduser() if configured else app_dir() / "license_private_key.pem"
 
 
-def load_private_key(path: Path | None = None):
+def load_private_key(path: Path | None = None, password: str | bytes | None = None, allow_unencrypted: bool = False):
     target = path or key_path()
     try:
         raw = target.read_bytes()
         if os.name != "nt":
             target.chmod(0o600)
-        key = serialization.load_pem_private_key(raw, password=None)
-    except (OSError, ValueError) as exc:
+        encrypted = b"ENCRYPTED PRIVATE KEY" in raw
+        if not encrypted and not allow_unencrypted:
+            raise RuntimeError("La clave privada está sin cifrar. Ejecuta tools/protect_license_key.py antes de emitir licencias.")
+        if isinstance(password,str):
+            password=password.encode("utf-8")
+        if encrypted and not password:
+            env=os.environ.get("ALLEN_LICENSE_KEY_PASSWORD","")
+            password=env.encode("utf-8") if env else None
+        if encrypted and not password:
+            raise RuntimeError("La clave privada está cifrada y necesita su frase de paso.")
+        key = serialization.load_pem_private_key(raw, password=password)
+    except RuntimeError:
+        raise
+    except (OSError, ValueError, TypeError) as exc:
         raise RuntimeError(
-            f"No se pudo abrir la clave privada: {target}. "
-            "Coloca license_private_key.pem junto al generador."
+            f"No se pudo abrir la clave privada: {target}. Comprueba la ruta y la frase de paso."
         ) from exc
     if key.__class__.__name__ != "Ed25519PrivateKey":
         raise RuntimeError("La clave privada no es Ed25519.")
@@ -231,10 +242,26 @@ class LicenseManagerUI:
     def _refresh_key_status(self):
         target = key_path()
         try:
-            load_private_key(target)
-            self.key_status.set(f"Clave privada: OK · {target}")
-        except RuntimeError:
+            raw=target.read_bytes()
+            if b"ENCRYPTED PRIVATE KEY" in raw:
+                self.key_status.set(f"Clave privada: PROTEGIDA · {target}")
+            else:
+                self.key_status.set(f"Clave privada: SIN CIFRAR · ejecuta protect_license_key.py")
+        except OSError:
             self.key_status.set(f"Clave privada NO encontrada · {target}")
+
+    def _private_key(self):
+        target=key_path()
+        try:
+            raw=target.read_bytes()
+        except OSError as exc:
+            raise RuntimeError(f"No se encontró la clave privada: {target}") from exc
+        password=None
+        if b"ENCRYPTED PRIVATE KEY" in raw and not os.environ.get("ALLEN_LICENSE_KEY_PASSWORD"):
+            password=simpledialog.askstring("Clave privada protegida","Frase de paso de license_private_key.pem:",show="*",parent=self.root)
+            if not password:
+                raise RuntimeError("Se necesita la frase de paso para firmar licencias.")
+        return load_private_key(target,password=password)
 
     def _preview_text(self, value: str):
         self.preview.configure(state="normal")
@@ -262,7 +289,7 @@ class LicenseManagerUI:
         if not filename:
             return
         try:
-            key = load_private_key()
+            key = self._private_key()
             payload = parse_existing(Path(filename), key)
             normalized_machine(str(payload["machine_id"]))
             self.loaded_payload = payload
@@ -291,7 +318,7 @@ class LicenseManagerUI:
 
     def generate(self):
         try:
-            key = load_private_key()
+            key = self._private_key()
             days = int(self.days.get())
             if self.loaded_payload is None:
                 payload = make_new_payload(
