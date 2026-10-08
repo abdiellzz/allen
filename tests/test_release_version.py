@@ -5,7 +5,7 @@ from backend.version import ALLEN_VERSION
 
 
 def test_release_version_is_stable():
-    assert ALLEN_VERSION == "1.2.3"
+    assert ALLEN_VERSION == "1.2.4"
 
 
 def test_bootstrap_exposes_release_version_without_fingerprinting_health(tmp_path):
@@ -16,4 +16,4 @@ def test_bootstrap_exposes_release_version_without_fingerprinting_health(tmp_pat
         assert "version" not in health.json()
         response=client.get("/api/bootstrap")
         assert response.status_code == 200
-        assert response.json()["version"] == "1.2.3"
+        assert response.json()["version"] == "1.2.4"
