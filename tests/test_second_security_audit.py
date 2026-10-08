@@ -12,6 +12,7 @@ from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
 import backend.app as app_module
 import backend.course_builder as course_builder
+from backend.course_builder import validate_course_structure
 from backend.app import create_app
 from backend.backup import export_backup
 from backend.backup_crypto import AAD, decrypt_backup, encrypt_backup
@@ -225,3 +226,75 @@ def test_legacy_six_digit_teacher_pin_is_upgraded(tmp_path):
     assert row["salt"]!=salt
     assert row["pin_hash"]!=legacy_hash
     client.close()
+
+
+def test_adventure_api_rejects_client_correct_field(tmp_path):
+    _,client=_client(tmp_path)
+    started=client.post("/api/adventures/start",json={"profile_id":1,"adventure_id":"digital-defender"})
+    sid=started.json()["id"]
+    response=client.post(
+        f"/api/adventures/{sid}/event",
+        json={"profile_id":1,"step":0,"event":"answer","answer":"Reutilizar una contraseña fácil","correct":True},
+    )
+    assert response.status_code==422
+    client.close()
+
+
+def test_course_structure_rejects_excessive_complexity():
+    too_many_topics={
+        "title":"Malicious",
+        "subject":"Test",
+        "level":"Premedia",
+        "units":[{
+            "title":"Unidad",
+            "topics":[
+                {"title":f"T{i}","objective":"Objetivo","route":[],"questions":[],"flashcards":[]}
+                for i in range(13)
+            ],
+        }],
+        "final_exam":[],
+    }
+    try:
+        validate_course_structure(too_many_topics)
+    except ValueError as exc:
+        assert "12 temas" in str(exc)
+    else:
+        raise AssertionError("Oversized Course Pack structure must be rejected")
+
+    nested={"title":"Nested","subject":"Test","level":"Premedia","units":[{"title":"U","topics":[{"title":"T","objective":"O"}]}]}
+    cursor=nested
+    for i in range(12):
+        cursor["extra"]={}
+        cursor=cursor["extra"]
+    try:
+        validate_course_structure(nested)
+    except ValueError as exc:
+        assert "compleja" in str(exc)
+    else:
+        raise AssertionError("Deeply nested Course Pack structure must be rejected")
+
+
+def test_snapshot_restore_reapplies_teacher_kdf_column(tmp_path):
+    from backend.database import Database
+    from backend.recovery import create_snapshot
+    db=Database(tmp_path/"allen.sqlite3")
+    # Simulate a v11-era teacher table inside a valid snapshot.
+    with db.connect() as con:
+        con.execute("ALTER TABLE teacher_security RENAME TO teacher_security_new")
+        con.execute("""CREATE TABLE teacher_security(
+            id INTEGER PRIMARY KEY CHECK(id=1),
+            salt TEXT NOT NULL,
+            pin_hash TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )""")
+        con.execute("DROP TABLE teacher_security_new")
+        con.execute("PRAGMA user_version=11")
+    snap=create_snapshot(db.path,"legacy-v11")
+    # Reopen migrates the live DB, then restore the old snapshot and ensure
+    # restore_snapshot runs compatibility migrations too.
+    migrated=Database(db.path)
+    assert "kdf_n" in {r["name"] for r in migrated.all("PRAGMA table_info(teacher_security)")}
+    result=migrated.restore_snapshot(snap)
+    assert result["integrity"]["ok"] is True
+    assert migrated.schema_version()==12
+    assert "kdf_n" in {r["name"] for r in migrated.all("PRAGMA table_info(teacher_security)")}
