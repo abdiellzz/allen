@@ -1,6 +1,6 @@
 from __future__ import annotations
 import json
-from datetime import date
+from .time_utils import local_day_iso
 
 def mastery_evidence(db,user_id,subject,topic):
     row=db.one("SELECT * FROM topic_mastery WHERE user_id=? AND subject=? AND topic=?",(user_id,subject,topic))
@@ -26,7 +26,7 @@ def mastery_evidence(db,user_id,subject,topic):
 def due_reviews(db,user_id,limit=10):
     return db.all("""SELECT subject,topic,mastery_score,status,next_review,last_seen
       FROM topic_mastery WHERE user_id=? AND next_review IS NOT NULL AND next_review<=?
-      ORDER BY next_review ASC,mastery_score ASC LIMIT ?""",(user_id,date.today().isoformat(),limit))
+      ORDER BY next_review ASC,mastery_score ASC LIMIT ?""",(user_id,local_day_iso(),limit))
 
 def diagnostic_questions(structure,count=7):
     pool=[]
