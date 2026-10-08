@@ -145,6 +145,36 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         found['memory']=db.memory(user_id)
         return found
 
+    def student_structure(structure):
+        """Return course material without assessment secrets."""
+        def scrub(value):
+            if isinstance(value,list):
+                return [scrub(item) for item in value]
+            if isinstance(value,dict):
+                return {
+                    key:scrub(item)
+                    for key,item in value.items()
+                    if key not in {'correct','answer_hint'}
+                }
+            return value
+        safe=scrub(structure)
+        if isinstance(safe,dict):
+            safe.pop('final_exam',None)
+        return safe
+
+    def student_questions(questions):
+        safe=[]
+        for q in questions or []:
+            if not isinstance(q,dict):
+                continue
+            safe.append({
+                'question':q.get('question',q.get('prompt','')),
+                'prompt':q.get('prompt',q.get('question','')),
+                'topic':q.get('topic',''),
+                'options':q.get('options',[]),
+            })
+        return safe
+
     @app.get('/api/bootstrap')
     def bootstrap():
         db.prune()
@@ -621,7 +651,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 skip_topics=[topic for topic,data in result.get('topics',{}).items() if data.get('percentage',0)>=80]
             except Exception:
                 pass
-        return {'course':{'id':cid,'title':course['title'],'subject':course['subject'],'level':course['level'],'structure':json.loads(course['structure_json'])},'enrollment':enrollment,'diagnostic_skip_topics':skip_topics}
+        return {'course':{'id':cid,'title':course['title'],'subject':course['subject'],'level':course['level'],'structure':student_structure(json.loads(course['structure_json']))},'enrollment':enrollment,'diagnostic_skip_topics':skip_topics}
 
     @app.get('/api/courses/{cid}/exam')
     def course_exam(cid:int,profile_id:int=1):
@@ -875,19 +905,32 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.post('/api/simulations')
     def create_simulation(value:SimulationCreate):
         user(value.profile_id)
-        topic=value.topics[0]
-        request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=value.question_count,kind='multiple')
-        questions=generate(request)
+        questions=[]
+        remaining=value.question_count
+        try:
+            for index,topic in enumerate(value.topics):
+                slots=max(1,remaining//max(1,len(value.topics)-index))
+                request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=slots,kind='multiple')
+                generated=generate(request)
+                questions.extend(generated[:slots])
+                remaining=value.question_count-len(questions)
+                if remaining<=0:
+                    break
+        except ValueError as exc:
+            raise HTTPException(422,str(exc))
+        if not questions:
+            raise HTTPException(422,'No pudimos crear preguntas para esos temas.')
+        questions=questions[:value.question_count]
         sid=db.execute("INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at,status,answers,updated_at,remaining_seconds) VALUES(?,?,?,?,NULL,?,?,'active','[]',?,?)",(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),(value.minutes if value.timed else 0),now(),now(),(value.minutes*60 if value.timed else 0)))
         db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'simulation',sid,value.subject,value.topics[0] if value.topics else '','active',now()))
-        return dict(id=sid,subject=value.subject,topics=value.topics,questions=questions,minutes=(value.minutes if value.timed else 0),timed=value.timed)
+        return dict(id=sid,subject=value.subject,topics=value.topics,questions=student_questions(questions),minutes=(value.minutes if value.timed else 0),timed=value.timed)
 
     @app.get('/api/simulations/active')
     def active_simulation(profile_id:int=1):
         user(profile_id)
         row=db.one("SELECT * FROM simulation_results WHERE user_id=? AND status IN ('active','paused','interrupted') AND result IS NULL ORDER BY COALESCE(updated_at,started_at) DESC LIMIT 1",(profile_id,))
         if not row:return None
-        row['topics']=json.loads(row['topics']);row['questions']=json.loads(row['questions']);row['answers']=json.loads(row['answers'] or '[]')
+        row['topics']=json.loads(row['topics']);row['questions']=student_questions(json.loads(row['questions']));row['answers']=json.loads(row['answers'] or '[]')
         return row
 
     @app.post('/api/simulations/{sid}/progress')
@@ -919,6 +962,10 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         user(value.profile_id)
         row=db.one('SELECT * FROM simulation_results WHERE id=? AND user_id=?',(sid,value.profile_id))
         if not row: raise HTTPException(404,'No encontramos ese simulacro.')
+        if row.get('result'):
+            result=json.loads(row['result'])
+            weak=result.get('review',[]) if isinstance(result,dict) else []
+            return dict(**result,reinforcement=dict(topics=weak,activities=[dict(type='explanation',minutes=10),dict(type='practice',minutes=15),dict(type='flashcards',minutes=5)] if weak else []))
         questions=json.loads(row['questions'])
         result=grade(questions,value.answers)
         db.execute("UPDATE simulation_results SET result=?,completed_at=?,status='completed',updated_at=? WHERE id=?",(json.dumps(result,ensure_ascii=False),now(),now(),sid))
