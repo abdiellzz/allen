@@ -14,6 +14,18 @@ let projectLinks={};
 function FairQRCode(){const url=projectLinks.PROJECT_URL||projectLinks.GITHUB_URL||projectLinks.SOCIAL_URL;if(!url)return '';try{const parsed=new URL(url);if(!['http:','https:'].includes(parsed.protocol)||parsed.username||parsed.password)return '';}catch{return '';}return `<section class="panel center"><h2>Conoce más sobre Allen</h2><img width="208" height="208" src="/api/fair/qr?url=${encodeURIComponent(url)}" alt="QR para conocer el proyecto Allen"><p>${esc(url)}</p><p class="muted">El QR se genera aquí. Abrir el enlace en tu teléfono puede requerir Internet.</p></section>`;}
 const categories=['Matemáticas','Inglés','Programación','Tecnología','Lógica','IA'];
 const icons={Matemáticas:'calculator',Inglés:'book-open',Programación:'layers',Tecnología:'lightbulb',Lógica:'compass',IA:'sparkles',Curiosidades:'compass',Ciberseguridad:'shield-check',Redes:'map',Ciencias:'flask-conical','Pensamiento crítico':'circle-help',Estudio:'notebook-tabs'};
+function applyFairStyles(root=document){
+ root.querySelectorAll('[data-css-i]').forEach(el=>el.style.setProperty('--i',Number(el.dataset.cssI)||0));
+}
+async function teacherUnlockForExit(){
+ const status=await api('/teacher/security/status');
+ if(status.unlocked)return true;
+ if(!status.configured){toast('Configura primero el PIN de profesor desde ALLEN.');return false;}
+ const pin=prompt('PIN de profesor para salir del Modo Feria.');
+ if(!pin)return false;
+ await api('/teacher/security/unlock','POST',{pin});
+ return true;
+}
 function toast(text){notice.textContent=text;setTimeout(()=>{if(notice.textContent===text)notice.textContent='';},6500);}
 function button(label,attr='',primary=false){return `<button ${attr} class="${primary?'primary':''}">${label}</button>`;}
 function tile(label,description,ico,attr){return `<button class="tile" ${attr}>${icon(ico,44)}<strong>${label}</strong><span>${description}</span></button>`;}
@@ -63,7 +75,7 @@ function render(){
  if(page==='challenge')html+='<p class="muted">Con Todas, el nivel elige la dificultad de las preguntas. En una categoría, recorres tres preguntas progresivas.</p>';
  if(['home','how','result','jury'].includes(page))html+=FairQRCode();
  if(page==='presenter')html+=`<form id="links-form" class="panel"><h2>Enlaces para el QR</h2><p>Se guardan en este navegador, sin datos de visitantes. Un repositorio privado requerirá iniciar sesión en GitHub.</p>${['PROJECT_URL','GITHUB_URL','SOCIAL_URL'].map(k=>`<label>${k}<input name="${k}" type="url" maxlength="500" value="${esc(projectLinks[k]||'')}" placeholder="https://…"></label>`).join('')}<button>Guardar enlaces</button></form>`;
- main.innerHTML=html;bind();
+ main.innerHTML=html;applyFairStyles(main);bind();
 }
 function chatActions(){
  const last=messages.at(-1);if(busy||last?.role!=='assistant')return '';
@@ -122,7 +134,7 @@ function bind(){
  main.querySelectorAll('[data-photo]').forEach(button=>button.addEventListener('click',()=>{photo=!photo;document.body.classList.toggle('photo',photo);render();}));
  main.querySelector('[data-stats]')?.addEventListener('click',loadStats);
  main.querySelector('[data-lock]')?.addEventListener('click',()=>{if(locked&&!confirm('¿Desbloquear la salida del Modo Feria?'))return;locked=!locked;localStorage.setItem('allen-fair-lock',String(locked));render();});
- main.querySelector('[data-exit]')?.addEventListener('click',async()=>{if(!locked){await reset();location.href='/';}});
+ main.querySelector('[data-exit]')?.addEventListener('click',async()=>{if(locked)return;try{if(!(await teacherUnlockForExit()))return;await api('/fair/exit','POST',{});await reset();location.href='/';}catch(e){toast(e.message);}});
  main.querySelector('#sounds')?.addEventListener('change',e=>{sounds=e.target.checked;sound(sounds);});
  main.querySelector('#tts')?.addEventListener('change',e=>{tts.enabled=e.target.checked;if(!tts.enabled)tts.stop();});
  main.querySelector('#auto')?.addEventListener('change',e=>autoSpeak=e.target.checked);
