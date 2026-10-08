@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+from .database import now
 FORMAT="allen-backup"; VERSION=1
 TABLES=("users","conversations","conversation_states","progress","quiz_results","flashcards","learning_sessions","library_packs","student_memory","saved_answers","study_plans","study_sessions","study_session_events","adventure_sessions","adventure_events","simulation_results","topic_mastery","learning_events","profile_current_activity","teacher_documents","courses","course_enrollments","course_exam_results","course_exam_sessions","curriculum_edges","question_bank","course_quality_reviews","diagnostic_results","course_versions")
 
@@ -65,8 +66,8 @@ def restore_backup(db,payload):
                 if course["status"] in ("reviewed","published"):
                     db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(course["id"],))
                 report=evaluate_course(structure)
-                db.execute("INSERT INTO course_quality_reviews(course_id,score,blocking_issues,report_json,created_at) VALUES(?,?,?,?,datetime('now'))",
-                           (course["id"],report["score"],report["blocking_issues"],json.dumps(report,ensure_ascii=False)))
+                db.execute("INSERT INTO course_quality_reviews(course_id,score,blocking_issues,report_json,created_at) VALUES(?,?,?,?,?)",
+                           (course["id"],report["score"],report["blocking_issues"],json.dumps(report,ensure_ascii=False),now()))
             except Exception:
                 continue
     if "course_versions" not in tables:
