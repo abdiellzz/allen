@@ -97,7 +97,7 @@ addEventListener('online',network);addEventListener('offline',network);network()
 
 async function ensureTeacherSession(){
  const status=await api('/teacher/auth/status');
- if(status.authenticated)return true;
+ if(status.required===false||status.authenticated)return true;
  const creating=!status.configured;
  const pin=prompt(creating?'Crea un PIN docente de 4 a 12 dígitos. Se guardará solo en este equipo.':'Introduce el PIN docente.');
  if(!pin)return false;
