@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import time
 import uuid
 
 from cryptography.exceptions import InvalidSignature
@@ -53,20 +54,33 @@ def _windows_machine_guid() -> str | None:
         return None
 
 
-def machine_id() -> str:
-    """Return a privacy-preserving stable identifier for this Windows install."""
-    source = _windows_machine_guid()
-    if not source:
-        source = "|".join(
-            [
-                platform.system(),
-                platform.machine(),
-                platform.node(),
-                str(uuid.getnode()),
-            ]
-        )
+def _format_machine_source(source: str) -> str:
     digest = hashlib.sha256(("ALLEN-LICENSE|" + source).encode("utf-8")).hexdigest().upper()[:24]
     return "-".join(digest[i : i + 4] for i in range(0, len(digest), 4))
+
+
+def legacy_machine_id() -> str:
+    """Identifier used by ALLEN 1.2.0/1.2.1 for backwards-compatible licenses."""
+    source=_windows_machine_guid()
+    if source:
+        return _format_machine_source(source)
+    source="|".join([platform.system(),platform.machine(),platform.node(),str(uuid.getnode())])
+    return _format_machine_source(source)
+
+
+def machine_id() -> str:
+    """Prefer two stable local factors while preserving the old ID as fallback."""
+    guid=_windows_machine_guid()
+    node=uuid.getnode()
+    # Python marks a randomly generated node by setting the multicast bit.
+    stable_node = None if ((node >> 40) & 1) else f"{node:012X}"
+    if guid and stable_node:
+        return _format_machine_source(f"{guid}|{platform.machine()}|{stable_node}")
+    return legacy_machine_id()
+
+
+def machine_id_candidates() -> set[str]:
+    return {machine_id(),legacy_machine_id()}
 
 
 class LicenseManager:
@@ -76,6 +90,8 @@ class LicenseManager:
         self.license_path = self.license_dir / "allen.license"
         self.state_path = self.license_dir / "state.json"
         self.public_key_path = Path(public_key_path)
+        self._status_cache = None
+        self._status_cache_until = 0.0
 
     def _public_key(self):
         try:
@@ -158,6 +174,13 @@ class LicenseManager:
             return {}
 
     def _write_state(self, payload: dict, today: date) -> None:
+        current=self._read_state()
+        if (
+            current.get("license_id")==payload["license_id"]
+            and current.get("machine_id")==payload["machine_id"]
+            and current.get("last_seen")==today.isoformat()
+        ):
+            return
         self.license_dir.mkdir(parents=True, exist_ok=True)
         state = {
             "license_id": payload["license_id"],
@@ -169,6 +192,9 @@ class LicenseManager:
         temp.replace(self.state_path)
 
     def status(self, today: date | None = None) -> dict:
+        explicit_today=today is not None
+        if not explicit_today and self._status_cache is not None and time.monotonic()<self._status_cache_until:
+            return dict(self._status_cache)
         today = today or date.today()
         machine = machine_id()
         base = {
@@ -179,12 +205,17 @@ class LicenseManager:
             "message": "Importa una licencia válida para utilizar ALLEN.",
         }
         if not self.license_path.exists():
+            if not explicit_today:
+                self._status_cache=dict(base); self._status_cache_until=time.monotonic()+15
             return base
         try:
             payload, _ = self._decode(self.license_path.read_text(encoding="utf-8"))
             start, end = self._dates(payload)
         except (OSError, LicenseError) as exc:
-            return {**base, "state": "invalid", "message": str(exc)}
+            result={**base, "state": "invalid", "message": str(exc)}
+            if not explicit_today:
+                self._status_cache=dict(result); self._status_cache_until=time.monotonic()+15
+            return result
 
         public = {
             "license_id": payload["license_id"],
@@ -195,7 +226,7 @@ class LicenseManager:
             "renewal_number": payload["renewal_number"],
             "unlimited_profiles": True,
         }
-        if payload["machine_id"] != machine:
+        if payload["machine_id"] not in machine_id_candidates():
             return {
                 **base,
                 **public,
@@ -220,7 +251,7 @@ class LicenseManager:
         state = self._read_state()
         if (
             state.get("license_id") == payload["license_id"]
-            and state.get("machine_id") == machine
+            and state.get("machine_id") == payload["machine_id"]
             and isinstance(state.get("last_seen"), str)
         ):
             try:
@@ -237,7 +268,7 @@ class LicenseManager:
 
         self._write_state(payload, today)
         days_remaining = (end - today).days + 1
-        return {
+        result={
             **base,
             **public,
             "active": True,
@@ -245,13 +276,19 @@ class LicenseManager:
             "days_remaining": days_remaining,
             "message": f"Licencia activa. Quedan {days_remaining} días.",
         }
+        if not explicit_today:
+            self._status_cache=dict(result)
+            self._status_cache_until=time.monotonic()+60
+        return result
 
     def install(self, raw: str, today: date | None = None) -> dict:
+        self._status_cache=None
+        self._status_cache_until=0.0
         today = today or date.today()
         payload, signature = self._decode(raw)
         start, end = self._dates(payload)
         current_machine = machine_id()
-        if payload["machine_id"] != current_machine:
+        if payload["machine_id"] not in machine_id_candidates():
             raise LicenseError("Esta licencia fue emitida para otro equipo.")
         if today < start:
             raise LicenseError(f"Esta licencia todavía no está activa. Comienza el {start.isoformat()}.")

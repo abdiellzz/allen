@@ -1,24 +1,27 @@
 from __future__ import annotations
 import json
+from datetime import datetime, timezone
 
-def sync_course_questions(db,course_id,structure):
-    db.execute("DELETE FROM question_bank WHERE course_id=? AND origin='generated'",(course_id,))
+def sync_course_questions(db,course_id,structure,conn=None):
+    target=conn or db
+    created_at=datetime.now(timezone.utc).isoformat()
+    target.execute("DELETE FROM question_bank WHERE course_id=? AND origin='generated'",(course_id,))
     count=0
     for ui,unit in enumerate(structure.get("units",[])):
         for ti,topic in enumerate(unit.get("topics",[])):
             for q in topic.get("questions",[]) or []:
-                db.execute("""INSERT INTO question_bank(course_id,unit_index,topic_index,subject,topic,objective,prompt,answer,options_json,difficulty,kind,source_page,status,origin,created_at)
-                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'generated',datetime('now'))""",
+                target.execute("""INSERT INTO question_bank(course_id,unit_index,topic_index,subject,topic,objective,prompt,answer,options_json,difficulty,kind,source_page,status,origin,created_at)
+                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'generated',?)""",
                     (course_id,ui,ti,structure.get("subject",""),topic.get("title",""),topic.get("objective",""),q.get("prompt",""),q.get("answer_hint",""),
-                     json.dumps(q.get("options",[]),ensure_ascii=False),"Normal","open",int((q.get("source") or topic.get("source") or {}).get("page") or 1),"reviewed"))
+                     json.dumps(q.get("options",[]),ensure_ascii=False),"Normal","open",int((q.get("source") or topic.get("source") or {}).get("page") or 1),"reviewed",created_at))
                 count+=1
     for q in structure.get("final_exam",[]) or []:
         node=next(((ui,ti,t) for ui,u in enumerate(structure.get("units",[])) for ti,t in enumerate(u.get("topics",[])) if t.get("title")==q.get("topic")),(0,0,{}))
         ui,ti,topic=node
-        db.execute("""INSERT INTO question_bank(course_id,unit_index,topic_index,subject,topic,objective,prompt,answer,options_json,difficulty,kind,source_page,status,origin,created_at)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'generated',datetime('now'))""",
+        target.execute("""INSERT INTO question_bank(course_id,unit_index,topic_index,subject,topic,objective,prompt,answer,options_json,difficulty,kind,source_page,status,origin,created_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'generated',?)""",
             (course_id,ui,ti,structure.get("subject",""),q.get("topic",""),topic.get("objective",""),q.get("prompt",""),q.get("correct",""),
-             json.dumps(q.get("options",[]),ensure_ascii=False),"Normal","multiple",int((q.get("source") or {}).get("page") or 1),"reviewed"))
+             json.dumps(q.get("options",[]),ensure_ascii=False),"Normal","multiple",int((q.get("source") or {}).get("page") or 1),"reviewed",created_at))
         count+=1
     return count
 

@@ -5,6 +5,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives import serialization
 
 from tools.license_manager import load_private_key
+from tools.protect_license_key import protect_key
 
 from tools.license_manager import make_new_payload, parse_existing, sign_document
 
@@ -75,7 +76,47 @@ def test_private_key_permissions_are_hardened_on_posix(tmp_path):
     )
     path.chmod(0o644)
 
-    loaded = load_private_key(path)
+    loaded = load_private_key(path, allow_unencrypted=True)
 
     assert loaded is not None
     assert path.stat().st_mode & 0o077 == 0
+
+
+def test_unencrypted_private_key_is_rejected_for_signing(tmp_path):
+    key = Ed25519PrivateKey.generate()
+    path = tmp_path / "license_private_key.pem"
+    path.write_bytes(
+        key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        )
+    )
+    try:
+        load_private_key(path)
+    except RuntimeError as exc:
+        assert "sin cifrar" in str(exc)
+    else:
+        raise AssertionError("Signing must reject unencrypted private keys")
+
+
+def test_private_key_can_be_migrated_to_encrypted_pem(tmp_path):
+    key = Ed25519PrivateKey.generate()
+    path = tmp_path / "license_private_key.pem"
+    path.write_bytes(
+        key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        )
+    )
+    protect_key(path,"correct-horse-battery")
+    assert b"ENCRYPTED PRIVATE KEY" in path.read_bytes()
+    loaded=load_private_key(path,password="correct-horse-battery")
+    assert loaded.public_key().public_bytes(
+        serialization.Encoding.Raw,
+        serialization.PublicFormat.Raw,
+    ) == key.public_key().public_bytes(
+        serialization.Encoding.Raw,
+        serialization.PublicFormat.Raw,
+    )

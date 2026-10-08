@@ -34,6 +34,15 @@ def health_ready(url: str = "http://127.0.0.1:8787/api/health") -> bool:
         return False
 
 
+def runtime_components():
+    import tkinter as tk
+    from tkinter import ttk
+    import uvicorn
+    from backend.app import app
+    from backend.version import ALLEN_VERSION
+    return tk, ttk, uvicorn, app, ALLEN_VERSION
+
+
 def self_test() -> int:
     root = configure_distribution_mode()
     bundle_root = Path(getattr(sys, "_MEIPASS", root))
@@ -50,19 +59,35 @@ def self_test() -> int:
         app = create_app()
         if not getattr(app, "state", None) or not app.state.db.path.parent.exists():
             return 3
+        # Import the same runtime dependencies used by run_gui so packaging cannot
+        # hide a missing launcher import until a customer opens ALLEN.
+        runtime_components()
     return 0
+
+
+def server_smoke_test() -> int:
+    with tempfile.TemporaryDirectory(prefix="allen-server-smoke-") as tmp:
+        os.environ["ALLEN_DATA_ROOT"] = tmp
+        tk, ttk, uvicorn, app, _ = runtime_components()
+        config=uvicorn.Config(app,host="127.0.0.1",port=8787,access_log=False,log_level="warning")
+        server=uvicorn.Server(config)
+        thread=threading.Thread(target=server.run,daemon=True)
+        thread.start()
+        ready=False
+        for _ in range(80):
+            if health_ready():
+                ready=True
+                break
+            time.sleep(0.25)
+        server.should_exit=True
+        thread.join(timeout=5)
+        return 0 if ready else 4
 
 
 def run_gui() -> int:
     configure_distribution_mode()
 
-    import tkinter as tk
-    from tkinter import ttk
-    import uvicorn
-
-    from backend.app import app
-    from backend.version import ALLEN_VERSION
-    from start_local_ai import main as start_local_ai
+    tk, ttk, uvicorn, app, ALLEN_VERSION = runtime_components()
 
     server_holder = {"server": None}
     stop_event = threading.Event()
@@ -86,7 +111,7 @@ def run_gui() -> int:
     buttons.pack(fill="x")
 
     def open_allen():
-        webbrowser.open("http://127.0.0.1:8787/?access="+app.state.access_key)
+        webbrowser.open("http://127.0.0.1:8787/?access="+app.state.issue_launch_token())
 
     ttk.Button(buttons, text="Abrir ALLEN", command=open_allen).pack(side="left")
 
@@ -106,12 +131,6 @@ def run_gui() -> int:
     ).pack(anchor="w", pady=(22, 0))
 
     root.protocol("WM_DELETE_WINDOW", close_allen)
-
-    def model_worker():
-        try:
-            start_local_ai()
-        except Exception:
-            pass
 
     def server_worker():
         if health_ready():
@@ -136,7 +155,6 @@ def run_gui() -> int:
             time.sleep(0.25)
         root.after(0, lambda: status.set("No se pudo iniciar. Comprueba si el puerto 8787 está ocupado."))
 
-    threading.Thread(target=model_worker, daemon=True).start()
     threading.Thread(target=server_worker, daemon=True).start()
     threading.Thread(target=readiness_worker, daemon=True).start()
 
@@ -147,4 +165,6 @@ def run_gui() -> int:
 if __name__ == "__main__":
     if "--self-test" in sys.argv:
         raise SystemExit(self_test())
+    if "--server-smoke-test" in sys.argv:
+        raise SystemExit(server_smoke_test())
     raise SystemExit(run_gui())

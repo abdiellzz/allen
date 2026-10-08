@@ -6,7 +6,7 @@ async function localFetch(path,options){
 async function readJSON(response){try{return await response.json();}catch{throw new Error('Allen no pudo leer esta respuesta. Recarga la aplicación e inténtalo de nuevo.');}}
 export async function api(path,method='GET',body){
  const response=await localFetch('/api'+path,{method,headers:{'Content-Type':'application/json','X-Allen-Token':token},body:body===undefined?undefined:JSON.stringify(body)});
- const data=await readJSON(response);if(!response.ok){if(data.license_required)window.dispatchEvent(new CustomEvent('allen-license-required'));throw new Error(data.error||'No pudimos completar esta acción.');}return data;
+ const data=await readJSON(response);if(!response.ok){if(data.license_required)window.dispatchEvent(new CustomEvent('allen-license-required'));if(data.teacher_auth_required)window.dispatchEvent(new CustomEvent('allen-teacher-auth-required'));throw new Error(data.error||'No pudimos completar esta acción.');}return data;
 }
 export async function streamChat(body,signal,onEvent){
  const response=await localFetch('/api/chat?stream=true',{method:'POST',headers:{'Content-Type':'application/json','X-Allen-Token':token},body:JSON.stringify(body),signal});

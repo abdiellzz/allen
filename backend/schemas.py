@@ -1,6 +1,8 @@
 from typing import Literal
+from datetime import date, datetime, timedelta
 from urllib.parse import urlsplit
 from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
+from .time_utils import local_day
 
 LEVELS = ['Primaria', 'Premedia', 'Media', 'Universidad / Técnico']
 SUBJECTS = ['Matemáticas', 'Ciencias', 'Español', 'Inglés', 'Tecnología', 'Programación', 'Historia', 'Geografía']
@@ -153,6 +155,20 @@ class StudyPlanCreate(Strict):
         if any(not v.strip() or len(v)>80 for v in values): raise ValueError('Tema no válido')
         return values
 
+    @field_validator('deadline')
+    @classmethod
+    def bounded_deadline(cls,value):
+        try:
+            target=datetime.strptime(value,"%Y-%m-%d").date()
+        except ValueError as exc:
+            raise ValueError('Usa una fecha válida en formato AAAA-MM-DD.') from exc
+        today=local_day()
+        if target < today:
+            raise ValueError('La fecha objetivo no puede estar en el pasado.')
+        if target > today + timedelta(days=365):
+            raise ValueError('La fecha objetivo no puede superar 365 días.')
+        return value
+
 class StudySessionEvent(Strict):
     profile_id: int = Field(ge=1)
     kind: Literal['started','completed','skipped','hint','understood','not_understood','paused']
@@ -245,6 +261,11 @@ class CourseVersionImport(Strict):
 
 class RecoveryRestore(Strict):
     snapshot: str = Field(min_length=1,max_length=180)
+
+
+
+class TeacherPin(Strict):
+    pin: str = Field(min_length=6, max_length=12, pattern=r'^\d{6,12}$')
 
 
 class LicenseActivation(Strict):

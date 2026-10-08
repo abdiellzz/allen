@@ -1,3 +1,4 @@
+import hashlib
 import asyncio
 import json
 import logging
@@ -5,8 +6,9 @@ from logging.handlers import RotatingFileHandler
 import os
 import secrets
 import sys
+import time
 from contextlib import asynccontextmanager
-from datetime import date, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 
@@ -21,7 +23,7 @@ from .ai import LocalAI
 from .database import Database, now
 from .education import catalog, generate, grade
 from .library import Library
-from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport, CourseHelp, CourseExamProgress, CourseVersionImport, RecoveryRestore, LicenseActivation
+from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport, CourseHelp, CourseExamProgress, CourseVersionImport, RecoveryRestore, TeacherPin, LicenseActivation
 from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
@@ -30,6 +32,7 @@ from .learning_events import record_event
 from .learning_engine import recommend_next_action
 from .recommendations import build_recommendation
 from .backup import export_backup, validate_backup, restore_backup
+from .backup_crypto import encrypt_backup,decrypt_backup
 from .course_builder import decode_source, build_course, course_pack, validate_course_structure
 from .curriculum_graph import build_graph, persist_graph, prerequisite_chain
 from .course_quality import evaluate_course, publication_allowed
@@ -38,10 +41,11 @@ from .learning_intelligence import mastery_evidence, due_reviews, diagnostic_que
 from .course_versioning import compare_versions, seed_initial_version, apply_version, history as course_version_history
 from .version import ALLEN_VERSION
 from .licensing import LicenseManager, LicenseError
+from .time_utils import local_day, local_day_iso
 
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))
 
-def create_app(db_path=None, ai=None, require_license=None, require_local_access=None):
+def create_app(db_path=None, ai=None, require_license=None, require_local_access=None, require_teacher_auth=None):
     local_root=Path(os.environ.get('ALLEN_DATA_ROOT') or (Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'))
     db=Database(db_path or os.environ.get('ALLEN_DB_PATH',local_root/'allen.sqlite3'))
     licensing=LicenseManager(local_root, ROOT/'config/license_public_key.pem')
@@ -49,8 +53,14 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     library=Library(ROOT/'data/library')
     engine=ai or LocalAI()
     token=secrets.token_urlsafe(32)
+    fair_token_value=secrets.token_urlsafe(32)
+    teacher_session=secrets.token_urlsafe(32)
+    teacher_failures=[]
     access_key=secrets.token_urlsafe(32)
+    launch_token=secrets.token_urlsafe(32)
+    launch_token_used=False
     local_access_required = (db_path is None) if require_local_access is None else bool(require_local_access)
+    teacher_auth_required = (db_path is None) if require_teacher_auth is None else bool(require_teacher_auth)
     privacy_epoch=0
     logger=logging.getLogger('allen')
     if not logger.handlers:
@@ -68,6 +78,14 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     app.state.db=db
     app.state.licensing=licensing
     app.state.access_key=access_key
+    def issue_launch_token():
+        nonlocal launch_token, launch_token_used
+        launch_token=secrets.token_urlsafe(32)
+        launch_token_used=False
+        app.state.launch_token=launch_token
+        return launch_token
+    app.state.launch_token=launch_token
+    app.state.issue_launch_token=issue_launch_token
     app.add_middleware(TrustedHostMiddleware,allowed_hosts=['127.0.0.1','localhost','[::1]']+(['testserver'] if db_path else []))
 
     def security_headers(response):
@@ -84,24 +102,53 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.middleware('http')
     async def local_guard(request,call_next):
         if local_access_required and request.url.path != '/api/health':
+            nonlocal launch_token_used
             launch_key=request.query_params.get('access','')
             cookie_key=request.cookies.get('allen_access','')
-            if request.method=='GET' and launch_key and secrets.compare_digest(launch_key,access_key):
+            if request.method=='GET' and launch_key and not launch_token_used and secrets.compare_digest(launch_key,launch_token):
+                launch_token_used=True
                 clean=[(k,v) for k,v in request.query_params.multi_items() if k!='access']
                 target=request.url.path+('?' + urlencode(clean) if clean else '')
                 response=RedirectResponse(target,status_code=303)
                 response.set_cookie('allen_access',access_key,httponly=True,samesite='strict',secure=False,path='/')
+                response.set_cookie('allen_mode','fair' if request.url.path=='/fair' else 'app',httponly=True,samesite='strict',secure=False,path='/')
                 return security_headers(response)
             if not cookie_key or not secrets.compare_digest(cookie_key,access_key):
                 return security_headers(JSONResponse({'error':'Abre ALLEN desde su aplicación de escritorio.'},403))
+        fair_mode=request.cookies.get('allen_mode')=='fair'
+        if fair_mode and request.url.path=='/api/fair/sessions' and request.method=='POST' and teacher_auth_required and not teacher_configured():
+            return security_headers(JSONResponse({'error':'Configura un PIN de profesor antes de iniciar el Modo Feria.','teacher_setup_required':True},409))
+        if fair_mode and request.url.path.startswith('/api/'):
+            fair_allowed=(
+                request.url.path.startswith('/api/fair/')
+                or request.url.path in {'/api/health','/api/model/status','/api/teacher/security/status','/api/teacher/security/unlock'}
+            )
+            if not fair_allowed:
+                return security_headers(JSONResponse({'error':'Modo Feria aislado: esta API no está disponible.','fair_restricted':True},403))
         origin=request.headers.get('origin')
         if origin and origin != str(request.base_url).rstrip('/'):
             return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
         if request.headers.get('sec-fetch-site')=='cross-site':
             return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
         if request.method in ('POST','PUT','DELETE','PATCH'):
-            if not secrets.compare_digest(request.headers.get('x-allen-token',''),token):
-                return JSONResponse({'error':'Recarga Allen para continuar.'},403)
+            fair_auth_path=request.url.path.startswith('/api/fair/') or (fair_mode and request.url.path=='/api/teacher/security/unlock')
+            expected_token=fair_token_value if fair_auth_path else token
+            if not secrets.compare_digest(request.headers.get('x-allen-token',''),expected_token):
+                return security_headers(JSONResponse({'error':'Recarga Allen para continuar.'},403))
+        teacher_security_paths={
+            '/api/teacher/security/status',
+            '/api/teacher/security/setup',
+            '/api/teacher/security/unlock',
+            '/api/teacher/security/lock',
+        }
+        protected_teacher=(
+            request.url.path.startswith('/api/teacher/')
+            or request.url.path.startswith('/api/backup/')
+            or request.url.path.startswith('/api/recovery/')
+            or request.url.path.startswith('/api/system/')
+        )
+        if teacher_auth_required and protected_teacher and request.url.path not in teacher_security_paths and not teacher_unlocked(request):
+            return security_headers(JSONResponse({'error':'Se requiere autorización de profesor.','teacher_auth_required':True},403))
         if licensing_required and request.url.path.startswith('/api/'):
             allowed = {
                 '/api/bootstrap',
@@ -112,15 +159,16 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             }
             if request.url.path not in allowed and not licensing.status().get('active'):
                 return JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402)
-            max_body=12_500_000 if request.url.path=='/api/teacher/import' or request.url.path.endswith('/versions') else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 5_500_000 if request.url.path.startswith('/api/backup/') else 200000
+        if request.url.path.startswith('/api/'):
+            max_body=12_500_000 if request.url.path=='/api/teacher/import' or request.url.path.endswith('/versions') else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 8_000_000 if request.url.path.startswith('/api/backup/') else 200000
             try:
                 if int(request.headers.get('content-length','0'))>max_body:
-                    return JSONResponse({'error':'El archivo o texto es demasiado largo.'},413)
+                    return security_headers(JSONResponse({'error':'El archivo o texto es demasiado largo.'},413))
             except ValueError:
-                return JSONResponse({'error':'Solicitud no válida.'},400)
+                return security_headers(JSONResponse({'error':'Solicitud no válida.'},400))
             body=await request.body()
             if len(body)>max_body:
-                return JSONResponse({'error':'El archivo o texto es demasiado largo.'},413)
+                return security_headers(JSONResponse({'error':'El archivo o texto es demasiado largo.'},413))
         response=await call_next(request)
         return security_headers(response)
 
@@ -144,6 +192,48 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             raise HTTPException(404,'No encontramos ese perfil. Selecciona otro.')
         found['memory']=db.memory(user_id)
         return found
+
+    def student_structure(structure):
+        """Return course material without assessment secrets."""
+        def scrub(value):
+            if isinstance(value,list):
+                return [scrub(item) for item in value]
+            if isinstance(value,dict):
+                return {
+                    key:scrub(item)
+                    for key,item in value.items()
+                    if key not in {'correct','answer_hint'}
+                }
+            return value
+        safe=scrub(structure)
+        if isinstance(safe,dict):
+            safe.pop('final_exam',None)
+        return safe
+
+    def student_questions(questions):
+        safe=[]
+        for q in questions or []:
+            if not isinstance(q,dict):
+                continue
+            safe.append({
+                'question':q.get('question',q.get('prompt','')),
+                'prompt':q.get('prompt',q.get('question','')),
+                'topic':q.get('topic',''),
+                'options':q.get('options',[]),
+            })
+        return safe
+
+
+    def teacher_configured():
+        return bool(db.one("SELECT id FROM teacher_security WHERE id=1"))
+
+    def teacher_unlocked(request):
+        value=request.cookies.get('allen_teacher','')
+        return bool(value and secrets.compare_digest(value,teacher_session))
+
+    def pin_digest(pin,salt_hex):
+        return hashlib.scrypt(pin.encode('utf-8'),salt=bytes.fromhex(salt_hex),n=2**14,r=8,p=1,dklen=32).hex()
+
 
     @app.get('/api/bootstrap')
     def bootstrap():
@@ -184,9 +274,62 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         except LicenseError as exc:
             raise HTTPException(422,str(exc))
 
+    @app.get('/api/teacher/security/status')
+    def teacher_security_status(request:Request):
+        if not teacher_auth_required:
+            return {'configured':teacher_configured(),'unlocked':True}
+        return {'configured':teacher_configured(),'unlocked':teacher_unlocked(request)}
+
+    @app.post('/api/teacher/security/setup')
+    def teacher_security_setup(value:TeacherPin,request:Request):
+        if teacher_configured():
+            raise HTTPException(409,'El PIN de profesor ya está configurado.')
+        salt=secrets.token_bytes(16).hex()
+        digest=pin_digest(value.pin,salt)
+        db.execute("INSERT INTO teacher_security(id,salt,pin_hash,updated_at) VALUES(1,?,?,?)",(salt,digest,now()))
+        response=JSONResponse({'configured':True,'unlocked':True})
+        response.set_cookie('allen_teacher',teacher_session,httponly=True,samesite='strict',secure=False,path='/')
+        return response
+
+    @app.post('/api/teacher/security/unlock')
+    def teacher_security_unlock(value:TeacherPin):
+        nonlocal teacher_session
+        now_mono=time.monotonic()
+        teacher_failures[:]=[attempt for attempt in teacher_failures if now_mono-attempt<60]
+        if len(teacher_failures)>=5:
+            raise HTTPException(429,'Demasiados intentos de PIN. Espera un minuto.')
+        row=db.one("SELECT salt,pin_hash FROM teacher_security WHERE id=1")
+        if not row:
+            raise HTTPException(409,'Configura primero un PIN de profesor desde la aplicación principal.')
+        candidate=pin_digest(value.pin,row['salt'])
+        if not secrets.compare_digest(candidate,row['pin_hash']):
+            teacher_failures.append(now_mono)
+            raise HTTPException(403,'PIN de profesor incorrecto.')
+        teacher_failures.clear()
+        teacher_session=secrets.token_urlsafe(32)
+        response=JSONResponse({'configured':True,'unlocked':True})
+        response.set_cookie('allen_teacher',teacher_session,httponly=True,samesite='strict',secure=False,path='/')
+        return response
+
+    @app.post('/api/teacher/security/lock')
+    def teacher_security_lock():
+        nonlocal teacher_session
+        teacher_session=secrets.token_urlsafe(32)
+        response=JSONResponse({'configured':teacher_configured(),'unlocked':False})
+        response.delete_cookie('allen_teacher',path='/')
+        return response
+
     @app.get('/api/fair/token')
     def fair_token():
-        return {'token':token}
+        return {'token':fair_token_value}
+
+    @app.post('/api/fair/exit')
+    def fair_exit(request:Request):
+        if not teacher_unlocked(request):
+            return JSONResponse({'error':'Se requiere el PIN de profesor para salir del Modo Feria.','teacher_auth_required':True},403)
+        response=JSONResponse({'ok':True})
+        response.set_cookie('allen_mode','app',httponly=True,samesite='strict',secure=False,path='/')
+        return response
 
     @app.get('/api/health')
     def health():
@@ -239,7 +382,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     def update_memory(value:LearningMemory,profile_id:int=1):
         user(profile_id)
         memory=db.memory(profile_id)
-        goal_date=date.today().isoformat() if value.set_goal or value.daily_goal!=memory['daily_goal'] else memory['goal_date']
+        goal_date=local_day_iso() if value.set_goal or value.daily_goal!=memory['daily_goal'] else memory['goal_date']
         return db.remember(profile_id,**value.model_dump(exclude={'set_goal'}),goal_date=goal_date)
 
     @app.delete('/api/memory')
@@ -277,9 +420,18 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.post('/api/study')
     def study(value:Study):
         user(value.profile_id)
+        latest=db.one('SELECT created FROM learning_sessions WHERE user_id=? ORDER BY id DESC LIMIT 1',(value.profile_id,))
+        if latest and latest.get('created'):
+            try:
+                previous=datetime.fromisoformat(str(latest['created']).replace('Z','+00:00'))
+                if previous.tzinfo is None: previous=previous.replace(tzinfo=timezone.utc)
+                if (datetime.now(timezone.utc)-previous).total_seconds()<25:
+                    return {'ok':True,'deduplicated':True}
+            except ValueError:
+                pass
         db.execute('INSERT INTO learning_sessions(user_id,subject,seconds,created) VALUES(?,?,?,?)',(value.profile_id,value.subject,value.seconds,now()))
-        db.award(value.profile_id,'study',value.subject,5,date.today().isoformat())
-        return {'ok':True}
+        db.award(value.profile_id,'study',value.subject,5,local_day_iso())
+        return {'ok':True,'deduplicated':False}
 
 
     @app.post('/api/study-plans')
@@ -316,7 +468,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         user(profile_id)
         row=db.one('SELECT * FROM study_plans WHERE id=? AND user_id=?',(pid,profile_id))
         if not row: raise HTTPException(404,'No encontramos ese plan.')
-        today=date.today().isoformat()
+        today=local_day_iso()
         existing=db.one('SELECT * FROM study_sessions WHERE plan_id=? AND user_id=? AND day=?',(pid,profile_id,today))
         if existing: return existing
         sid=db.execute('INSERT INTO study_sessions(user_id,plan_id,day,status,started) VALUES(?,?,?,?,?)',(profile_id,pid,today,'active',now()))
@@ -445,14 +597,17 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         except ValueError as exc: raise HTTPException(422,str(exc))
         value.structure['status']='reviewed'
         quality=evaluate_course(value.structure)
-        graph=persist_graph(db,cid,value.structure)
-        synced=sync_course_questions(db,cid,value.structure)
-        db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
-        db.execute("INSERT INTO course_quality_reviews(course_id,score,blocking_issues,report_json,created_at) VALUES(?,?,?,?,?)",(cid,quality['score'],quality['blocking_issues'],json.dumps(quality,ensure_ascii=False),now()))
-        db.execute("UPDATE courses SET status='reviewed',structure_json=?,updated_at=? WHERE id=?",(json.dumps(value.structure,ensure_ascii=False),now(),cid))
-        current=db.one("SELECT version FROM courses WHERE id=?",(cid,))
-        if current:
-            db.execute("UPDATE course_versions SET structure_json=?,status='reviewed' WHERE course_id=? AND version_number=?",(json.dumps(value.structure,ensure_ascii=False),cid,current['version']))
+        serialized=json.dumps(value.structure,ensure_ascii=False)
+        with db.connect() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            graph=persist_graph(db,cid,value.structure,conn=conn)
+            synced=sync_course_questions(db,cid,value.structure,conn=conn)
+            conn.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
+            conn.execute("INSERT INTO course_quality_reviews(course_id,score,blocking_issues,report_json,created_at) VALUES(?,?,?,?,?)",(cid,quality['score'],quality['blocking_issues'],json.dumps(quality,ensure_ascii=False),now()))
+            conn.execute("UPDATE courses SET status='reviewed',structure_json=?,updated_at=? WHERE id=?",(serialized,now(),cid))
+            current=conn.execute("SELECT version FROM courses WHERE id=?",(cid,)).fetchone()
+            if current:
+                conn.execute("UPDATE course_versions SET structure_json=?,status='reviewed' WHERE course_id=? AND version_number=?",(serialized,cid,current['version']))
         return {'ok':True,'quality':quality,'graph':{'nodes':len(graph['nodes']),'edges':len(graph['edges'])},'question_bank':synced}
 
     @app.post('/api/teacher/courses/{cid}/publish')
@@ -468,12 +623,14 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         quality=evaluate_course(structure)
         if not publication_allowed(quality):
             raise HTTPException(409,'El curso todavía tiene problemas de calidad que deben revisarse antes de publicar.')
-        persist_graph(db,cid,structure)
-        sync_course_questions(db,cid,structure)
-        db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
         published_at=now()
-        db.execute("UPDATE courses SET status='published',published_at=?,updated_at=? WHERE id=?",(published_at,published_at,cid))
-        db.execute("UPDATE course_versions SET status='published',published_at=? WHERE course_id=? AND version_number=?",(published_at,cid,row['version']))
+        with db.connect() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            persist_graph(db,cid,structure,conn=conn)
+            sync_course_questions(db,cid,structure,conn=conn)
+            conn.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
+            conn.execute("UPDATE courses SET status='published',published_at=?,updated_at=? WHERE id=?",(published_at,published_at,cid))
+            conn.execute("UPDATE course_versions SET status='published',published_at=? WHERE course_id=? AND version_number=?",(published_at,cid,row['version']))
         return {'ok':True,'course_id':cid,'quality':quality,'version':row['version']}
 
     @app.get('/api/teacher/courses/{cid}/pack')
@@ -621,7 +778,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 skip_topics=[topic for topic,data in result.get('topics',{}).items() if data.get('percentage',0)>=80]
             except Exception:
                 pass
-        return {'course':{'id':cid,'title':course['title'],'subject':course['subject'],'level':course['level'],'structure':json.loads(course['structure_json'])},'enrollment':enrollment,'diagnostic_skip_topics':skip_topics}
+        return {'course':{'id':cid,'title':course['title'],'subject':course['subject'],'level':course['level'],'structure':student_structure(json.loads(course['structure_json']))},'enrollment':enrollment,'diagnostic_skip_topics':skip_topics}
 
     @app.get('/api/courses/{cid}/exam')
     def course_exam(cid:int,profile_id:int=1):
@@ -659,29 +816,41 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.post('/api/courses/{cid}/exam/submit')
     def submit_course_exam(cid:int,value:Submission):
         user(value.profile_id)
-        course=db.one("SELECT * FROM courses WHERE id=? AND status='published'",(cid,))
-        if not course: raise HTTPException(404,'Ese curso no está publicado.')
-        enrollment=db.one("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id))
-        if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
-        structure=json.loads(course['structure_json'])
-        questions=structure.get('final_exam',[])
-        if len(value.answers)!=len(questions): raise HTTPException(422,'Responde todas las preguntas del examen.')
-        feedback=[];score=0
-        for q,answer in zip(questions,value.answers):
-            correct=answer==q.get('correct')
-            score+=int(correct)
-            feedback.append({'topic':q.get('topic',''),'correct':correct,'answer':answer,'correct_answer':q.get('correct',''),'source':q.get('source',{})})
-            record_event(db,value.profile_id,'question_answered',course['subject'],q.get('topic',''),reference_type='course_exam',reference_id=cid,metadata={'correct':correct,'difficulty':'Normal'})
-            bank=db.one("SELECT id FROM question_bank WHERE course_id=? AND topic=? AND prompt=? LIMIT 1",(cid,q.get('topic',''),q.get('prompt','')))
-            if bank: db.execute("UPDATE question_bank SET attempts=attempts+1,correct_count=correct_count+?,incorrect_count=incorrect_count+? WHERE id=?",(int(correct),int(not correct),bank['id']))
-        total=len(questions)
-        weak=list(dict.fromkeys(x['topic'] for x in feedback if not x['correct']))
-        strong=list(dict.fromkeys(x['topic'] for x in feedback if x['correct']))
-        result={'score':score,'total':total,'percentage':round(score/max(1,total)*100),'strong_topics':strong,'weak_topics':weak,'feedback':feedback}
-        db.execute("INSERT INTO course_exam_results(course_id,user_id,answers_json,result_json,created_at) VALUES(?,?,?,?,?)",(cid,value.profile_id,json.dumps(value.answers,ensure_ascii=False),json.dumps(result,ensure_ascii=False),now()))
-        db.execute("DELETE FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
-        db.execute("UPDATE course_enrollments SET status='completed',completed_at=?,updated_at=? WHERE course_id=? AND user_id=?",(now(),now(),cid,value.profile_id))
-        db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
+        question_events=[]
+        with db.connect() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            course=conn.execute("SELECT * FROM courses WHERE id=? AND status='published'",(cid,)).fetchone()
+            if not course: raise HTTPException(404,'Ese curso no está publicado.')
+            enrollment=conn.execute("SELECT * FROM course_enrollments WHERE course_id=? AND user_id=?",(cid,value.profile_id)).fetchone()
+            if not enrollment: raise HTTPException(409,'Primero inscríbete en este curso.')
+            structure=json.loads(course['structure_json'])
+            questions=structure.get('final_exam',[])
+            if len(value.answers)!=len(questions): raise HTTPException(422,'Responde todas las preguntas del examen.')
+            feedback=[];score=0
+            for q,answer in zip(questions,value.answers):
+                correct=answer==q.get('correct')
+                score+=int(correct)
+                feedback.append({'topic':q.get('topic',''),'correct':correct,'answer':answer,'correct_answer':q.get('correct',''),'source':q.get('source',{})})
+                question_events.append((q.get('topic',''),correct))
+                bank=conn.execute("SELECT id FROM question_bank WHERE course_id=? AND topic=? AND prompt=? LIMIT 1",(cid,q.get('topic',''),q.get('prompt',''))).fetchone()
+                if bank:
+                    conn.execute("UPDATE question_bank SET attempts=attempts+1,correct_count=correct_count+?,incorrect_count=incorrect_count+? WHERE id=?",(int(correct),int(not correct),bank['id']))
+            total=len(questions)
+            weak=list(dict.fromkeys(x['topic'] for x in feedback if not x['correct']))
+            strong=list(dict.fromkeys(x['topic'] for x in feedback if x['correct']))
+            result={'score':score,'total':total,'percentage':round(score/max(1,total)*100),'strong_topics':strong,'weak_topics':weak,'feedback':feedback}
+            passed=result['percentage']>=70
+            result['passed']=passed
+            timestamp=now()
+            conn.execute("INSERT INTO course_exam_results(course_id,user_id,answers_json,result_json,created_at) VALUES(?,?,?,?,?)",(cid,value.profile_id,json.dumps(value.answers,ensure_ascii=False),json.dumps(result,ensure_ascii=False),timestamp))
+            conn.execute("DELETE FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+            if passed:
+                conn.execute("UPDATE course_enrollments SET status='completed',completed_at=?,updated_at=? WHERE course_id=? AND user_id=?",(timestamp,timestamp,cid,value.profile_id))
+                conn.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
+            else:
+                conn.execute("UPDATE course_enrollments SET status='active',completed_at=NULL,updated_at=? WHERE course_id=? AND user_id=?",(timestamp,cid,value.profile_id))
+        for topic,correct in question_events:
+            record_event(db,value.profile_id,'question_answered',course['subject'],topic,reference_type='course_exam',reference_id=cid,metadata={'correct':correct,'difficulty':'Normal'})
         record_event(db,value.profile_id,'quiz_completed',course['subject'],'Examen final',reference_type='course_exam',reference_id=cid,metadata={'score':score,'total':total,'difficulty':'Normal'})
         return result
 
@@ -726,6 +895,22 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         if value.topic_index>=len(topics): raise HTTPException(422,'Tema fuera de rango.')
         route=topics[value.topic_index].get('route',[])
         if value.step_index>=max(1,len(route)): raise HTTPException(422,'Paso fuera de rango.')
+        if value.status=='completed':
+            raise HTTPException(409,'El curso solo se completa al aprobar el examen final.')
+        positions=[]
+        for ui,unit in enumerate(units):
+            for ti,item in enumerate(unit.get('topics',[])):
+                steps=item.get('route',[]) or [{}]
+                positions.extend((ui,ti,si) for si in range(len(steps)))
+        current=(row['unit_index'],row['topic_index'],row['step_index'])
+        requested=(value.unit_index,value.topic_index,value.step_index)
+        try:
+            current_index=positions.index(current)
+            requested_index=positions.index(requested)
+        except ValueError:
+            raise HTTPException(422,'Posición de curso no válida.')
+        if requested_index < current_index or requested_index > current_index+1:
+            raise HTTPException(409,'Avanza un paso a la vez en tu ruta.')
         # Evaluate evidence from the step the student just completed, not the destination step.
         previous_topic=''
         previous_step_type=''
@@ -759,7 +944,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         plan=db.one("SELECT * FROM study_plans WHERE user_id=? ORDER BY id DESC LIMIT 1",(profile_id,))
         if plan:
             plan['topics']=json.loads(plan['topics']); plan['plan']=json.loads(plan['plan'])
-        due_cards=db.one("SELECT count(*) n FROM flashcards WHERE user_id=? AND due<=?",(profile_id,date.today().isoformat()))['n']
+        due_cards=db.one("SELECT count(*) n FROM flashcards WHERE user_id=? AND due<=?",(profile_id,local_day_iso()))['n']
         recommendation=build_recommendation(db,profile_id)
         mastery=db.all("SELECT * FROM topic_mastery WHERE user_id=? ORDER BY mastery_score ASC,last_seen DESC LIMIT 8",(profile_id,))
         topic_reviews=due_reviews(db,profile_id,5)
@@ -778,8 +963,29 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.get('/api/backup/export')
     def backup_export(profile_id:int=1):
         user(profile_id)
-        payload=export_backup(db)
-        return payload
+        if teacher_auth_required:
+            raise HTTPException(409,'En la aplicación distribuida los respaldos deben exportarse cifrados.')
+        return export_backup(db)
+
+    @app.post('/api/backup/export-encrypted')
+    async def backup_export_encrypted(request:Request):
+        body=await request.json()
+        profile_id=int(body.get('profile_id',1))
+        user(profile_id)
+        try:
+            return encrypt_backup(export_backup(db),body.get('password',''))
+        except (ValueError,TypeError) as exc:
+            raise HTTPException(422,str(exc))
+
+    @app.post('/api/backup/decrypt')
+    async def backup_decrypt(request:Request):
+        body=await request.json()
+        try:
+            payload=decrypt_backup(body.get('envelope'),body.get('password',''))
+            validate_backup(payload)
+            return payload
+        except (ValueError,TypeError) as exc:
+            raise HTTPException(422,str(exc))
 
     @app.post('/api/backup/validate')
     async def backup_validate(request:Request):
@@ -875,19 +1081,32 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.post('/api/simulations')
     def create_simulation(value:SimulationCreate):
         user(value.profile_id)
-        topic=value.topics[0]
-        request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=value.question_count,kind='multiple')
-        questions=generate(request)
+        questions=[]
+        remaining=value.question_count
+        try:
+            for index,topic in enumerate(value.topics):
+                slots=max(1,remaining//max(1,len(value.topics)-index))
+                request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=slots,kind='multiple')
+                generated=generate(request)
+                questions.extend(generated[:slots])
+                remaining=value.question_count-len(questions)
+                if remaining<=0:
+                    break
+        except ValueError as exc:
+            raise HTTPException(422,str(exc))
+        if not questions:
+            raise HTTPException(422,'No pudimos crear preguntas para esos temas.')
+        questions=questions[:value.question_count]
         sid=db.execute("INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at,status,answers,updated_at,remaining_seconds) VALUES(?,?,?,?,NULL,?,?,'active','[]',?,?)",(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),(value.minutes if value.timed else 0),now(),now(),(value.minutes*60 if value.timed else 0)))
         db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'simulation',sid,value.subject,value.topics[0] if value.topics else '','active',now()))
-        return dict(id=sid,subject=value.subject,topics=value.topics,questions=questions,minutes=(value.minutes if value.timed else 0),timed=value.timed)
+        return dict(id=sid,subject=value.subject,topics=value.topics,questions=student_questions(questions),minutes=(value.minutes if value.timed else 0),timed=value.timed)
 
     @app.get('/api/simulations/active')
     def active_simulation(profile_id:int=1):
         user(profile_id)
         row=db.one("SELECT * FROM simulation_results WHERE user_id=? AND status IN ('active','paused','interrupted') AND result IS NULL ORDER BY COALESCE(updated_at,started_at) DESC LIMIT 1",(profile_id,))
         if not row:return None
-        row['topics']=json.loads(row['topics']);row['questions']=json.loads(row['questions']);row['answers']=json.loads(row['answers'] or '[]')
+        row['topics']=json.loads(row['topics']);row['questions']=student_questions(json.loads(row['questions']));row['answers']=json.loads(row['answers'] or '[]')
         return row
 
     @app.post('/api/simulations/{sid}/progress')
@@ -906,7 +1125,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         if not row or not row['result']:raise HTTPException(409,'Completa el simulacro antes de crear el refuerzo.')
         result=json.loads(row['result']);weak=result.get('review',[])
         if not weak:return {'plan_id':None,'message':'No hay temas débiles destacados.'}
-        deadline=(date.today()+timedelta(days=3)).isoformat()
+        deadline=(local_day()+timedelta(days=3)).isoformat()
         quiz_rows=db.all('SELECT result FROM quiz_results WHERE user_id=? ORDER BY id DESC LIMIT 30',(profile_id,))
         cards=db.all('SELECT question,answer,due,interval FROM flashcards WHERE user_id=?',(profile_id,))
         plan=build_plan(row['subject'],weak,deadline,30,profile['level'],'Plan de refuerzo',quiz_rows,cards,db.progress(profile_id))
@@ -919,6 +1138,10 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         user(value.profile_id)
         row=db.one('SELECT * FROM simulation_results WHERE id=? AND user_id=?',(sid,value.profile_id))
         if not row: raise HTTPException(404,'No encontramos ese simulacro.')
+        if row.get('result'):
+            result=json.loads(row['result'])
+            weak=result.get('review',[]) if isinstance(result,dict) else []
+            return dict(**result,reinforcement=dict(topics=weak,activities=[dict(type='explanation',minutes=10),dict(type='practice',minutes=15),dict(type='flashcards',minutes=5)] if weak else []))
         questions=json.loads(row['questions'])
         result=grade(questions,value.answers)
         db.execute("UPDATE simulation_results SET result=?,completed_at=?,status='completed',updated_at=? WHERE id=?",(json.dumps(result,ensure_ascii=False),now(),now(),sid))
@@ -977,8 +1200,10 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             row=db.one('SELECT messages FROM conversations WHERE id=? AND user_id=?',(value.conversation_id,value.profile_id))
             if not row:
                 raise HTTPException(404,'La conversación ya no está disponible. Inicia una nueva.')
-            if not value.history and not value.regenerate:
-                value=Chat.model_validate({**value.model_dump(),'history':json.loads(row['messages'])})
+            stored_history=json.loads(row['messages'])
+            if value.regenerate and len(stored_history)>=2 and stored_history[-1].get('role')=='assistant' and stored_history[-2].get('role')=='user':
+                stored_history=stored_history[:-2]
+            value=Chat.model_validate({**value.model_dump(),'history':stored_history})
         stored=db.one('SELECT value FROM conversation_states WHERE conversation_id=?',(value.conversation_id,)) if value.conversation_id else None
         value=prepare(value,json.loads(stored['value']) if stored else None)
         sources=library.search(value.message,2,custom_documents(value.profile_id)) if value.use_library else []
@@ -1120,7 +1345,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             conn.execute('UPDATE quiz_results SET result=? WHERE id=?',(json.dumps(result,ensure_ascii=False),qid))
             config=json.loads(row['config'])
             kind='exercise' if config['count']==1 else 'quiz'
-            conn.execute('INSERT OR IGNORE INTO progress(user_id,kind,subject,xp,day,reference) VALUES(?,?,?,?,?,?)',(value.profile_id,kind,config['subject'],10 if kind=='exercise' else 30,date.today().isoformat(),str(qid)))
+            conn.execute('INSERT OR IGNORE INTO progress(user_id,kind,subject,xp,day,reference) VALUES(?,?,?,?,?,?)',(value.profile_id,kind,config['subject'],10 if kind=='exercise' else 30,local_day_iso(),str(qid)))
         config=json.loads(row['config'])
         for item in result.get('feedback',[]):
             record_event(db,value.profile_id,'question_answered',config.get('subject',''),item.get('topic',config.get('topic','')),reference_type='quiz',reference_id=qid,metadata={'correct':item.get('correct'),'difficulty':config.get('difficulty','Normal')})
@@ -1140,7 +1365,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.post('/api/flashcards')
     def create_card(value:Card):
         user(value.profile_id)
-        cid=db.execute('INSERT INTO flashcards(user_id,question,answer,due) VALUES(?,?,?,?)',(value.profile_id,value.question,value.answer,date.today().isoformat()))
+        cid=db.execute('INSERT INTO flashcards(user_id,question,answer,due) VALUES(?,?,?,?)',(value.profile_id,value.question,value.answer,local_day_iso()))
         return {'id':cid}
 
     @app.post('/api/flashcards/generate')
@@ -1177,9 +1402,9 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         if not row:raise HTTPException(404,'No encontramos esa tarjeta.')
         interval={'No la sé':0,'Difícil':1,'Bien':max(3,row['interval']*2),'Fácil':max(7,row['interval']*3)}[value.rating]
         interval=min(interval,180)
-        due=(date.today()+timedelta(days=interval)).isoformat()
+        due=(local_day()+timedelta(days=interval)).isoformat()
         db.execute('UPDATE flashcards SET interval=?,due=?,reviews=reviews+1 WHERE id=?',(interval,due,cid))
-        db.award(value.profile_id,'card','Tarjetas',5,f'{cid}:{date.today().isoformat()}')
+        db.award(value.profile_id,'card','Tarjetas',5,f'{cid}:{local_day_iso()}')
         record_event(db,value.profile_id,'flashcard_reviewed','Tarjetas',row['question'][:80],reference_type='flashcard',reference_id=cid,metadata={'rating':value.rating})
         return {'due':due}
 
@@ -1189,13 +1414,23 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         return {'ok':True}
 
     @app.get('/')
-    def index(mode:str=''):return FileResponse(ROOT/('frontend/fair.html' if mode=='fair' else 'frontend/index.html'))
+    def index(mode:str=''):
+        if mode=='fair':
+            response=FileResponse(ROOT/'frontend/fair.html')
+            response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
+            return response
+        response=FileResponse(ROOT/'frontend/index.html')
+        response.set_cookie('allen_mode','app',httponly=True,samesite='strict',secure=False,path='/')
+        return response
 
     from .fair import install_fair
     install_fair(app,db,engine)
 
     @app.get('/fair')
-    def fair_index():return FileResponse(ROOT/'frontend/fair.html')
+    def fair_index():
+        response=FileResponse(ROOT/'frontend/fair.html')
+        response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
+        return response
 
     app.mount('/static',StaticFiles(directory=ROOT/'frontend'),name='static')
     return app

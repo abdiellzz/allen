@@ -1,5 +1,6 @@
 from __future__ import annotations
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from .time_utils import local_day, local_day_iso
 
 STATUSES=("new","learning","practicing","reviewing","mastered","needs_reinforcement")
 
@@ -17,7 +18,7 @@ def compute_mastery(attempts=0,correct=0,incorrect=0,hints=0,practice_count=0,qu
     if last_seen:
         try:
             seen=datetime.fromisoformat(str(last_seen).replace("Z","+00:00")).date()
-            age=(date.today()-seen).days
+            age=(local_day()-seen).days
             recent_bonus=6 if age<=1 else 3 if age<=7 else 0
         except Exception:
             pass
@@ -25,14 +26,14 @@ def compute_mastery(attempts=0,correct=0,incorrect=0,hints=0,practice_count=0,qu
     confidence=round(_clamp(evidence*100))
     if score>=85 and confidence>=55: status="mastered"
     elif incorrect>=3 and score<45: status="needs_reinforcement"
-    elif next_review and str(next_review)<=date.today().isoformat(): status="reviewing"
+    elif next_review and str(next_review)<=local_day_iso(): status="reviewing"
     elif score>=55: status="practicing"
     else: status="learning"
     return dict(score=score,confidence=confidence,status=status)
 
 def next_review_date(score:int):
     days=1 if score<40 else 2 if score<60 else 4 if score<80 else 7
-    return (date.today()+timedelta(days=days)).isoformat()
+    return (local_day()+timedelta(days=days)).isoformat()
 
 def recommend_for_state(state):
     score=state.get("mastery_score",0)

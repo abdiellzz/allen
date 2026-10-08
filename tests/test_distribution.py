@@ -39,3 +39,10 @@ def test_complete_remover_is_packaged_and_guarded():
     assert "Stop-Process -Force" in remover
     assert "ALLEN_DATA_ROOT" not in launcher
     assert "remove_allen.ps1" in launcher
+
+
+def test_launcher_has_no_obsolete_imports():
+    root = Path(__file__).resolve().parent.parent
+    launcher = (root / "distribution/allen_launcher.py").read_text(encoding="utf-8")
+    assert "start_local_ai" not in launcher
+    assert "issue_launch_token" in launcher

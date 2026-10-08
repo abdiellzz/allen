@@ -39,12 +39,13 @@ def build_graph(structure):
             seen.add(key); unique.append(edge)
     return {"nodes":nodes,"edges":unique}
 
-def persist_graph(db,course_id,structure):
+def persist_graph(db,course_id,structure,conn=None):
     graph=build_graph(structure)
-    db.execute("DELETE FROM curriculum_edges WHERE course_id=?",(course_id,))
+    target=conn or db
+    target.execute("DELETE FROM curriculum_edges WHERE course_id=?",(course_id,))
     for edge in graph["edges"]:
-        db.execute("INSERT INTO curriculum_edges(course_id,from_node,to_node,relation,reason) VALUES(?,?,?,?,?)",
-                   (course_id,edge["from"],edge["to"],edge["relation"],edge["reason"]))
+        target.execute("INSERT INTO curriculum_edges(course_id,from_node,to_node,relation,reason) VALUES(?,?,?,?,?)",
+                       (course_id,edge["from"],edge["to"],edge["relation"],edge["reason"]))
     return graph
 
 def prerequisite_chain(db,course_id,node_id):
