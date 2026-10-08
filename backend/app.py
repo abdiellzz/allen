@@ -64,6 +64,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     local_access_required = (db_path is None) if require_local_access is None else bool(require_local_access)
     teacher_auth_required = (db_path is None) if require_teacher_auth is None else bool(require_teacher_auth)
     privacy_epoch=0
+    runtime_mode='app'
     logger=logging.getLogger('allen')
     if not logger.handlers:
         db.path.parent.mkdir(parents=True,exist_ok=True)
@@ -117,7 +118,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 return security_headers(response)
             if not cookie_key or not secrets.compare_digest(cookie_key,access_key):
                 return security_headers(JSONResponse({'error':'Abre ALLEN desde su aplicación de escritorio.'},403))
-        fair_mode=request.cookies.get('allen_mode')=='fair'
+        fair_mode=runtime_mode=='fair'
         if fair_mode and request.method=='GET' and request.url.path=='/':
             return security_headers(RedirectResponse('/fair',status_code=303))
         if fair_mode and request.url.path=='/api/fair/sessions' and request.method=='POST' and teacher_auth_required and not teacher_configured():
@@ -370,8 +371,10 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
 
     @app.post('/api/fair/exit')
     def fair_exit(request:Request):
+        nonlocal runtime_mode
         if not teacher_unlocked(request):
             return JSONResponse({'error':'Se requiere el PIN de profesor para salir del Modo Feria.','teacher_auth_required':True},403)
+        runtime_mode='app'
         response=JSONResponse({'ok':True})
         response.set_cookie('allen_mode','app',httponly=True,samesite='strict',secure=False,path='/')
         return response
@@ -1534,7 +1537,9 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
 
     @app.get('/')
     def index(mode:str=''):
+        nonlocal runtime_mode
         if mode=='fair':
+            runtime_mode='fair'
             response=FileResponse(ROOT/'frontend/fair.html')
             response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
             return response
@@ -1547,6 +1552,8 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
 
     @app.get('/fair')
     def fair_index():
+        nonlocal runtime_mode
+        runtime_mode='fair'
         response=FileResponse(ROOT/'frontend/fair.html')
         response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
         return response
