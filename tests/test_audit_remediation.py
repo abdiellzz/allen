@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from backend.app import create_app
 from backend.backup import export_backup, restore_backup
+from backend.backup_crypto import encrypt_backup, decrypt_backup
 from backend.database import Database
 from backend.schemas import StudyPlanCreate
 from backend.time_utils import local_day_from_timestamp
@@ -135,3 +136,35 @@ def test_local_day_conversion_respects_machine_timezone(monkeypatch):
     monkeypatch.setenv("TZ","America/Panama")
     time.tzset()
     assert local_day_from_timestamp("2026-10-08T01:30:00+00:00")=="2026-10-07"
+
+
+def test_encrypted_backup_rejects_wrong_password_and_tampering(tmp_path):
+    db=Database(tmp_path/"allen.sqlite3")
+    payload=export_backup(db)
+    encrypted=encrypt_backup(payload,"correct horse battery")
+    restored=decrypt_backup(encrypted,"correct horse battery")
+    assert restored["format"]=="allen-backup"
+
+    try:
+        decrypt_backup(encrypted,"wrong password")
+    except ValueError as exc:
+        assert "incorrecta" in str(exc) or "modificado" in str(exc)
+    else:
+        raise AssertionError("Wrong backup password must fail")
+
+    tampered=dict(encrypted)
+    tampered["ciphertext"]=encrypted["ciphertext"][:-4]+"AAAA"
+    try:
+        decrypt_backup(tampered,"correct horse battery")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Tampered encrypted backup must fail")
+
+
+def test_system_routes_are_teacher_protected(tmp_path):
+    _,client=client_for(tmp_path,teacher=True)
+    assert client.get("/api/system/integrity").status_code==403
+    client.post("/api/teacher/security/setup",json={"pin":"123456"})
+    assert client.get("/api/system/integrity").status_code==200
+    client.close()
