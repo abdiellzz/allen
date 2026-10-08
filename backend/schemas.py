@@ -1,4 +1,5 @@
 from typing import Literal
+from datetime import date, datetime, timedelta
 from urllib.parse import urlsplit
 from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 
@@ -152,6 +153,20 @@ class StudyPlanCreate(Strict):
     def topic_lengths(cls,values):
         if any(not v.strip() or len(v)>80 for v in values): raise ValueError('Tema no válido')
         return values
+
+    @field_validator('deadline')
+    @classmethod
+    def bounded_deadline(cls,value):
+        try:
+            target=datetime.strptime(value,"%Y-%m-%d").date()
+        except ValueError as exc:
+            raise ValueError('Usa una fecha válida en formato AAAA-MM-DD.') from exc
+        today=date.today()
+        if target < today:
+            raise ValueError('La fecha objetivo no puede estar en el pasado.')
+        if target > today + timedelta(days=365):
+            raise ValueError('La fecha objetivo no puede superar 365 días.')
+        return value
 
 class StudySessionEvent(Strict):
     profile_id: int = Field(ge=1)
