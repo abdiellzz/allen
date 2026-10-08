@@ -1,6 +1,6 @@
 # ALLEN — aprende, incluso sin Internet
 
-> **Release estable actual: ALLEN 1.1.0** · 7 de octubre de 2026  
+> **Release estable actual: ALLEN 1.1.1** · 7 de octubre de 2026  
 > Consulta [CHANGELOG.md](CHANGELOG.md) y [docs/RELEASE_1.0.0.md](docs/RELEASE_1.0.0.md).
 
 ## Main
@@ -26,12 +26,18 @@ Sin modelo puedes usar quizzes, ejercicios, biblioteca, perfiles, tarjetas manua
 
 ## Descargar para Windows
 
-ALLEN 1.1.0 genera dos paquetes listos para usar:
+ALLEN 1.1.1 genera dos paquetes listos para usar:
 
-- **Portable:** `ALLEN-1.1.0-Portable-Windows-x64.zip`. Extrae la carpeta completa y ejecuta `ALLEN.exe`. No requiere instalar Python. Los datos se guardan dentro de `ALLEN-Data`, por lo que puedes mover la carpeta completa a otra PC o memoria USB.
-- **Instalador:** `ALLEN-1.1.0-Setup-Windows-x64.exe`. Instala ALLEN para el usuario actual, crea acceso en el menú Inicio y puede crear un acceso directo en el escritorio. Tampoco requiere Python.
+- **Portable:** `ALLEN-1.1.1-Portable-Windows-x64.zip`. Extrae la carpeta completa y ejecuta `ALLEN.exe`. No requiere instalar Python. Los datos se guardan dentro de `ALLEN-Data`, por lo que puedes mover la carpeta completa a otra PC o memoria USB.
+- **Instalador:** `ALLEN-1.1.1-Setup-Windows-x64.exe`. Instala ALLEN para el usuario actual, crea acceso en el menú Inicio y puede crear un acceso directo en el escritorio. Tampoco requiere Python.
 
 Consulta **[docs/WINDOWS_DISTRIBUTION.md](docs/WINDOWS_DISTRIBUTION.md)** para conocer el proceso de construcción, almacenamiento de datos y desinstalación.
+
+### Eliminar ALLEN completamente
+
+Tanto el instalador como el Portable incluyen **`Eliminar ALLEN completamente.bat`**. Este archivo pide escribir **`BORRAR`** antes de hacer cambios y elimina la aplicación, los perfiles, el progreso, la base SQLite, backups, snapshots, configuración de ALLEN y accesos directos. En modo Portable también elimina `ALLEN-Data` y la carpeta de la aplicación.
+
+Por seguridad, no borra modelos GGUF ni instalaciones externas de llama.cpp, porque pueden pertenecer a otras aplicaciones.
 
 ## Instalar desde el código fuente
 
@@ -59,7 +65,7 @@ El constructor determinista no finge que un texto generado es automáticamente c
 
 ## Alcance de plataforma
 
-ALLEN 1.1.0 está diseñado primero para **Windows en escritorio y laptop**. La experiencia principal se valida en 1920×1080, 1440×900 y 1366×768.
+ALLEN 1.1.1 está diseñado primero para **Windows en escritorio y laptop**. La experiencia principal se valida en 1920×1080, 1440×900 y 1366×768.
 
 La interfaz también se prueba para 900×800, 640×900 y 390×844 para evitar overflow horizontal y mantener utilizables los flujos esenciales en pantallas pequeñas. Esto no convierte a ALLEN en una app móvil dedicada: no hay APK ni navegación móvil independiente; el objetivo principal sigue siendo escritorio/laptop.
 
