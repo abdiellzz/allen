@@ -1,11 +1,12 @@
 from __future__ import annotations
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
+from .time_utils import local_day, local_day_iso
 
 TECHNIQUES=("Descubre","Recupera","Explica","Mezcla","Representa","Revisa")
 
 def _parse_deadline(value:str)->date:
     target=datetime.strptime(value,"%Y-%m-%d").date()
-    if target < date.today():
+    if target < local_day():
         raise ValueError("La fecha objetivo no puede estar en el pasado.")
     return target
 
