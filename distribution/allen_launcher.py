@@ -50,6 +50,8 @@ def self_test() -> int:
         app = create_app()
         if not getattr(app, "state", None) or not app.state.db.path.parent.exists():
             return 3
+        if not callable(getattr(app.state, "issue_launch_key", None)):
+            return 4
     return 0
 
 
@@ -85,7 +87,7 @@ def run_gui() -> int:
     buttons.pack(fill="x")
 
     def open_allen():
-        webbrowser.open("http://127.0.0.1:8787/?access="+app.state.access_key)
+        webbrowser.open("http://127.0.0.1:8787/?access="+app.state.issue_launch_key())
 
     ttk.Button(buttons, text="Abrir ALLEN", command=open_allen).pack(side="left")
 
