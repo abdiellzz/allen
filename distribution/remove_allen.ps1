@@ -86,6 +86,24 @@ Get-ChildItem -LiteralPath $env:TEMP -Force -ErrorAction SilentlyContinue |
   Where-Object { $_.Name -like "ALLEN*" -or $_.Name -like "allen-*" } |
   ForEach-Object { Safe-Remove $_.FullName }
 
+# Remove recognized ALLEN distribution downloads without touching unrelated files.
+$downloads = Join-Path $env:USERPROFILE "Downloads"
+if (Test-Path -LiteralPath $downloads) {
+  $downloadPatterns = @(
+    "ALLEN-*-Setup-Windows-x64.exe",
+    "ALLEN-*-Portable-Windows-x64.zip",
+    "allen-installer*.zip",
+    "allen-portable*.zip"
+  )
+  foreach ($pattern in $downloadPatterns) {
+    Get-ChildItem -LiteralPath $downloads -Filter $pattern -File -ErrorAction SilentlyContinue |
+      ForEach-Object {
+        Write-Host "Eliminando descarga: $($_.FullName)"
+        Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue
+      }
+  }
+}
+
 # If this remover came from a portable/extracted distribution, remove that folder
 # too. The script itself runs from TEMP, so the source folder is not locked.
 $source = Normalize-Path $SourceRoot
