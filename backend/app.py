@@ -140,6 +140,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             request.url.path.startswith('/api/teacher/')
             or request.url.path.startswith('/api/backup/')
             or request.url.path.startswith('/api/recovery/')
+            or request.url.path.startswith('/api/system/')
         )
         if teacher_auth_required and protected_teacher and request.url.path not in teacher_security_paths and not teacher_unlocked(request):
             return security_headers(JSONResponse({'error':'Se requiere autorización de profesor.','teacher_auth_required':True},403))
