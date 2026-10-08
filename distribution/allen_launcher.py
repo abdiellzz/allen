@@ -62,7 +62,6 @@ def run_gui() -> int:
 
     from backend.app import app
     from backend.version import ALLEN_VERSION
-    from start_local_ai import main as start_local_ai
 
     server_holder = {"server": None}
     stop_event = threading.Event()
@@ -107,12 +106,6 @@ def run_gui() -> int:
 
     root.protocol("WM_DELETE_WINDOW", close_allen)
 
-    def model_worker():
-        try:
-            start_local_ai()
-        except Exception:
-            pass
-
     def server_worker():
         if health_ready():
             root.after(0, lambda: status.set("ALLEN ya está activo."))
@@ -136,7 +129,6 @@ def run_gui() -> int:
             time.sleep(0.25)
         root.after(0, lambda: status.set("No se pudo iniciar. Comprueba si el puerto 8787 está ocupado."))
 
-    threading.Thread(target=model_worker, daemon=True).start()
     threading.Thread(target=server_worker, daemon=True).start()
     threading.Thread(target=readiness_worker, daemon=True).start()
 
