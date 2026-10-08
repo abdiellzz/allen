@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 BASE_VERSION=8
-LATEST_SCHEMA_VERSION=11
+LATEST_SCHEMA_VERSION=12
 
 MIGRATIONS={
     9: (
@@ -42,6 +42,12 @@ MIGRATIONS={
             pin_hash TEXT NOT NULL,
             updated_at TEXT NOT NULL
         );
+        """
+    ),
+    12: (
+        "teacher_pin_kdf_version",
+        """
+        SELECT 1;
         """
     ),
 }
