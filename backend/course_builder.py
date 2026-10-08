@@ -33,10 +33,16 @@ def decode_source(filename:str,mime:str,content_base64:str):
             raise ValueError('No pudimos abrir este PDF.') from exc
         if len(reader.pages)>250:
             raise ValueError("El PDF tiene demasiadas páginas para esta versión.")
+        used=0
         for idx,page in enumerate(reader.pages,1):
+            if used>=MAX_TEXT:
+                break
             text=_clean(page.extract_text() or "")
             if text:
+                remaining=MAX_TEXT-used
+                text=text[:remaining]
                 pages.append({"page":idx,"text":text})
+                used+=len(text)
     elif ext in (".txt",".md") or mime in ("text/plain","text/markdown"):
         text=_clean(raw.decode("utf-8","replace"))
         pages=[{"page":1,"text":text}]
