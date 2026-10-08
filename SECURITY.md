@@ -1,16 +1,117 @@
 # Seguridad y privacidad
 
-ALLEN está diseñado para uso local. El servidor escucha en `127.0.0.1` y el modelo GGUF debe permanecer en el equipo del usuario. No subas modelos, bases SQLite, tokens, archivos `.env` ni credenciales al repositorio.
+ALLEN es una aplicación local. La seguridad del proyecto depende tanto del código como de mantener secretos y datos reales fuera del repositorio.
 
-## Antes de publicar
+## Datos que nunca deben entrar a Git
 
-- Revisa `git diff --cached` y confirma que no contiene secretos ni datos personales.
-- Usa un repositorio privado si el código o los datos todavía no deben ser públicos.
-- Configura los secretos de despliegue únicamente en GitHub/Vercel; nunca los escribas en el código.
-- Rota cualquier credencial que haya sido pegada en un commit o en una incidencia.
+No subas:
 
-## Vercel
+- `license_private_key.pem`;
+- archivos `*.license` emitidos a clientes;
+- `.env`;
+- tokens o credenciales;
+- bases `*.sqlite3`;
+- backups reales;
+- modelos `*.gguf`;
+- documentos privados de estudiantes o instituciones;
+- logs con información sensible.
 
-La configuración de Vercel publica únicamente la página de entrada. No expone el servidor FastAPI, SQLite ni el modelo local. Para usar el tutor completo, ejecuta ALLEN en el dispositivo con `start_allen.bat`.
+Las reglas principales ya están en `.gitignore`, pero el desarrollador debe revisar cada commit.
 
-Para reportar un problema de seguridad, no publiques detalles sensibles en una incidencia. Contacta al propietario del repositorio de forma privada.
+## Licenciamiento
+
+ALLEN contiene únicamente la **clave pública** Ed25519.
+
+La **clave privada**:
+
+- pertenece exclusivamente al administrador de licencias;
+- no debe subirse a GitHub;
+- no debe incluirse en el instalador;
+- no debe incluirse en el Portable;
+- no debe incrustarse en `ALLEN-License-Manager.exe`;
+- debe conservarse con backup cifrado.
+
+Si la clave privada se filtra, hay que considerar comprometida la capacidad de emitir licencias y rotar el par de claves en una release posterior.
+
+## Aplicación local
+
+El servidor de ALLEN escucha solamente en:
+
+`127.0.0.1:8787`
+
+La conexión al modelo local debe permanecer igualmente en loopback.
+
+No abras estos servicios a la LAN o Internet sin un diseño de autenticación, autorización y transporte adecuado.
+
+## Controles actuales
+
+Entre las defensas del producto:
+
+- validación Host/Origin;
+- bloqueo de solicitudes cross-site;
+- token para mutaciones;
+- CSP;
+- `X-Content-Type-Options`;
+- `Referrer-Policy`;
+- entradas acotadas;
+- SQL parametrizado;
+- Markdown sin HTML activo;
+- sin ejecución de código del estudiante;
+- logs sin conversaciones;
+- licencia firmada Ed25519.
+
+Estos controles reducen riesgo; no convierten ALLEN en un sistema certificado.
+
+## Datos locales
+
+Instalación:
+
+`%LOCALAPPDATA%\ALLEN`
+
+Portable:
+
+`ALLEN-Data`
+
+Los perfiles no son cuentas de seguridad. Personas que compartan la misma cuenta de Windows pueden tener acceso a los mismos datos locales.
+
+## Backups y snapshots
+
+Los backups externos quedan bajo responsabilidad de quien los exporta.
+
+No subas backups reales al repositorio ni los uses como fixtures de pruebas.
+
+## Landing Vercel
+
+`public/` es estática.
+
+`vercel.json` publica únicamente esa superficie y añade cabeceras defensivas.
+
+La landing no debe contener:
+
+- claves;
+- tokens;
+- SQLite;
+- endpoints privados;
+- datos reales.
+
+## Dependencias
+
+Antes de una release:
+
+1. instala desde los requirements versionados;
+2. ejecuta pruebas;
+3. revisa cambios de dependencias;
+4. construye desde CI limpio;
+5. distribuye artefactos provenientes del workflow/release esperado.
+
+## Reportar una vulnerabilidad
+
+No publiques secretos, claves privadas, datos personales ni una prueba explotable contra una instalación real en una issue pública.
+
+Contacta al propietario del repositorio de forma privada y aporta:
+
+- versión;
+- componente afectado;
+- pasos mínimos para reproducir;
+- impacto;
+- mitigación conocida, si existe.
