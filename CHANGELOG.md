@@ -4,6 +4,18 @@ Todos los cambios relevantes de ALLEN se documentan aquí.
 
 ## [Unreleased]
 
+## [1.2.1] — 2026-10-07
+
+### Seguridad
+- Protege la API local con un secreto efímero por ejecución y cookie HttpOnly/SameSite=Strict.
+- Verifica criptográficamente la licencia anterior antes de renovarla en License Manager.
+- Actualiza pypdf a 6.19.0 y cryptography a 50.0.2.
+- Añade pip-audit a CI y Dependabot semanal.
+- Fija GitHub Actions a SHAs inmutables y limita GITHUB_TOKEN a lectura.
+- Endurece permisos del PEM privado en Linux/macOS.
+- Añade cabeceras COOP/CORP, X-Frame-Options y Permissions-Policy.
+
+
 ### Repositorio y documentación
 - Limpieza de scripts raíz obsoletos anteriores a la distribución 1.2.0.
 - Documentación reorganizada bajo `docs/`.
