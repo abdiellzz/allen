@@ -1,23 +1,26 @@
-# Only the explicitly configured static Vercel output is deployed.
-# This directory contains the public landing page and its local assets.
-.venv/
+# Vercel publishes only the static landing in public/.
 backend/
 config/
 data/
-dist/
-installer/
-licenses/
-licensing/
+distribution/
+docs/
+frontend/
 models/
-scripts/
 tests/
 tools/
-allen_training/
-android/
-legacy/
-output/
+.github/
+.venv/
 build/
+dist/
+artifacts/
 *.sqlite3
 *.sqlite3-*
 *.gguf
+*.license
 *.env
+license_private_key.pem
+CHANGELOG.md
+SECURITY.md
+VERSION
+requirements*.txt
+server.py
