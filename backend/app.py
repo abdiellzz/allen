@@ -505,7 +505,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         if not session: raise HTTPException(404,'No encontramos esa sesión.')
         db.execute('INSERT INTO study_session_events(user_id,session_id,kind,activity_index,note,created) VALUES(?,?,?,?,?,?)',
             (value.profile_id,sid,value.kind,value.activity_index,value.note,now()))
-        fields=['current_activity_index=?','last_activity_at=?']; args=[value.activity_index,now()]
+        timestamp=now()
         status=session['status']
         completed=session.get('activities_completed',0); skipped=session.get('activities_skipped',0); difficulties=session.get('difficulties',0); hints=session.get('hints_used',0)
         if value.kind=='completed': completed+=1; status='completed'
@@ -514,11 +514,12 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         elif value.kind=='hint': hints+=1
         elif value.kind=='paused': status='paused'
         if status!='completed' and value.kind not in ('completed','paused'): status='active'
-        fields += ['activities_completed=?','activities_skipped=?','difficulties=?','hints_used=?','status=?']
-        args += [completed,skipped,difficulties,hints,status]
-        if status=='completed': fields.append('completed=?'); args.append(now())
-        args.append(sid)
-        db.execute('UPDATE study_sessions SET '+','.join(fields)+' WHERE id=?',tuple(args))
+        completed_at=timestamp if status=='completed' else session.get('completed')
+        db.execute("""UPDATE study_sessions
+            SET current_activity_index=?,last_activity_at=?,activities_completed=?,activities_skipped=?,
+                difficulties=?,hints_used=?,status=?,completed=?
+            WHERE id=?""",
+            (value.activity_index,timestamp,completed,skipped,difficulties,hints,status,completed_at,sid))
         plan=db.one("SELECT subject FROM study_plans WHERE id=?",(session['plan_id'],))
         subject=plan['subject'] if plan else ''
         if value.kind=='hint': record_event(db,value.profile_id,'hint_used',subject,'',reference_type='study_session',reference_id=sid)
