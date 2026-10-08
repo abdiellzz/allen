@@ -1,3 +1,4 @@
+import hashlib
 import asyncio
 import json
 import logging
@@ -21,7 +22,7 @@ from .ai import LocalAI
 from .database import Database, now
 from .education import catalog, generate, grade
 from .library import Library
-from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport, CourseHelp, CourseExamProgress, CourseVersionImport, RecoveryRestore, LicenseActivation
+from .schemas import LearningMemory, SavedAnswer, LibraryImport, QuizAnswer, Settings, Profile, Chat, QuizRequest, Submission, Card, Review, Study, CardGeneration, StudyPlanCreate, StudySessionEvent, GuideRequest, AdventureStart, AdventureEvent, SimulationCreate, SimulationProgress, TeacherImport, CourseReview, CoursePublish, CourseEnroll, CourseProgress, CoursePackImport, CourseHelp, CourseExamProgress, CourseVersionImport, RecoveryRestore, TeacherPin, LicenseActivation
 from .security import safe_reply
 from .prompts import declared_name, topic_title
 from .conversation import prepare, advance, guard_action
@@ -50,6 +51,8 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     library=Library(ROOT/'data/library')
     engine=ai or LocalAI()
     token=secrets.token_urlsafe(32)
+    fair_token_value=secrets.token_urlsafe(32)
+    teacher_session=secrets.token_urlsafe(32)
     access_key=secrets.token_urlsafe(32)
     launch_token=secrets.token_urlsafe(32)
     launch_token_used=False
@@ -104,17 +107,41 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 target=request.url.path+('?' + urlencode(clean) if clean else '')
                 response=RedirectResponse(target,status_code=303)
                 response.set_cookie('allen_access',access_key,httponly=True,samesite='strict',secure=False,path='/')
+                response.set_cookie('allen_mode','fair' if request.url.path=='/fair' else 'app',httponly=True,samesite='strict',secure=False,path='/')
                 return security_headers(response)
             if not cookie_key or not secrets.compare_digest(cookie_key,access_key):
                 return security_headers(JSONResponse({'error':'Abre ALLEN desde su aplicación de escritorio.'},403))
+        fair_mode=request.cookies.get('allen_mode')=='fair'
+        if fair_mode and request.url.path.startswith('/api/'):
+            fair_allowed=(
+                request.url.path.startswith('/api/fair/')
+                or request.url.path in {'/api/health','/api/model/status','/api/teacher/security/status','/api/teacher/security/unlock'}
+            )
+            if not fair_allowed:
+                return security_headers(JSONResponse({'error':'Modo Feria aislado: esta API no está disponible.','fair_restricted':True},403))
         origin=request.headers.get('origin')
         if origin and origin != str(request.base_url).rstrip('/'):
             return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
         if request.headers.get('sec-fetch-site')=='cross-site':
             return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
         if request.method in ('POST','PUT','DELETE','PATCH'):
-            if not secrets.compare_digest(request.headers.get('x-allen-token',''),token):
-                return JSONResponse({'error':'Recarga Allen para continuar.'},403)
+            fair_auth_path=request.url.path.startswith('/api/fair/') or (fair_mode and request.url.path=='/api/teacher/security/unlock')
+            expected_token=fair_token_value if fair_auth_path else token
+            if not secrets.compare_digest(request.headers.get('x-allen-token',''),expected_token):
+                return security_headers(JSONResponse({'error':'Recarga Allen para continuar.'},403))
+        teacher_security_paths={
+            '/api/teacher/security/status',
+            '/api/teacher/security/setup',
+            '/api/teacher/security/unlock',
+            '/api/teacher/security/lock',
+        }
+        protected_teacher=(
+            request.url.path.startswith('/api/teacher/')
+            or request.url.path.startswith('/api/backup/')
+            or request.url.path.startswith('/api/recovery/')
+        )
+        if protected_teacher and request.url.path not in teacher_security_paths and not teacher_unlocked(request):
+            return security_headers(JSONResponse({'error':'Se requiere autorización de profesor.','teacher_auth_required':True},403))
         if licensing_required and request.url.path.startswith('/api/'):
             allowed = {
                 '/api/bootstrap',
@@ -189,6 +216,18 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             })
         return safe
 
+
+    def teacher_configured():
+        return bool(db.one("SELECT id FROM teacher_security WHERE id=1"))
+
+    def teacher_unlocked(request):
+        value=request.cookies.get('allen_teacher','')
+        return bool(value and secrets.compare_digest(value,teacher_session))
+
+    def pin_digest(pin,salt_hex):
+        return hashlib.scrypt(pin.encode('utf-8'),salt=bytes.fromhex(salt_hex),n=2**14,r=8,p=1,dklen=32).hex()
+
+
     @app.get('/api/bootstrap')
     def bootstrap():
         db.prune()
@@ -228,9 +267,50 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         except LicenseError as exc:
             raise HTTPException(422,str(exc))
 
+    @app.get('/api/teacher/security/status')
+    def teacher_security_status(request:Request):
+        return {'configured':teacher_configured(),'unlocked':teacher_unlocked(request)}
+
+    @app.post('/api/teacher/security/setup')
+    def teacher_security_setup(value:TeacherPin,request:Request):
+        if teacher_configured():
+            raise HTTPException(409,'El PIN de profesor ya está configurado.')
+        salt=secrets.token_bytes(16).hex()
+        digest=pin_digest(value.pin,salt)
+        db.execute("INSERT INTO teacher_security(id,salt,pin_hash,updated_at) VALUES(1,?,?,?)",(salt,digest,now()))
+        response=JSONResponse({'configured':True,'unlocked':True})
+        response.set_cookie('allen_teacher',teacher_session,httponly=True,samesite='strict',secure=False,path='/')
+        return response
+
+    @app.post('/api/teacher/security/unlock')
+    def teacher_security_unlock(value:TeacherPin):
+        row=db.one("SELECT salt,pin_hash FROM teacher_security WHERE id=1")
+        if not row:
+            raise HTTPException(409,'Configura primero un PIN de profesor desde la aplicación principal.')
+        candidate=pin_digest(value.pin,row['salt'])
+        if not secrets.compare_digest(candidate,row['pin_hash']):
+            raise HTTPException(403,'PIN de profesor incorrecto.')
+        response=JSONResponse({'configured':True,'unlocked':True})
+        response.set_cookie('allen_teacher',teacher_session,httponly=True,samesite='strict',secure=False,path='/')
+        return response
+
+    @app.post('/api/teacher/security/lock')
+    def teacher_security_lock():
+        response=JSONResponse({'configured':teacher_configured(),'unlocked':False})
+        response.delete_cookie('allen_teacher',path='/')
+        return response
+
     @app.get('/api/fair/token')
     def fair_token():
-        return {'token':token}
+        return {'token':fair_token_value}
+
+    @app.post('/api/fair/exit')
+    def fair_exit(request:Request):
+        if not teacher_unlocked(request):
+            return JSONResponse({'error':'Se requiere el PIN de profesor para salir del Modo Feria.','teacher_auth_required':True},403)
+        response=JSONResponse({'ok':True})
+        response.set_cookie('allen_mode','app',httponly=True,samesite='strict',secure=False,path='/')
+        return response
 
     @app.get('/api/health')
     def health():
@@ -1280,13 +1360,23 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         return {'ok':True}
 
     @app.get('/')
-    def index(mode:str=''):return FileResponse(ROOT/('frontend/fair.html' if mode=='fair' else 'frontend/index.html'))
+    def index(mode:str=''):
+        if mode=='fair':
+            response=FileResponse(ROOT/'frontend/fair.html')
+            response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
+            return response
+        response=FileResponse(ROOT/'frontend/index.html')
+        response.set_cookie('allen_mode','app',httponly=True,samesite='strict',secure=False,path='/')
+        return response
 
     from .fair import install_fair
     install_fair(app,db,engine)
 
     @app.get('/fair')
-    def fair_index():return FileResponse(ROOT/'frontend/fair.html')
+    def fair_index():
+        response=FileResponse(ROOT/'frontend/fair.html')
+        response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
+        return response
 
     app.mount('/static',StaticFiles(directory=ROOT/'frontend'),name='static')
     return app
