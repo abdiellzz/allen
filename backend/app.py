@@ -131,7 +131,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         if origin and origin != str(request.base_url).rstrip('/'):
             return security_headers(JSONResponse({'error':'Abre Allen desde su dirección local.'},403))
         if request.headers.get('sec-fetch-site')=='cross-site':
-            return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
+            return security_headers(JSONResponse({'error':'Abre Allen desde su dirección local.'},403))
         if request.method in ('POST','PUT','DELETE','PATCH'):
             fair_auth_path=request.url.path.startswith('/api/fair/') or (fair_mode and request.url.path=='/api/teacher/security/unlock')
             expected_token=fair_token_value if fair_auth_path else token
