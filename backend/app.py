@@ -582,14 +582,17 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         except ValueError as exc: raise HTTPException(422,str(exc))
         value.structure['status']='reviewed'
         quality=evaluate_course(value.structure)
-        graph=persist_graph(db,cid,value.structure)
-        synced=sync_course_questions(db,cid,value.structure)
-        db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
-        db.execute("INSERT INTO course_quality_reviews(course_id,score,blocking_issues,report_json,created_at) VALUES(?,?,?,?,?)",(cid,quality['score'],quality['blocking_issues'],json.dumps(quality,ensure_ascii=False),now()))
-        db.execute("UPDATE courses SET status='reviewed',structure_json=?,updated_at=? WHERE id=?",(json.dumps(value.structure,ensure_ascii=False),now(),cid))
-        current=db.one("SELECT version FROM courses WHERE id=?",(cid,))
-        if current:
-            db.execute("UPDATE course_versions SET structure_json=?,status='reviewed' WHERE course_id=? AND version_number=?",(json.dumps(value.structure,ensure_ascii=False),cid,current['version']))
+        serialized=json.dumps(value.structure,ensure_ascii=False)
+        with db.connect() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            graph=persist_graph(db,cid,value.structure,conn=conn)
+            synced=sync_course_questions(db,cid,value.structure,conn=conn)
+            conn.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
+            conn.execute("INSERT INTO course_quality_reviews(course_id,score,blocking_issues,report_json,created_at) VALUES(?,?,?,?,?)",(cid,quality['score'],quality['blocking_issues'],json.dumps(quality,ensure_ascii=False),now()))
+            conn.execute("UPDATE courses SET status='reviewed',structure_json=?,updated_at=? WHERE id=?",(serialized,now(),cid))
+            current=conn.execute("SELECT version FROM courses WHERE id=?",(cid,)).fetchone()
+            if current:
+                conn.execute("UPDATE course_versions SET structure_json=?,status='reviewed' WHERE course_id=? AND version_number=?",(serialized,cid,current['version']))
         return {'ok':True,'quality':quality,'graph':{'nodes':len(graph['nodes']),'edges':len(graph['edges'])},'question_bank':synced}
 
     @app.post('/api/teacher/courses/{cid}/publish')
@@ -605,12 +608,14 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         quality=evaluate_course(structure)
         if not publication_allowed(quality):
             raise HTTPException(409,'El curso todavía tiene problemas de calidad que deben revisarse antes de publicar.')
-        persist_graph(db,cid,structure)
-        sync_course_questions(db,cid,structure)
-        db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
         published_at=now()
-        db.execute("UPDATE courses SET status='published',published_at=?,updated_at=? WHERE id=?",(published_at,published_at,cid))
-        db.execute("UPDATE course_versions SET status='published',published_at=? WHERE course_id=? AND version_number=?",(published_at,cid,row['version']))
+        with db.connect() as conn:
+            conn.execute('BEGIN IMMEDIATE')
+            persist_graph(db,cid,structure,conn=conn)
+            sync_course_questions(db,cid,structure,conn=conn)
+            conn.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
+            conn.execute("UPDATE courses SET status='published',published_at=?,updated_at=? WHERE id=?",(published_at,published_at,cid))
+            conn.execute("UPDATE course_versions SET status='published',published_at=? WHERE course_id=? AND version_number=?",(published_at,cid,row['version']))
         return {'ok':True,'course_id':cid,'quality':quality,'version':row['version']}
 
     @app.get('/api/teacher/courses/{cid}/pack')
