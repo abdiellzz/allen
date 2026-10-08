@@ -546,12 +546,13 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         quality=evaluate_course(structure)
         if not publication_allowed(quality):
             raise HTTPException(409,'El curso todavía tiene problemas de calidad que deben revisarse antes de publicar.')
-        persist_graph(db,cid,structure)
-        sync_course_questions(db,cid,structure)
-        db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
-        published_at=now()
-        db.execute("UPDATE courses SET status='published',published_at=?,updated_at=? WHERE id=?",(published_at,published_at,cid))
-        db.execute("UPDATE course_versions SET status='published',published_at=? WHERE course_id=? AND version_number=?",(published_at,cid,row['version']))
+        with db.transaction():
+            persist_graph(db,cid,structure)
+            sync_course_questions(db,cid,structure)
+            db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(cid,))
+            published_at=now()
+            db.execute("UPDATE courses SET status='published',published_at=?,updated_at=? WHERE id=?",(published_at,published_at,cid))
+            db.execute("UPDATE course_versions SET status='published',published_at=? WHERE course_id=? AND version_number=?",(published_at,cid,row['version']))
         return {'ok':True,'course_id':cid,'quality':quality,'version':row['version']}
 
     @app.get('/api/teacher/courses/{cid}/pack')
@@ -744,23 +745,24 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         structure=json.loads(course['structure_json'])
         questions=structure.get('final_exam',[])
         if len(value.answers)!=len(questions): raise HTTPException(422,'Responde todas las preguntas del examen.')
-        feedback=[];score=0
-        for q,answer in zip(questions,value.answers):
-            correct=answer==q.get('correct')
-            score+=int(correct)
-            feedback.append({'topic':q.get('topic',''),'correct':correct,'answer':answer,'correct_answer':q.get('correct',''),'source':q.get('source',{})})
-            record_event(db,value.profile_id,'question_answered',course['subject'],q.get('topic',''),reference_type='course_exam',reference_id=cid,metadata={'correct':correct,'difficulty':'Normal'})
-            bank=db.one("SELECT id FROM question_bank WHERE course_id=? AND topic=? AND prompt=? LIMIT 1",(cid,q.get('topic',''),q.get('prompt','')))
-            if bank: db.execute("UPDATE question_bank SET attempts=attempts+1,correct_count=correct_count+?,incorrect_count=incorrect_count+? WHERE id=?",(int(correct),int(not correct),bank['id']))
-        total=len(questions)
-        weak=list(dict.fromkeys(x['topic'] for x in feedback if not x['correct']))
-        strong=list(dict.fromkeys(x['topic'] for x in feedback if x['correct']))
-        result={'score':score,'total':total,'percentage':round(score/max(1,total)*100),'strong_topics':strong,'weak_topics':weak,'feedback':feedback}
-        db.execute("INSERT INTO course_exam_results(course_id,user_id,answers_json,result_json,created_at) VALUES(?,?,?,?,?)",(cid,value.profile_id,json.dumps(value.answers,ensure_ascii=False),json.dumps(result,ensure_ascii=False),now()))
-        db.execute("DELETE FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
-        db.execute("UPDATE course_enrollments SET status='completed',completed_at=?,updated_at=? WHERE course_id=? AND user_id=?",(now(),now(),cid,value.profile_id))
-        db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
-        record_event(db,value.profile_id,'quiz_completed',course['subject'],'Examen final',reference_type='course_exam',reference_id=cid,metadata={'score':score,'total':total,'difficulty':'Normal'})
+        with db.transaction():
+            feedback=[];score=0
+            for q,answer in zip(questions,value.answers):
+                correct=answer==q.get('correct')
+                score+=int(correct)
+                feedback.append({'topic':q.get('topic',''),'correct':correct,'answer':answer,'correct_answer':q.get('correct',''),'source':q.get('source',{})})
+                record_event(db,value.profile_id,'question_answered',course['subject'],q.get('topic',''),reference_type='course_exam',reference_id=cid,metadata={'correct':correct,'difficulty':'Normal'})
+                bank=db.one("SELECT id FROM question_bank WHERE course_id=? AND topic=? AND prompt=? LIMIT 1",(cid,q.get('topic',''),q.get('prompt','')))
+                if bank: db.execute("UPDATE question_bank SET attempts=attempts+1,correct_count=correct_count+?,incorrect_count=incorrect_count+? WHERE id=?",(int(correct),int(not correct),bank['id']))
+            total=len(questions)
+            weak=list(dict.fromkeys(x['topic'] for x in feedback if not x['correct']))
+            strong=list(dict.fromkeys(x['topic'] for x in feedback if x['correct']))
+            result={'score':score,'total':total,'percentage':round(score/max(1,total)*100),'strong_topics':strong,'weak_topics':weak,'feedback':feedback}
+            db.execute("INSERT INTO course_exam_results(course_id,user_id,answers_json,result_json,created_at) VALUES(?,?,?,?,?)",(cid,value.profile_id,json.dumps(value.answers,ensure_ascii=False),json.dumps(result,ensure_ascii=False),now()))
+            db.execute("DELETE FROM course_exam_sessions WHERE course_id=? AND user_id=?",(cid,value.profile_id))
+            db.execute("UPDATE course_enrollments SET status='completed',completed_at=?,updated_at=? WHERE course_id=? AND user_id=?",(now(),now(),cid,value.profile_id))
+            db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='course' AND reference_id=?",(value.profile_id,enrollment['id']))
+            record_event(db,value.profile_id,'quiz_completed',course['subject'],'Examen final',reference_type='course_exam',reference_id=cid,metadata={'score':score,'total':total,'difficulty':'Normal'})
         return result
 
     @app.post('/api/courses/{cid}/help')
@@ -1026,13 +1028,14 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             return dict(**result,reinforcement=dict(topics=weak,activities=[dict(type='explanation',minutes=10),dict(type='practice',minutes=15),dict(type='flashcards',minutes=5)] if weak else []),idempotent=True)
         questions=json.loads(row['questions'])
         result=grade(questions,value.answers)
-        db.execute("UPDATE simulation_results SET result=?,completed_at=?,status='completed',updated_at=? WHERE id=?",(json.dumps(result,ensure_ascii=False),now(),now(),sid))
-        weak=result.get('review',[]) if isinstance(result,dict) else []
-        topics=json.loads(row['topics'])
-        for item in result.get('feedback',[]):
-            record_event(db,value.profile_id,'question_answered',row['subject'],item.get('topic',topics[0] if topics else row['subject']),reference_type='simulation',reference_id=sid,metadata={'correct':item.get('correct'),'difficulty':'Normal'})
-        record_event(db,value.profile_id,'simulation_completed',row['subject'],topics[0] if topics else row['subject'],reference_type='simulation',reference_id=sid,metadata={'score':result.get('score'),'total':result.get('total')})
-        db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='simulation' AND reference_id=?",(value.profile_id,sid))
+        with db.transaction():
+            db.execute("UPDATE simulation_results SET result=?,completed_at=?,status='completed',updated_at=? WHERE id=?",(json.dumps(result,ensure_ascii=False),now(),now(),sid))
+            weak=result.get('review',[]) if isinstance(result,dict) else []
+            topics=json.loads(row['topics'])
+            for item in result.get('feedback',[]):
+                record_event(db,value.profile_id,'question_answered',row['subject'],item.get('topic',topics[0] if topics else row['subject']),reference_type='simulation',reference_id=sid,metadata={'correct':item.get('correct'),'difficulty':'Normal'})
+            record_event(db,value.profile_id,'simulation_completed',row['subject'],topics[0] if topics else row['subject'],reference_type='simulation',reference_id=sid,metadata={'score':result.get('score'),'total':result.get('total')})
+            db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='simulation' AND reference_id=?",(value.profile_id,sid))
         return dict(**result,reinforcement=dict(topics=weak,activities=[dict(type='explanation',minutes=10),dict(type='practice',minutes=15),dict(type='flashcards',minutes=5)] if weak else []))
 
     @app.post('/api/guides/cornell')
