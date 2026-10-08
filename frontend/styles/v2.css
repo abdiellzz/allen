@@ -710,3 +710,32 @@ html,body{max-width:100%;overflow-x:clip}
 
 /* remove legacy desktop-only floor */
 body{min-width:0}
+
+
+/* ALLEN offline licensing */
+body.license-locked .sidebar{display:none}
+body.license-locked .workspace{margin-left:0;width:100%}
+body.license-locked .top-actions>*:not(.network){display:none!important}
+body.license-locked main{min-height:calc(100vh - 120px);display:grid;place-items:center}
+.license-gate{width:min(760px,100%);padding:24px}
+.license-card{background:var(--v3-surface,#fff);border:1px solid var(--v3-border,#dedede);border-radius:24px;padding:30px;box-shadow:0 18px 60px rgba(0,0,0,.08)}
+.license-card h1{font-size:36px;margin:8px 0 10px}
+.license-mark{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:var(--v3-soft,#f4f1ea);margin-bottom:18px}
+.license-machine{margin:22px 0;padding:16px;border:1px solid var(--v3-border,#dedede);border-radius:16px;background:var(--v3-soft,#f7f6f2);display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.license-machine span{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--v3-muted,#666)}
+.license-machine code{font-size:15px;font-weight:700;word-break:break-all}
+.license-machine.compact{margin:16px 0;grid-template-columns:auto 1fr}
+.license-file{display:inline-flex;margin-top:4px}
+.license-feedback{margin-top:16px;padding:12px 14px;border-radius:12px;background:var(--v3-soft,#f5f5f2)}
+.license-feedback.error{border:1px solid #b42318}
+.license-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+.license-summary>div{border:1px solid var(--v3-border,#dedede);border-radius:14px;padding:13px;display:grid;gap:5px}
+.license-summary span{font-size:12px;color:var(--v3-muted,#666)}
+.license-summary b{font-size:15px;word-break:break-word}
+@media(max-width:640px){
+ .license-gate{padding:10px}
+ .license-card{padding:20px}
+ .license-card h1{font-size:30px}
+ .license-machine{grid-template-columns:1fr}
+ .license-summary{grid-template-columns:1fr 1fr}
+}
