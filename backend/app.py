@@ -31,6 +31,7 @@ from .learning_events import record_event
 from .learning_engine import recommend_next_action
 from .recommendations import build_recommendation
 from .backup import export_backup, validate_backup, restore_backup
+from .backup_crypto import encrypt_backup,decrypt_backup
 from .course_builder import decode_source, build_course, course_pack, validate_course_structure
 from .curriculum_graph import build_graph, persist_graph, prerequisite_chain
 from .course_quality import evaluate_course, publication_allowed
