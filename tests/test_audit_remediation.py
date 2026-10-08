@@ -89,14 +89,14 @@ def test_teacher_routes_require_server_side_pin_session(tmp_path):
     assert blocked.status_code==403
     assert blocked.json()["teacher_auth_required"] is True
 
-    setup=client.post("/api/teacher/security/setup",json={"pin":"123456"})
+    setup=client.post("/api/teacher/security/setup",json={"pin":"12345678"})
     assert setup.status_code==200
     allowed=client.get("/api/teacher/analytics?profile_id=1")
     assert allowed.status_code==200
 
     client.post("/api/teacher/security/lock",json={})
     assert client.get("/api/teacher/analytics?profile_id=1").status_code==403
-    unlock=client.post("/api/teacher/security/unlock",json={"pin":"123456"})
+    unlock=client.post("/api/teacher/security/unlock",json={"pin":"12345678"})
     assert unlock.status_code==200
     assert client.get("/api/teacher/analytics?profile_id=1").status_code==200
     client.close()
@@ -165,7 +165,7 @@ def test_encrypted_backup_rejects_wrong_password_and_tampering(tmp_path):
 def test_system_routes_are_teacher_protected(tmp_path):
     _,client=client_for(tmp_path,teacher=True)
     assert client.get("/api/system/integrity").status_code==403
-    client.post("/api/teacher/security/setup",json={"pin":"123456"})
+    client.post("/api/teacher/security/setup",json={"pin":"12345678"})
     assert client.get("/api/system/integrity").status_code==200
     client.close()
 
@@ -180,7 +180,7 @@ def test_plaintext_backup_export_is_disabled_in_distributed_mode(tmp_path):
     client=TestClient(app)
     token=client.get("/api/bootstrap").json()["token"]
     client.headers["X-Allen-Token"]=token
-    client.post("/api/teacher/security/setup",json={"pin":"123456"})
+    client.post("/api/teacher/security/setup",json={"pin":"12345678"})
     response=client.get("/api/backup/export?profile_id=1")
     assert response.status_code==409
     assert "cifrados" in response.json()["error"]

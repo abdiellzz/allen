@@ -190,7 +190,6 @@ class AdventureEvent(Strict):
     step: int = Field(ge=0,le=100)
     event: Literal['answer','hint','advance','pause','resume','complete','abandon']
     answer: str = Field('',max_length=500)
-    correct: bool | None = None
 
 class SimulationCreate(Strict):
     profile_id: int = Field(ge=1)

@@ -33,10 +33,16 @@ def decode_source(filename:str,mime:str,content_base64:str):
             raise ValueError('No pudimos abrir este PDF.') from exc
         if len(reader.pages)>250:
             raise ValueError("El PDF tiene demasiadas páginas para esta versión.")
+        used=0
         for idx,page in enumerate(reader.pages,1):
+            if used>=MAX_TEXT:
+                break
             text=_clean(page.extract_text() or "")
             if text:
+                remaining=MAX_TEXT-used
+                text=text[:remaining]
                 pages.append({"page":idx,"text":text})
+                used+=len(text)
     elif ext in (".txt",".md") or mime in ("text/plain","text/markdown"):
         text=_clean(raw.decode("utf-8","replace"))
         pages=[{"page":1,"text":text}]
@@ -239,12 +245,79 @@ def course_pack(course:dict,document:dict):
         }
     }
 
+def _bounded_tree(value,depth=0,counter=None):
+    if counter is None:
+        counter=[0]
+    counter[0]+=1
+    if counter[0]>5000 or depth>10:
+        raise ValueError("La estructura del curso es demasiado compleja.")
+    if isinstance(value,dict):
+        if len(value)>80:
+            raise ValueError("La estructura del curso contiene demasiados campos.")
+        for key,item in value.items():
+            if not isinstance(key,str) or len(key)>80:
+                raise ValueError("La estructura del curso contiene un campo no válido.")
+            _bounded_tree(item,depth+1,counter)
+    elif isinstance(value,list):
+        if len(value)>200:
+            raise ValueError("La estructura del curso contiene una lista demasiado grande.")
+        for item in value:
+            _bounded_tree(item,depth+1,counter)
+    elif isinstance(value,str) and len(value)>20_000:
+        raise ValueError("La estructura del curso contiene texto demasiado largo.")
+    elif value is not None and not isinstance(value,(str,int,float,bool)):
+        raise ValueError("La estructura del curso contiene un tipo no compatible.")
+
+
 def validate_course_structure(structure:dict):
-    if not isinstance(structure,dict): raise ValueError("Curso no válido.")
+    if not isinstance(structure,dict):
+        raise ValueError("Curso no válido.")
+    if len(json.dumps(structure,ensure_ascii=False))>2_500_000:
+        raise ValueError("La estructura del curso es demasiado grande.")
+    _bounded_tree(structure)
     units=structure.get("units")
-    if not isinstance(units,list) or not units: raise ValueError("El curso debe tener al menos una unidad.")
+    if not isinstance(units,list) or not units:
+        raise ValueError("El curso debe tener al menos una unidad.")
+    if len(units)>12:
+        raise ValueError("El curso no puede superar 12 unidades.")
     for unit in units:
-        if not unit.get("title") or not isinstance(unit.get("topics"),list): raise ValueError("Unidad incompleta.")
-        for topic in unit["topics"]:
-            if not topic.get("title") or not topic.get("objective"): raise ValueError("Tema incompleto.")
+        if not isinstance(unit,dict):
+            raise ValueError("Unidad no válida.")
+        title=unit.get("title")
+        topics=unit.get("topics")
+        if not isinstance(title,str) or not title.strip() or len(title)>140 or not isinstance(topics,list):
+            raise ValueError("Unidad incompleta.")
+        if not topics or len(topics)>12:
+            raise ValueError("Cada unidad debe tener entre 1 y 12 temas.")
+        for topic in topics:
+            if not isinstance(topic,dict):
+                raise ValueError("Tema no válido.")
+            topic_title=topic.get("title")
+            objective=topic.get("objective")
+            if not isinstance(topic_title,str) or not topic_title.strip() or len(topic_title)>140:
+                raise ValueError("Tema incompleto.")
+            if not isinstance(objective,str) or not objective.strip() or len(objective)>1500:
+                raise ValueError("Objetivo de tema no válido.")
+            if len(str(topic.get("source_excerpt","")))>5000:
+                raise ValueError("El fragmento de fuente es demasiado largo.")
+            for field,limit in (("route",20),("questions",50),("flashcards",50)):
+                items=topic.get(field,[]) or []
+                if not isinstance(items,list) or len(items)>limit:
+                    raise ValueError(f"El campo {field} supera el límite permitido.")
+            for q in topic.get("questions",[]) or []:
+                if not isinstance(q,dict) or len(str(q.get("prompt","")))>2000 or len(str(q.get("answer_hint","")))>4000:
+                    raise ValueError("Pregunta de curso no válida.")
+    exam=structure.get("final_exam",[]) or []
+    if not isinstance(exam,list) or len(exam)>100:
+        raise ValueError("El examen final supera el límite permitido.")
+    for q in exam:
+        if not isinstance(q,dict):
+            raise ValueError("Pregunta de examen no válida.")
+        options=q.get("options",[])
+        if not isinstance(options,list) or len(options)>10:
+            raise ValueError("Opciones de examen no válidas.")
+        if len(str(q.get("prompt","")))>2000 or len(str(q.get("correct","")))>4000:
+            raise ValueError("Pregunta de examen demasiado larga.")
+        if any(len(str(option))>4000 for option in options):
+            raise ValueError("Una opción del examen es demasiado larga.")
     return True

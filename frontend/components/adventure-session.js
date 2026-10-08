@@ -46,26 +46,26 @@ export function bindAdventureContinuity(root,profileId,{api,toast,refresh=()=>{}
   const shell=e.target.closest('[data-session-id]');if(!shell)return;
   const sid=Number(shell.dataset.sessionId),mission=missions.find(m=>m.id===shell.dataset.adventureId),index=Number(shell.dataset.step),step=mission.steps[index];
   if(e.target.closest('[data-adventure-hint]')){
-   await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:index,event:'hint',answer:'',correct:null});
+   await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:index,event:'hint',answer:''});
    shell.querySelector('.v2-stage-feedback').innerHTML=`<div class="v2-feedback"><strong>Pista</strong><p>${esc(step.hint)}</p></div>`;return;
   }
   const answer=e.target.closest('[data-adventure-answer]');
   if(answer){
-   const choice=Number(answer.dataset.adventureAnswer),correct=choice===step.correct;
-   await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:index,event:'answer',answer:step.options[choice],correct});
-   if(!correct){shell.querySelector('.v2-stage-feedback').innerHTML=`<div class="v2-feedback retry"><strong>Vamos a reforzarlo.</strong><p>${esc(step.explanation)}</p></div>`;return;}
+   const choice=Number(answer.dataset.adventureAnswer);
+   const answered=await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:index,event:'answer',answer:step.options[choice]});
+   if(!answered.correct){shell.querySelector('.v2-stage-feedback').innerHTML=`<div class="v2-feedback retry"><strong>Vamos a reforzarlo.</strong><p>${esc(step.explanation)}</p></div>`;return;}
    if(index<mission.steps.length-1){
-    const updated=await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:index+1,event:'advance',answer:'',correct:null});
+    const updated=await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:index+1,event:'advance',answer:''});
     stageRoot.innerHTML=stage(mission,updated);
    }else{
-    const updated=await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:mission.steps.length,event:'complete',answer:'',correct:null});
+    const updated=await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:mission.steps.length,event:'complete',answer:''});
     stageRoot.innerHTML=`<section class="adventure-complete"><img src="/static/assets/allen-celebrate-official.svg" alt="Allen celebrando"><div><span class="eyebrow">AVENTURA COMPLETADA</span><h2>${esc(mission.title)}</h2><p>Completaste ${mission.steps.length} pasos. Errores registrados: ${updated.mistakes}. Pistas usadas: ${updated.hints_used}.</p><button data-page="Progreso">Ver mi progreso</button></div></section>`;toast('Aventura completada y guardada.');
    }
    return;
   }
   if(e.target.closest('[data-finish-adventure]')){
    if(!confirm('¿Quieres terminar esta aventura? Tu progreso se guardará como finalizado.'))return;
-   const updated=await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:index,event:'complete',answer:'',correct:null});
+   const updated=await api('/adventures/'+sid+'/event','POST',{profile_id:profileId,step:index,event:'abandon',answer:''});
    stageRoot.innerHTML=`<section class="adventure-complete"><img src="/static/assets/allen-celebrate-official.svg" alt="Allen celebrando"><div><h2>Aventura finalizada</h2><p>Tu progreso quedó guardado. Completaste ${updated.completed_steps} pasos y puedes volver cuando quieras.</p><button data-page="Inicio">Volver al inicio</button></div></section>`;toast('Aventura finalizada.');
   }
  });

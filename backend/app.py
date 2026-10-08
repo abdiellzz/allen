@@ -42,6 +42,7 @@ from .course_versioning import compare_versions, seed_initial_version, apply_ver
 from .version import ALLEN_VERSION
 from .licensing import LicenseManager, LicenseError
 from .time_utils import local_day, local_day_iso
+from .adventure_catalog import adventure_step_count, answer_is_correct
 
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))
 
@@ -55,6 +56,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     token=secrets.token_urlsafe(32)
     fair_token_value=secrets.token_urlsafe(32)
     teacher_session=secrets.token_urlsafe(32)
+    teacher_session_until=0.0
     teacher_failures=[]
     access_key=secrets.token_urlsafe(32)
     launch_token=secrets.token_urlsafe(32)
@@ -62,6 +64,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     local_access_required = (db_path is None) if require_local_access is None else bool(require_local_access)
     teacher_auth_required = (db_path is None) if require_teacher_auth is None else bool(require_teacher_auth)
     privacy_epoch=0
+    runtime_mode='app'
     logger=logging.getLogger('allen')
     if not logger.handlers:
         db.path.parent.mkdir(parents=True,exist_ok=True)
@@ -115,7 +118,9 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 return security_headers(response)
             if not cookie_key or not secrets.compare_digest(cookie_key,access_key):
                 return security_headers(JSONResponse({'error':'Abre ALLEN desde su aplicación de escritorio.'},403))
-        fair_mode=request.cookies.get('allen_mode')=='fair'
+        fair_mode=runtime_mode=='fair'
+        if fair_mode and request.method=='GET' and request.url.path=='/':
+            return security_headers(RedirectResponse('/fair',status_code=303))
         if fair_mode and request.url.path=='/api/fair/sessions' and request.method=='POST' and teacher_auth_required and not teacher_configured():
             return security_headers(JSONResponse({'error':'Configura un PIN de profesor antes de iniciar el Modo Feria.','teacher_setup_required':True},409))
         if fair_mode and request.url.path.startswith('/api/'):
@@ -127,9 +132,9 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 return security_headers(JSONResponse({'error':'Modo Feria aislado: esta API no está disponible.','fair_restricted':True},403))
         origin=request.headers.get('origin')
         if origin and origin != str(request.base_url).rstrip('/'):
-            return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
+            return security_headers(JSONResponse({'error':'Abre Allen desde su dirección local.'},403))
         if request.headers.get('sec-fetch-site')=='cross-site':
-            return JSONResponse({'error':'Abre Allen desde su dirección local.'},403)
+            return security_headers(JSONResponse({'error':'Abre Allen desde su dirección local.'},403))
         if request.method in ('POST','PUT','DELETE','PATCH'):
             fair_auth_path=request.url.path.startswith('/api/fair/') or (fair_mode and request.url.path=='/api/teacher/security/unlock')
             expected_token=fair_token_value if fair_auth_path else token
@@ -147,7 +152,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             or request.url.path.startswith('/api/recovery/')
             or request.url.path.startswith('/api/system/')
         )
-        if teacher_auth_required and protected_teacher and request.url.path not in teacher_security_paths and not teacher_unlocked(request):
+        if teacher_auth_required and protected_teacher and request.url.path not in teacher_security_paths and not teacher_unlocked(request,touch=True):
             return security_headers(JSONResponse({'error':'Se requiere autorización de profesor.','teacher_auth_required':True},403))
         if licensing_required and request.url.path.startswith('/api/'):
             allowed = {
@@ -158,7 +163,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 '/api/license/activate',
             }
             if request.url.path not in allowed and not licensing.status().get('active'):
-                return JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402)
+                return security_headers(JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402))
         if request.url.path.startswith('/api/'):
             max_body=12_500_000 if request.url.path=='/api/teacher/import' or request.url.path.endswith('/versions') else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 8_000_000 if request.url.path.startswith('/api/backup/') else 200000
             try:
@@ -224,15 +229,42 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         return safe
 
 
+    def simulation_remaining(row,at=None):
+        if not row or int(row.get('minutes') or 0)<=0:
+            return 0
+        remaining=max(0,int(row.get('remaining_seconds') or 0))
+        if row.get('status')!='active' or not row.get('updated_at'):
+            return remaining
+        try:
+            updated=datetime.fromisoformat(str(row['updated_at']).replace('Z','+00:00'))
+            if updated.tzinfo is None:
+                updated=updated.replace(tzinfo=timezone.utc)
+            current=at or datetime.now(timezone.utc)
+            elapsed=max(0,int((current-updated).total_seconds()))
+            return max(0,remaining-elapsed)
+        except (ValueError,TypeError):
+            return remaining
+
+
     def teacher_configured():
         return bool(db.one("SELECT id FROM teacher_security WHERE id=1"))
 
-    def teacher_unlocked(request):
+    def teacher_unlocked(request,touch=False):
+        nonlocal teacher_session_until
         value=request.cookies.get('allen_teacher','')
-        return bool(value and secrets.compare_digest(value,teacher_session))
+        valid=bool(
+            value
+            and secrets.compare_digest(value,teacher_session)
+            and time.monotonic()<teacher_session_until
+        )
+        if valid and touch:
+            teacher_session_until=time.monotonic()+900
+        return valid
 
-    def pin_digest(pin,salt_hex):
-        return hashlib.scrypt(pin.encode('utf-8'),salt=bytes.fromhex(salt_hex),n=2**14,r=8,p=1,dklen=32).hex()
+    def pin_digest(pin,salt_hex,kdf_n=65536):
+        if kdf_n not in (16384,65536):
+            raise ValueError('Parámetros de PIN no compatibles.')
+        return hashlib.scrypt(pin.encode('utf-8'),salt=bytes.fromhex(salt_hex),n=kdf_n,r=8,p=1,dklen=32).hex()
 
 
     @app.get('/api/bootstrap')
@@ -282,39 +314,53 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
 
     @app.post('/api/teacher/security/setup')
     def teacher_security_setup(value:TeacherPin,request:Request):
+        nonlocal teacher_session_until
         if teacher_configured():
             raise HTTPException(409,'El PIN de profesor ya está configurado.')
+        if len(value.pin)<8:
+            raise HTTPException(422,'Los PIN nuevos de profesor deben tener al menos 8 dígitos.')
         salt=secrets.token_bytes(16).hex()
-        digest=pin_digest(value.pin,salt)
-        db.execute("INSERT INTO teacher_security(id,salt,pin_hash,updated_at) VALUES(1,?,?,?)",(salt,digest,now()))
+        digest=pin_digest(value.pin,salt,65536)
+        db.execute("INSERT INTO teacher_security(id,salt,pin_hash,kdf_n,updated_at) VALUES(1,?,?,?,?)",(salt,digest,65536,now()))
+        teacher_session_until=time.monotonic()+900
         response=JSONResponse({'configured':True,'unlocked':True})
         response.set_cookie('allen_teacher',teacher_session,httponly=True,samesite='strict',secure=False,path='/')
         return response
 
     @app.post('/api/teacher/security/unlock')
     def teacher_security_unlock(value:TeacherPin):
-        nonlocal teacher_session
+        nonlocal teacher_session, teacher_session_until
         now_mono=time.monotonic()
         teacher_failures[:]=[attempt for attempt in teacher_failures if now_mono-attempt<60]
         if len(teacher_failures)>=5:
             raise HTTPException(429,'Demasiados intentos de PIN. Espera un minuto.')
-        row=db.one("SELECT salt,pin_hash FROM teacher_security WHERE id=1")
+        row=db.one("SELECT salt,pin_hash,kdf_n FROM teacher_security WHERE id=1")
         if not row:
             raise HTTPException(409,'Configura primero un PIN de profesor desde la aplicación principal.')
-        candidate=pin_digest(value.pin,row['salt'])
+        kdf_n=int(row.get('kdf_n') or 16384)
+        try:
+            candidate=pin_digest(value.pin,row['salt'],kdf_n)
+        except ValueError:
+            raise HTTPException(409,'La configuración del PIN necesita actualizarse.')
         if not secrets.compare_digest(candidate,row['pin_hash']):
             teacher_failures.append(now_mono)
             raise HTTPException(403,'PIN de profesor incorrecto.')
         teacher_failures.clear()
+        if kdf_n<65536:
+            new_salt=secrets.token_bytes(16).hex()
+            new_hash=pin_digest(value.pin,new_salt,65536)
+            db.execute("UPDATE teacher_security SET salt=?,pin_hash=?,kdf_n=?,updated_at=? WHERE id=1",(new_salt,new_hash,65536,now()))
         teacher_session=secrets.token_urlsafe(32)
+        teacher_session_until=time.monotonic()+900
         response=JSONResponse({'configured':True,'unlocked':True})
         response.set_cookie('allen_teacher',teacher_session,httponly=True,samesite='strict',secure=False,path='/')
         return response
 
     @app.post('/api/teacher/security/lock')
     def teacher_security_lock():
-        nonlocal teacher_session
+        nonlocal teacher_session, teacher_session_until
         teacher_session=secrets.token_urlsafe(32)
+        teacher_session_until=0.0
         response=JSONResponse({'configured':teacher_configured(),'unlocked':False})
         response.delete_cookie('allen_teacher',path='/')
         return response
@@ -325,8 +371,10 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
 
     @app.post('/api/fair/exit')
     def fair_exit(request:Request):
+        nonlocal runtime_mode
         if not teacher_unlocked(request):
             return JSONResponse({'error':'Se requiere el PIN de profesor para salir del Modo Feria.','teacher_auth_required':True},403)
+        runtime_mode='app'
         response=JSONResponse({'ok':True})
         response.set_cookie('allen_mode','app',httponly=True,samesite='strict',secure=False,path='/')
         return response
@@ -1031,6 +1079,9 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.post('/api/adventures/start')
     def start_adventure(value:AdventureStart):
         user(value.profile_id)
+        total_steps=adventure_step_count(value.adventure_id)
+        if not total_steps:
+            raise HTTPException(422,'La aventura seleccionada no existe.')
         current=db.one("SELECT * FROM adventure_sessions WHERE user_id=? AND adventure_id=? AND status IN ('active','paused') ORDER BY id DESC LIMIT 1",(value.profile_id,value.adventure_id))
         if current:
             db.execute("UPDATE adventure_sessions SET status='active',updated_at=? WHERE id=?",(now(),current['id']))
@@ -1053,22 +1104,65 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         user(value.profile_id)
         row=db.one('SELECT * FROM adventure_sessions WHERE id=? AND user_id=?',(sid,value.profile_id))
         if not row: raise HTTPException(404,'No encontramos esa aventura.')
-        answers=json.loads(row['answers'] or '[]'); mistakes=row['mistakes']; hints=row['hints_used']; status=row['status']; completed=row['completed_steps']; current=row['current_step']; completed_at=row['completed_at']
+        total_steps=adventure_step_count(row['adventure_id'])
+        if not total_steps:
+            raise HTTPException(409,'La aventura ya no es compatible con esta versión.')
+        if row['status'] in ('completed','abandoned') and value.event not in ('resume',):
+            raise HTTPException(409,'Esta aventura ya está finalizada.')
+        answers=json.loads(row['answers'] or '[]')
+        mistakes=row['mistakes']
+        hints=row['hints_used']
+        status=row['status']
+        completed=row['completed_steps']
+        current=row['current_step']
+        completed_at=row['completed_at']
+        computed_correct=None
+
         if value.event=='answer':
-            answers.append(dict(step=value.step,answer=value.answer,correct=value.correct))
-            if value.correct is False: mistakes+=1
-        elif value.event=='hint': hints+=1
-        elif value.event=='advance': current=max(current,value.step); completed=max(completed,value.step)
-        elif value.event=='pause': status='paused'
-        elif value.event=='resume': status='active'
-        elif value.event=='complete': status='completed'; completed_at=now()
-        elif value.event=='abandon': status='abandoned'; completed_at=now()
-        db.execute('INSERT INTO adventure_events(user_id,session_id,event,step,answer,correct,created) VALUES(?,?,?,?,?,?,?)',(value.profile_id,sid,value.event,value.step,value.answer,None if value.correct is None else int(value.correct),now()))
+            if value.step!=current:
+                raise HTTPException(409,'Responde el paso actual antes de continuar.')
+            if value.step<0 or value.step>=total_steps:
+                raise HTTPException(422,'Paso fuera de rango.')
+            computed_correct=answer_is_correct(row['adventure_id'],value.step,value.answer)
+            answers.append(dict(step=value.step,answer=value.answer,correct=computed_correct))
+            if not computed_correct:
+                mistakes+=1
+        elif value.event=='hint':
+            if value.step!=current:
+                raise HTTPException(409,'La pista debe corresponder al paso actual.')
+            hints+=1
+        elif value.event=='advance':
+            if value.step!=current+1 or value.step>=total_steps:
+                raise HTTPException(409,'Avanza únicamente al siguiente paso.')
+            solved=any(item.get('step')==current and item.get('correct') is True for item in answers)
+            if not solved:
+                raise HTTPException(409,'Primero responde correctamente el paso actual.')
+            current=value.step
+            completed=max(completed,value.step)
+        elif value.event=='pause':
+            status='paused'
+        elif value.event=='resume':
+            if status!='paused':
+                raise HTTPException(409,'La aventura no está pausada.')
+            status='active'
+        elif value.event=='complete':
+            solved=any(item.get('step')==total_steps-1 and item.get('correct') is True for item in answers)
+            if current!=total_steps-1 or value.step!=total_steps or not solved:
+                raise HTTPException(409,'Completa correctamente todos los pasos antes de finalizar.')
+            status='completed'
+            completed=total_steps
+            completed_at=now()
+        elif value.event=='abandon':
+            status='abandoned'
+            completed_at=now()
+
+        event_correct=computed_correct if value.event=='answer' else None
+        db.execute('INSERT INTO adventure_events(user_id,session_id,event,step,answer,correct,created) VALUES(?,?,?,?,?,?,?)',(value.profile_id,sid,value.event,value.step,value.answer,None if event_correct is None else int(event_correct),now()))
         db.execute('UPDATE adventure_sessions SET status=?,current_step=?,completed_steps=?,answers=?,mistakes=?,hints_used=?,updated_at=?,completed_at=? WHERE id=?',(status,current,completed,json.dumps(answers,ensure_ascii=False),mistakes,hints,now(),completed_at,sid))
         if value.event=='hint':
             record_event(db,value.profile_id,'hint_used',reference_type='adventure',reference_id=sid)
         if value.event=='answer':
-            record_event(db,value.profile_id,'question_answered',reference_type='adventure',reference_id=sid,metadata={'correct':value.correct})
+            record_event(db,value.profile_id,'question_answered',reference_type='adventure',reference_id=sid,metadata={'correct':computed_correct})
         if value.event=='complete':
             record_event(db,value.profile_id,'adventure_completed',reference_type='adventure',reference_id=sid)
             db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='adventure' AND reference_id=?",(value.profile_id,sid))
@@ -1076,7 +1170,10 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             db.execute("DELETE FROM profile_current_activity WHERE user_id=? AND activity_type='adventure' AND reference_id=?",(value.profile_id,sid))
         else:
             db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'adventure',sid,'','',status,now()))
-        return db.one('SELECT * FROM adventure_sessions WHERE id=?',(sid,))
+        result=db.one('SELECT * FROM adventure_sessions WHERE id=?',(sid,))
+        if value.event=='answer':
+            result['correct']=computed_correct
+        return result
 
     @app.post('/api/simulations')
     def create_simulation(value:SimulationCreate):
@@ -1106,17 +1203,36 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         user(profile_id)
         row=db.one("SELECT * FROM simulation_results WHERE user_id=? AND status IN ('active','paused','interrupted') AND result IS NULL ORDER BY COALESCE(updated_at,started_at) DESC LIMIT 1",(profile_id,))
         if not row:return None
+        remaining=simulation_remaining(row)
+        if int(row.get('minutes') or 0)>0 and remaining!=int(row.get('remaining_seconds') or 0):
+            db.execute("UPDATE simulation_results SET remaining_seconds=?,updated_at=? WHERE id=?",(remaining,now(),row['id']))
+            row['remaining_seconds']=remaining
+            row['updated_at']=now()
         row['topics']=json.loads(row['topics']);row['questions']=student_questions(json.loads(row['questions']));row['answers']=json.loads(row['answers'] or '[]')
         return row
 
     @app.post('/api/simulations/{sid}/progress')
     def save_simulation_progress(sid:int,value:SimulationProgress):
         user(value.profile_id)
-        row=db.one('SELECT id FROM simulation_results WHERE id=? AND user_id=?',(sid,value.profile_id))
+        row=db.one('SELECT * FROM simulation_results WHERE id=? AND user_id=?',(sid,value.profile_id))
         if not row:raise HTTPException(404,'No encontramos ese simulacro.')
-        db.execute('UPDATE simulation_results SET answers=?,status=?,updated_at=?,remaining_seconds=COALESCE(?,remaining_seconds) WHERE id=?',(json.dumps(value.answers,ensure_ascii=False),value.status,now(),value.remaining_seconds,sid))
-        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) SELECT user_id,'simulation',id,subject,'',?,? FROM simulation_results WHERE id=?",(value.status,now(),sid))
-        return {'ok':True}
+        if row.get('result'):
+            raise HTTPException(409,'Ese simulacro ya terminó.')
+        questions=json.loads(row['questions'])
+        if len(value.answers)>len(questions):
+            raise HTTPException(422,'Hay más respuestas que preguntas.')
+        remaining=simulation_remaining(row)
+        if int(row.get('minutes') or 0)>0:
+            if value.remaining_seconds is not None:
+                remaining=min(remaining,max(0,value.remaining_seconds))
+            if remaining<=0:
+                value.status='interrupted'
+        else:
+            remaining=0
+        timestamp=now()
+        db.execute('UPDATE simulation_results SET answers=?,status=?,updated_at=?,remaining_seconds=? WHERE id=?',(json.dumps(value.answers,ensure_ascii=False),value.status,timestamp,remaining,sid))
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) SELECT user_id,'simulation',id,subject,'',?,? FROM simulation_results WHERE id=?",(value.status,timestamp,sid))
+        return {'ok':True,'remaining_seconds':remaining,'status':value.status}
 
     @app.post('/api/simulations/{sid}/reinforcement')
     def simulation_reinforcement(sid:int,profile_id:int=1):
@@ -1143,8 +1259,14 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             weak=result.get('review',[]) if isinstance(result,dict) else []
             return dict(**result,reinforcement=dict(topics=weak,activities=[dict(type='explanation',minutes=10),dict(type='practice',minutes=15),dict(type='flashcards',minutes=5)] if weak else []))
         questions=json.loads(row['questions'])
-        result=grade(questions,value.answers)
-        db.execute("UPDATE simulation_results SET result=?,completed_at=?,status='completed',updated_at=? WHERE id=?",(json.dumps(result,ensure_ascii=False),now(),now(),sid))
+        answers=value.answers
+        remaining=simulation_remaining(row)
+        if int(row.get('minutes') or 0)>0 and remaining<=0:
+            answers=json.loads(row.get('answers') or '[]')
+        if len(answers)>len(questions):
+            raise HTTPException(422,'Hay más respuestas que preguntas.')
+        result=grade(questions,answers)
+        db.execute("UPDATE simulation_results SET result=?,completed_at=?,status='completed',updated_at=?,remaining_seconds=? WHERE id=?",(json.dumps(result,ensure_ascii=False),now(),now(),remaining,sid))
         weak=result.get('review',[]) if isinstance(result,dict) else []
         topics=json.loads(row['topics'])
         for item in result.get('feedback',[]):
@@ -1413,12 +1535,23 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         db.execute('DELETE FROM flashcards WHERE id=? AND user_id=?',(cid,profile_id))
         return {'ok':True}
 
+    def enter_fair_response(request:Request):
+        nonlocal runtime_mode, teacher_session, teacher_session_until
+        if teacher_auth_required and not teacher_unlocked(request):
+            return RedirectResponse('/',status_code=303)
+        runtime_mode='fair'
+        # Never leave an authenticated teacher session inside the kiosk browser.
+        teacher_session=secrets.token_urlsafe(32)
+        teacher_session_until=0.0
+        response=FileResponse(ROOT/'frontend/fair.html')
+        response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
+        response.delete_cookie('allen_teacher',path='/')
+        return response
+
     @app.get('/')
-    def index(mode:str=''):
+    def index(request:Request,mode:str=''):
         if mode=='fair':
-            response=FileResponse(ROOT/'frontend/fair.html')
-            response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
-            return response
+            return enter_fair_response(request)
         response=FileResponse(ROOT/'frontend/index.html')
         response.set_cookie('allen_mode','app',httponly=True,samesite='strict',secure=False,path='/')
         return response
@@ -1427,10 +1560,8 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     install_fair(app,db,engine)
 
     @app.get('/fair')
-    def fair_index():
-        response=FileResponse(ROOT/'frontend/fair.html')
-        response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
-        return response
+    def fair_index(request:Request):
+        return enter_fair_response(request)
 
     app.mount('/static',StaticFiles(directory=ROOT/'frontend'),name='static')
     return app

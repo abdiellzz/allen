@@ -15,15 +15,23 @@ def test_adventure_persists_across_restart_and_manual_completion():
         app,c=client_for(db)
         started=c.post('/api/adventures/start',json={'profile_id':1,'adventure_id':'recover-network'}).json()
         sid=started['id']
-        c.post(f'/api/adventures/{sid}/event',json={'profile_id':1,'step':0,'event':'answer','answer':'192.168.10','correct':True})
-        c.post(f'/api/adventures/{sid}/event',json={'profile_id':1,'step':1,'event':'advance','answer':'','correct':None})
+        answer=c.post(f'/api/adventures/{sid}/event',json={'profile_id':1,'step':0,'event':'answer','answer':'192.168.10'})
+        assert answer.json()['correct'] is True
+        c.post(f'/api/adventures/{sid}/event',json={'profile_id':1,'step':1,'event':'advance','answer':''})
         c.close()
         app2,c2=client_for(db)
         active=c2.get('/api/adventures/active?profile_id=1').json()
         assert active['id']==sid
         assert active['status'] in ('active','paused')
         assert active['current_step']==1
-        done=c2.post(f'/api/adventures/{sid}/event',json={'profile_id':1,'step':1,'event':'complete','answer':'','correct':None}).json()
+        answers=['255.255.255.0','/26','192.168.10.65']
+        for step,text in enumerate(answers,start=1):
+            answered=c2.post(f'/api/adventures/{sid}/event',json={'profile_id':1,'step':step,'event':'answer','answer':text})
+            assert answered.json()['correct'] is True
+            if step<3:
+                advanced=c2.post(f'/api/adventures/{sid}/event',json={'profile_id':1,'step':step+1,'event':'advance','answer':''})
+                assert advanced.status_code==200
+        done=c2.post(f'/api/adventures/{sid}/event',json={'profile_id':1,'step':4,'event':'complete','answer':''}).json()
         assert done['status']=='completed'
         assert c2.get('/api/adventures/active?profile_id=1').json() is None
         c2.close()

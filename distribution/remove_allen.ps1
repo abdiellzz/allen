@@ -20,9 +20,13 @@ function Safe-Remove([string]$PathValue) {
     (Normalize-Path $env:LOCALAPPDATA),
     (Normalize-Path $env:APPDATA),
     (Normalize-Path $env:TEMP),
-    (Normalize-Path $env:SystemRoot)
+    (Normalize-Path $env:SystemRoot),
+    (Normalize-Path (Join-Path $env:USERPROFILE "Downloads")),
+    (Normalize-Path ([Environment]::GetFolderPath("Desktop"))),
+    (Normalize-Path ([Environment]::GetFolderPath("MyDocuments")))
   )
-  if ($blocked -contains $resolved) {
+  $driveRoot = Normalize-Path ([IO.Path]::GetPathRoot($resolved))
+  if (($blocked -contains $resolved) -or ($resolved -eq $driveRoot)) {
     Write-Warning "Ruta protegida omitida: $resolved"
     return
   }
@@ -105,14 +109,26 @@ if (Test-Path -LiteralPath $downloads) {
 }
 
 # If this remover came from a portable/extracted distribution, remove that folder
-# too. The script itself runs from TEMP, so the source folder is not locked.
+# too. Never trust SourceRoot merely because it contains a file named ALLEN.exe:
+# the caller controls SourceRoot and it could otherwise point at Downloads or
+# another broad user directory.
 $source = Normalize-Path $SourceRoot
 if ($source) {
   $portableFlag = Join-Path $source "portable.flag"
   $allenExe = Join-Path $source "ALLEN.exe"
+  $internalDir = Join-Path $source "_internal"
+  $removeScript = Join-Path $source "remove_allen.ps1"
   $knownInstalled = Normalize-Path $installedApp
-  if ((Test-Path -LiteralPath $portableFlag) -or (Test-Path -LiteralPath $allenExe) -or $source -eq $knownInstalled) {
+  $isPortableRoot = (
+    (Test-Path -LiteralPath $portableFlag) -and
+    (Test-Path -LiteralPath $allenExe) -and
+    (Test-Path -LiteralPath $internalDir) -and
+    (Test-Path -LiteralPath $removeScript)
+  )
+  if (($source -eq $knownInstalled) -or $isPortableRoot) {
     Safe-Remove $source
+  } else {
+    Write-Warning "SourceRoot no reconocido como una instalación ALLEN; no se elimina: $source"
   }
 }
 
