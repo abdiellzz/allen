@@ -39,6 +39,8 @@ def load_private_key(path: Path | None = None):
     target = path or key_path()
     try:
         raw = target.read_bytes()
+        if os.name != "nt":
+            target.chmod(0o600)
         key = serialization.load_pem_private_key(raw, password=None)
     except (OSError, ValueError) as exc:
         raise RuntimeError(
