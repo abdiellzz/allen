@@ -52,6 +52,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     engine=ai or LocalAI()
     token=secrets.token_urlsafe(32)
     fair_write_token=secrets.token_urlsafe(32)
+    fair_session_key=secrets.token_urlsafe(32)
     access_key=secrets.token_urlsafe(32)
     launch_key=None
     teacher_auth=TeacherAuth(local_root)
@@ -117,6 +118,13 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             return security_headers(JSONResponse({'error':'Abre Allen desde su dirección local.'},403))
 
         path=request.url.path
+        fair_cookie=request.cookies.get('allen_fair','')
+        fair_context=bool(fair_cookie and secrets.compare_digest(fair_cookie,fair_session_key))
+        if fair_context:
+            fair_allowed=path.startswith('/api/fair/') or path in {'/api/health','/api/model/status','/fair'} or path.startswith('/static/')
+            if (path.startswith('/api/') or path=='/') and not fair_allowed:
+                return security_headers(JSONResponse({'error':'El Modo Feria está aislado. Usa la salida protegida para volver a ALLEN.'},403))
+
         teacher_protected=(
             (path.startswith('/api/teacher/') and not path.startswith('/api/teacher/auth/'))
             or path.startswith('/api/backup/')
@@ -265,6 +273,15 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.get('/api/fair/token')
     def fair_token():
         return {'token':fair_write_token}
+
+    @app.post('/api/fair/exit')
+    def fair_exit(value:TeacherPin):
+        if not teacher_auth.verify(value.pin):
+            raise HTTPException(403,'PIN docente incorrecto.')
+        response=JSONResponse({'ok':True})
+        response.delete_cookie('allen_fair',path='/')
+        response.set_cookie('allen_teacher',teacher_auth.session_token,httponly=True,samesite='strict',secure=False,path='/')
+        return response
 
     @app.get('/api/health')
     def health():
@@ -1297,7 +1314,11 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         return {'ok':True}
 
     @app.get('/')
-    def index(mode:str=''):return FileResponse(ROOT/('frontend/fair.html' if mode=='fair' else 'frontend/index.html'))
+    def index(mode:str=''):
+        response=FileResponse(ROOT/('frontend/fair.html' if mode=='fair' else 'frontend/index.html'))
+        if mode!='fair':
+            response.delete_cookie('allen_fair',path='/')
+        return response
 
     from .fair import install_fair
     install_fair(app,db,engine)
@@ -1306,6 +1327,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     def fair_index():
         response=FileResponse(ROOT/'frontend/fair.html')
         response.delete_cookie('allen_teacher',path='/')
+        response.set_cookie('allen_fair',fair_session_key,httponly=True,samesite='strict',secure=False,path='/')
         return response
 
     app.mount('/static',StaticFiles(directory=ROOT/'frontend'),name='static')
