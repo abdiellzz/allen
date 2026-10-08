@@ -53,6 +53,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     library=Library(ROOT/'data/library')
     engine=ai or LocalAI()
     token=secrets.token_urlsafe(32)
+    instance_id=secrets.token_urlsafe(24)
     fair_token_value=secrets.token_urlsafe(32)
     teacher_session=secrets.token_urlsafe(32)
     teacher_failures=[]
@@ -76,6 +77,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
 
     app=FastAPI(title='ALLEN local',version=ALLEN_VERSION,docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
     app.state.db=db
+    app.state.instance_id=instance_id
     app.state.licensing=licensing
     app.state.access_key=access_key
     def issue_launch_token():
@@ -159,6 +161,18 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             }
             if request.url.path not in allowed and not licensing.status().get('active'):
                 return JSONResponse({'error':'ALLEN necesita una licencia activa para continuar.','license_required':True},402)
+        if teacher_auth_required and request.url.path.startswith('/api/') and not teacher_configured():
+            setup_allowed={
+                '/api/bootstrap',
+                '/api/health',
+                '/api/license/status',
+                '/api/license/machine-id',
+                '/api/license/activate',
+                '/api/teacher/security/status',
+                '/api/teacher/security/setup',
+            }
+            if request.url.path not in setup_allowed:
+                return security_headers(JSONResponse({'error':'Configura primero el PIN de profesor.','teacher_setup_required':True},428))
         if request.url.path.startswith('/api/'):
             max_body=12_500_000 if request.url.path=='/api/teacher/import' or request.url.path.endswith('/versions') else 3_500_000 if request.url.path=='/api/teacher/packs/import' or request.url.path.endswith('/review') else 8_000_000 if request.url.path.startswith('/api/backup/') else 200000
             try:
@@ -252,6 +266,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             profiles=[user(p['id']) for p in db.all('SELECT id FROM users')],
             settings=db.settings().model_dump(),
             catalog=catalog(),
+            teacher_security={'configured':teacher_configured()},
         )
 
     @app.get('/api/license/status')
@@ -334,7 +349,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     @app.get('/api/health')
     def health():
         db.one('SELECT 1')
-        return dict(version=ALLEN_VERSION,application=True,database=True,library=len(library.documents()),internet='No se consulta Internet; el navegador informa de la red.')
+        return {'ok':True,'instance':instance_id}
 
     @app.get('/api/model/status')
     async def model_status():
@@ -367,7 +382,9 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         return user(uid)
 
     @app.delete('/api/profiles/{uid}')
-    def delete_profile(uid:int):
+    def delete_profile(uid:int,request:Request):
+        if teacher_auth_required and not teacher_unlocked(request):
+            raise HTTPException(403,'Se requiere autorización de profesor para eliminar perfiles.')
         nonlocal privacy_epoch
         privacy_epoch+=1
         user(uid); db.erase_profile(uid)
