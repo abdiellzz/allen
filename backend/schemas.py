@@ -245,3 +245,7 @@ class CourseVersionImport(Strict):
 
 class RecoveryRestore(Strict):
     snapshot: str = Field(min_length=1,max_length=180)
+
+
+class LicenseActivation(Strict):
+    content: str = Field(min_length=20, max_length=64000)
