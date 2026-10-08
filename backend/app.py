@@ -1535,14 +1535,23 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         db.execute('DELETE FROM flashcards WHERE id=? AND user_id=?',(cid,profile_id))
         return {'ok':True}
 
+    def enter_fair_response(request:Request):
+        nonlocal runtime_mode, teacher_session, teacher_session_until
+        if teacher_auth_required and not teacher_unlocked(request):
+            return RedirectResponse('/',status_code=303)
+        runtime_mode='fair'
+        # Never leave an authenticated teacher session inside the kiosk browser.
+        teacher_session=secrets.token_urlsafe(32)
+        teacher_session_until=0.0
+        response=FileResponse(ROOT/'frontend/fair.html')
+        response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
+        response.delete_cookie('allen_teacher',path='/')
+        return response
+
     @app.get('/')
-    def index(mode:str=''):
-        nonlocal runtime_mode
+    def index(request:Request,mode:str=''):
         if mode=='fair':
-            runtime_mode='fair'
-            response=FileResponse(ROOT/'frontend/fair.html')
-            response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
-            return response
+            return enter_fair_response(request)
         response=FileResponse(ROOT/'frontend/index.html')
         response.set_cookie('allen_mode','app',httponly=True,samesite='strict',secure=False,path='/')
         return response
@@ -1551,12 +1560,8 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     install_fair(app,db,engine)
 
     @app.get('/fair')
-    def fair_index():
-        nonlocal runtime_mode
-        runtime_mode='fair'
-        response=FileResponse(ROOT/'frontend/fair.html')
-        response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
-        return response
+    def fair_index(request:Request):
+        return enter_fair_response(request)
 
     app.mount('/static',StaticFiles(directory=ROOT/'frontend'),name='static')
     return app
