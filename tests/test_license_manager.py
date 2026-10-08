@@ -2,6 +2,9 @@ from datetime import date
 import json
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives import serialization
+
+from tools.license_manager import load_private_key
 
 from tools.license_manager import make_new_payload, parse_existing, sign_document
 
@@ -55,3 +58,24 @@ def test_license_signed_by_another_key_is_rejected(tmp_path):
         assert "firma válida" in str(exc)
     else:
         raise AssertionError("A license signed by another key must never be renewed")
+
+
+def test_private_key_permissions_are_hardened_on_posix(tmp_path):
+    import os
+    if os.name == "nt":
+        return
+    key = Ed25519PrivateKey.generate()
+    path = tmp_path / "license_private_key.pem"
+    path.write_bytes(
+        key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        )
+    )
+    path.chmod(0o644)
+
+    loaded = load_private_key(path)
+
+    assert loaded is not None
+    assert path.stat().st_mode & 0o077 == 0
