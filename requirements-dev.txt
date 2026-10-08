@@ -2,5 +2,5 @@
 pytest==9.1.1
 playwright==1.55.0
 pip-audit==2.10.1
-ruff==0.14.1
+ruff==0.16.10
 bandit==1.8.6
