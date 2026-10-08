@@ -232,12 +232,48 @@ def course_pack(course:dict,document:dict):
         }
     }
 
+def _bounded_json(value,depth=0,counter=None):
+    if counter is None: counter=[0]
+    counter[0]+=1
+    if counter[0]>20000 or depth>10:
+        raise ValueError("La estructura del curso es demasiado compleja.")
+    if isinstance(value,str):
+        if len(value)>20000: raise ValueError("El curso contiene texto excesivamente largo.")
+    elif isinstance(value,list):
+        if len(value)>200: raise ValueError("El curso contiene demasiados elementos.")
+        for item in value:_bounded_json(item,depth+1,counter)
+    elif isinstance(value,dict):
+        if len(value)>80: raise ValueError("El curso contiene demasiados campos.")
+        for key,item in value.items():
+            if not isinstance(key,str) or len(key)>80: raise ValueError("El curso contiene campos no válidos.")
+            _bounded_json(item,depth+1,counter)
+    elif value is not None and not isinstance(value,(int,float,bool)):
+        raise ValueError("El curso contiene un tipo de dato no válido.")
+
+
 def validate_course_structure(structure:dict):
     if not isinstance(structure,dict): raise ValueError("Curso no válido.")
+    encoded=json.dumps(structure,ensure_ascii=False,separators=(",",":"))
+    if len(encoded)>1_500_000: raise ValueError("La estructura del curso supera el límite permitido.")
+    _bounded_json(structure)
     units=structure.get("units")
     if not isinstance(units,list) or not units: raise ValueError("El curso debe tener al menos una unidad.")
+    if len(units)>20: raise ValueError("El curso no puede superar 20 unidades.")
     for unit in units:
-        if not unit.get("title") or not isinstance(unit.get("topics"),list): raise ValueError("Unidad incompleta.")
-        for topic in unit["topics"]:
-            if not topic.get("title") or not topic.get("objective"): raise ValueError("Tema incompleto.")
+        if not isinstance(unit,dict): raise ValueError("Unidad no válida.")
+        title=unit.get("title")
+        topics=unit.get("topics")
+        if not isinstance(title,str) or not 1<=len(title)<=140 or not isinstance(topics,list): raise ValueError("Unidad incompleta.")
+        if not topics or len(topics)>40: raise ValueError("Cada unidad debe tener entre 1 y 40 temas.")
+        for topic in topics:
+            if not isinstance(topic,dict): raise ValueError("Tema no válido.")
+            if not isinstance(topic.get("title"),str) or not 1<=len(topic["title"])<=140: raise ValueError("Tema incompleto.")
+            if not isinstance(topic.get("objective"),str) or not 1<=len(topic["objective"])<=600: raise ValueError("Objetivo no válido.")
+            for key,limit in (("route",20),("questions",100),("flashcards",100)):
+                value=topic.get(key,[])
+                if value is not None and (not isinstance(value,list) or len(value)>limit):
+                    raise ValueError(f"{key} excede el límite permitido.")
+    exam=structure.get("final_exam",[])
+    if exam is not None and (not isinstance(exam,list) or len(exam)>100):
+        raise ValueError("El examen final excede el límite permitido.")
     return True
