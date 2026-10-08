@@ -1,6 +1,7 @@
 """Native Windows launcher for packaged ALLEN builds."""
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 import sys
@@ -44,25 +45,42 @@ def self_test() -> int:
     ]
     if not all(path.exists() for path in required):
         return 2
+    try:
+        gui_modules()
+    except ImportError:
+        return 4
     with tempfile.TemporaryDirectory(prefix="allen-self-test-") as tmp:
         os.environ["ALLEN_DATA_ROOT"] = tmp
-        from backend.app import create_app
-        app = create_app()
-        if not getattr(app, "state", None) or not app.state.db.path.parent.exists():
+        try:
+            from backend.app import create_app
+            app = create_app()
+            ok = bool(getattr(app, "state", None)) and app.state.db.path.parent.exists()
+        finally:
+            # Windows cannot delete the temporary folder while allen.log is still open.
+            logger = logging.getLogger("allen")
+            for handler in list(logger.handlers):
+                handler.close()
+                logger.removeHandler(handler)
+        if not ok:
             return 3
     return 0
+
+
+def gui_modules():
+    import tkinter as tk
+    from tkinter import ttk
+    import uvicorn
+
+    from backend.local_model import main as start_local_ai
+    from backend.version import ALLEN_VERSION
+    return tk, ttk, uvicorn, start_local_ai, ALLEN_VERSION
 
 
 def run_gui() -> int:
     configure_distribution_mode()
 
-    import tkinter as tk
-    from tkinter import ttk
-    import uvicorn
-
+    tk, ttk, uvicorn, start_local_ai, ALLEN_VERSION = gui_modules()
     from backend.app import app
-    from backend.version import ALLEN_VERSION
-    from start_local_ai import main as start_local_ai
 
     server_holder = {"server": None}
     stop_event = threading.Event()

@@ -1,6 +1,8 @@
 from __future__ import annotations
 import json
+import sqlite3
 FORMAT="allen-backup"; VERSION=1
+CLEARED_ON_RESTORE=("conversation_states","conversations")
 TABLES=("users","progress","quiz_results","flashcards","learning_sessions","library_packs","student_memory","saved_answers","study_plans","study_sessions","study_session_events","adventure_sessions","adventure_events","simulation_results","topic_mastery","learning_events","profile_current_activity","teacher_documents","courses","course_enrollments","course_exam_results","course_exam_sessions","curriculum_edges","question_bank","course_quality_reviews","diagnostic_results","course_versions")
 
 def export_backup(db):
@@ -25,25 +27,36 @@ def restore_backup(db,payload):
     validate_backup(payload)
     tables=payload["tables"]
     # Restore is intentionally all-or-nothing and uses trusted table/column names only.
-    with db.connect() as con:
-        con.execute("PRAGMA foreign_keys=OFF")
-        for table in reversed(TABLES):
-            try:con.execute(f"DELETE FROM {table}")
-            except Exception:pass
-        for table in TABLES:
-            rows=tables.get(table,[])
-            for row in rows:
-                if not isinstance(row,dict) or not row: continue
-                cols=[c for c in row.keys() if c.replace("_","").isalnum()]
-                values=[row[c] for c in cols]
-                q=",".join("?" for _ in cols)
-                con.execute(f"INSERT INTO {table}({','.join(cols)}) VALUES({q})",values)
-        settings=payload.get("settings")
-        if isinstance(settings,dict):
-            from .schemas import Settings
-            safe=Settings.model_validate(settings)
-            con.execute("INSERT OR REPLACE INTO settings(id,value) VALUES(1,?)",(safe.model_dump_json(),))
-        con.execute("PRAGMA foreign_keys=ON")
+    try:
+        with db.connect() as con:
+            con.execute("PRAGMA foreign_keys=OFF")
+            # Conversations are not part of backups, but they point at profile ids that the
+            # restore reassigns; keeping them would show one student's chats to another.
+            for table in (*CLEARED_ON_RESTORE,*reversed(TABLES)):
+                try:con.execute(f"DELETE FROM {table}")
+                except Exception:pass
+            for table in TABLES:
+                rows=tables.get(table,[])
+                if not isinstance(rows,list): raise ValueError("El respaldo tiene una tabla dañada.")
+                known={r["name"] for r in con.execute(f"PRAGMA table_info({table})").fetchall()}
+                for row in rows:
+                    if not isinstance(row,dict) or not row: continue
+                    cols=list(row.keys())
+                    if any(c not in known for c in cols): raise ValueError("El respaldo contiene datos que esta versión de ALLEN no reconoce.")
+                    values=[row[c] for c in cols]
+                    if any(v is not None and not isinstance(v,(str,int,float)) for v in values): raise ValueError("El respaldo contiene valores no válidos.")
+                    q=",".join("?" for _ in cols)
+                    con.execute(f"INSERT INTO {table}({','.join(cols)}) VALUES({q})",values)
+            if con.execute("PRAGMA foreign_key_check").fetchone():
+                raise ValueError("El respaldo tiene referencias rotas entre datos y no se restauró.")
+            settings=payload.get("settings")
+            if isinstance(settings,dict):
+                from .schemas import Settings
+                safe=Settings.model_validate(settings)
+                con.execute("INSERT OR REPLACE INTO settings(id,value) VALUES(1,?)",(safe.model_dump_json(),))
+            con.execute("PRAGMA foreign_keys=ON")
+    except sqlite3.Error as exc:
+        raise ValueError("El respaldo no es compatible con esta base de datos y no se restauró.") from exc
     # Backup v1 is intentionally backward compatible. Older v1 files did not
     # contain derived learning-intelligence tables, so reconstruct only those
     # derived structures without inventing diagnostic history.

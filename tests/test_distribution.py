@@ -39,3 +39,19 @@ def test_complete_remover_is_packaged_and_guarded():
     assert "Stop-Process -Force" in remover
     assert "ALLEN_DATA_ROOT" not in launcher
     assert "remove_allen.ps1" in launcher
+
+
+def test_launcher_imports_resolve():
+    import ast
+    import importlib.util
+
+    root = Path(__file__).resolve().parent.parent
+    tree = ast.parse((root / "distribution/allen_launcher.py").read_text(encoding="utf-8"))
+    modules = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module != "__future__":
+            modules.add(node.module)
+    missing = sorted(name for name in modules if importlib.util.find_spec(name) is None)
+    assert missing == [], f"launcher imports modules that do not exist: {missing}"

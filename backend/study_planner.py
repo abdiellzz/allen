@@ -2,11 +2,14 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 
 TECHNIQUES=("Descubre","Recupera","Explica","Mezcla","Representa","Revisa")
+MAX_PLAN_DAYS=366
 
 def _parse_deadline(value:str)->date:
     target=datetime.strptime(value,"%Y-%m-%d").date()
     if target < date.today():
         raise ValueError("La fecha objetivo no puede estar en el pasado.")
+    if (target-date.today()).days >= MAX_PLAN_DAYS:
+        raise ValueError(f"La fecha objetivo debe estar dentro de los próximos {MAX_PLAN_DAYS} días.")
     return target
 
 def _weak_topics(quiz_rows, topics):

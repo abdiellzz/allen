@@ -82,7 +82,7 @@ export async function bindPlanAllen(root,{api,profileId,profile,go,toast}){
  const form=root.querySelector('#study-plan-form'),current=root.querySelector('#study-plan-current'),stage=root.querySelector('#study-session-stage');
  const level=root.querySelector('#plan-level'); if(level&&profile?.level)level.value=profile.level;
  try{const prefill=JSON.parse(sessionStorage.getItem('allen-plan-prefill')||'null');if(prefill){if(prefill.subject)root.querySelector('#plan-subject').value=prefill.subject;if(Array.isArray(prefill.topics))root.querySelector('#plan-topics').value=prefill.topics.join(', ');root.querySelector('#plan-goal').value=prefill.goal||'Prepararme para examen';sessionStorage.removeItem('allen-plan-prefill');}}catch{}
- const deadline=root.querySelector('#plan-deadline');if(deadline){const d=new Date();d.setDate(d.getDate()+7);deadline.value=d.toISOString().slice(0,10);deadline.min=new Date().toISOString().slice(0,10);}
+ const deadline=root.querySelector('#plan-deadline');if(deadline){const d=new Date();d.setDate(d.getDate()+7);deadline.value=d.toISOString().slice(0,10);deadline.min=new Date().toISOString().slice(0,10);const last=new Date();last.setDate(last.getDate()+365);deadline.max=last.toISOString().slice(0,10);}
  async function refresh(){
   const plans=await api('/study-plans?profile_id='+profileId);
   current.innerHTML=plans.length?renderPlan(plans[0]):'<section class="panel empty"><h2>Aún no tienes un plan</h2><p>Crea uno para organizar tus próximas sesiones.</p></section>';

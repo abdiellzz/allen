@@ -239,6 +239,18 @@ def course_pack(course:dict,document:dict):
         }
     }
 
+def student_structure(structure:dict):
+    """Course structure safe to send to students: no exam answers or answer hints."""
+    view={k:v for k,v in structure.items() if k!="final_exam"}
+    view["units"]=[
+        {**unit,"topics":[
+            {**topic,"questions":[{k:v for k,v in q.items() if k!="answer_hint"} for q in topic.get("questions") or []]}
+            for topic in unit.get("topics") or []
+        ]}
+        for unit in structure.get("units") or []
+    ]
+    return view
+
 def validate_course_structure(structure:dict):
     if not isinstance(structure,dict): raise ValueError("Curso no válido.")
     units=structure.get("units")

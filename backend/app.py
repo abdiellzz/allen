@@ -30,7 +30,7 @@ from .learning_events import record_event
 from .learning_engine import recommend_next_action
 from .recommendations import build_recommendation
 from .backup import export_backup, validate_backup, restore_backup
-from .course_builder import decode_source, build_course, course_pack, validate_course_structure
+from .course_builder import decode_source, build_course, course_pack, validate_course_structure, student_structure
 from .curriculum_graph import build_graph, persist_graph, prerequisite_chain
 from .course_quality import evaluate_course, publication_allowed
 from .question_bank import sync_course_questions, stats_for_course
@@ -40,6 +40,9 @@ from .version import ALLEN_VERSION
 from .licensing import LicenseManager, LicenseError
 
 ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))
+
+def hide_answers(questions):
+    return [{k:v for k,v in q.items() if k not in ('answer','explanation')} for q in questions]
 
 def create_app(db_path=None, ai=None, require_license=None, require_local_access=None):
     local_root=Path(os.environ.get('ALLEN_DATA_ROOT') or (Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local/share'))/'ALLEN'))
@@ -621,7 +624,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
                 skip_topics=[topic for topic,data in result.get('topics',{}).items() if data.get('percentage',0)>=80]
             except Exception:
                 pass
-        return {'course':{'id':cid,'title':course['title'],'subject':course['subject'],'level':course['level'],'structure':json.loads(course['structure_json'])},'enrollment':enrollment,'diagnostic_skip_topics':skip_topics}
+        return {'course':{'id':cid,'title':course['title'],'subject':course['subject'],'level':course['level'],'structure':student_structure(json.loads(course['structure_json']))},'enrollment':enrollment,'diagnostic_skip_topics':skip_topics}
 
     @app.get('/api/courses/{cid}/exam')
     def course_exam(cid:int,profile_id:int=1):
@@ -877,17 +880,18 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         user(value.profile_id)
         topic=value.topics[0]
         request=QuizRequest(profile_id=value.profile_id,subject=value.subject,topic=topic,difficulty='Normal',count=value.question_count,kind='multiple')
-        questions=generate(request)
+        try:questions=generate(request)
+        except ValueError as exc:raise HTTPException(422,str(exc))
         sid=db.execute("INSERT INTO simulation_results(user_id,subject,topics,questions,result,minutes,started_at,status,answers,updated_at,remaining_seconds) VALUES(?,?,?,?,NULL,?,?,'active','[]',?,?)",(value.profile_id,value.subject,json.dumps(value.topics,ensure_ascii=False),json.dumps(questions,ensure_ascii=False),(value.minutes if value.timed else 0),now(),now(),(value.minutes*60 if value.timed else 0)))
         db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) VALUES(?,?,?,?,?,?,?)",(value.profile_id,'simulation',sid,value.subject,value.topics[0] if value.topics else '','active',now()))
-        return dict(id=sid,subject=value.subject,topics=value.topics,questions=questions,minutes=(value.minutes if value.timed else 0),timed=value.timed)
+        return dict(id=sid,subject=value.subject,topics=value.topics,questions=hide_answers(questions),minutes=(value.minutes if value.timed else 0),timed=value.timed)
 
     @app.get('/api/simulations/active')
     def active_simulation(profile_id:int=1):
         user(profile_id)
         row=db.one("SELECT * FROM simulation_results WHERE user_id=? AND status IN ('active','paused','interrupted') AND result IS NULL ORDER BY COALESCE(updated_at,started_at) DESC LIMIT 1",(profile_id,))
         if not row:return None
-        row['topics']=json.loads(row['topics']);row['questions']=json.loads(row['questions']);row['answers']=json.loads(row['answers'] or '[]')
+        row['topics']=json.loads(row['topics']);row['questions']=hide_answers(json.loads(row['questions']));row['answers']=json.loads(row['answers'] or '[]')
         return row
 
     @app.post('/api/simulations/{sid}/progress')
@@ -1106,7 +1110,7 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         try:questions=generate(value)
         except ValueError as exc:raise HTTPException(422,str(exc))
         qid=db.execute('INSERT INTO quiz_results(user_id,config,questions,created) VALUES(?,?,?,?)',(value.profile_id,value.model_dump_json(),json.dumps(questions,ensure_ascii=False),now()))
-        return dict(id=qid,questions=[{k:v for k,v in q.items() if k not in ('answer','explanation')} for q in questions],source='Banco local',actual_count=len(questions))
+        return dict(id=qid,questions=hide_answers(questions),source='Banco local',actual_count=len(questions))
 
     @app.post('/api/quiz/{qid}/submit')
     def submit(qid:int,value:Submission):
