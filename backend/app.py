@@ -258,8 +258,10 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             teacher_session_until=time.monotonic()+900
         return valid
 
-    def pin_digest(pin,salt_hex):
-        return hashlib.scrypt(pin.encode('utf-8'),salt=bytes.fromhex(salt_hex),n=2**14,r=8,p=1,dklen=32).hex()
+    def pin_digest(pin,salt_hex,kdf_n=65536):
+        if kdf_n not in (16384,65536):
+            raise ValueError('Parámetros de PIN no compatibles.')
+        return hashlib.scrypt(pin.encode('utf-8'),salt=bytes.fromhex(salt_hex),n=kdf_n,r=8,p=1,dklen=32).hex()
 
 
     @app.get('/api/bootstrap')
@@ -312,9 +314,11 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         nonlocal teacher_session_until
         if teacher_configured():
             raise HTTPException(409,'El PIN de profesor ya está configurado.')
+        if len(value.pin)<8:
+            raise HTTPException(422,'Los PIN nuevos de profesor deben tener al menos 8 dígitos.')
         salt=secrets.token_bytes(16).hex()
-        digest=pin_digest(value.pin,salt)
-        db.execute("INSERT INTO teacher_security(id,salt,pin_hash,updated_at) VALUES(1,?,?,?)",(salt,digest,now()))
+        digest=pin_digest(value.pin,salt,65536)
+        db.execute("INSERT INTO teacher_security(id,salt,pin_hash,kdf_n,updated_at) VALUES(1,?,?,?,?)",(salt,digest,65536,now()))
         teacher_session_until=time.monotonic()+900
         response=JSONResponse({'configured':True,'unlocked':True})
         response.set_cookie('allen_teacher',teacher_session,httponly=True,samesite='strict',secure=False,path='/')
@@ -327,14 +331,22 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         teacher_failures[:]=[attempt for attempt in teacher_failures if now_mono-attempt<60]
         if len(teacher_failures)>=5:
             raise HTTPException(429,'Demasiados intentos de PIN. Espera un minuto.')
-        row=db.one("SELECT salt,pin_hash FROM teacher_security WHERE id=1")
+        row=db.one("SELECT salt,pin_hash,kdf_n FROM teacher_security WHERE id=1")
         if not row:
             raise HTTPException(409,'Configura primero un PIN de profesor desde la aplicación principal.')
-        candidate=pin_digest(value.pin,row['salt'])
+        kdf_n=int(row.get('kdf_n') or 16384)
+        try:
+            candidate=pin_digest(value.pin,row['salt'],kdf_n)
+        except ValueError:
+            raise HTTPException(409,'La configuración del PIN necesita actualizarse.')
         if not secrets.compare_digest(candidate,row['pin_hash']):
             teacher_failures.append(now_mono)
             raise HTTPException(403,'PIN de profesor incorrecto.')
         teacher_failures.clear()
+        if kdf_n<65536:
+            new_salt=secrets.token_bytes(16).hex()
+            new_hash=pin_digest(value.pin,new_salt,65536)
+            db.execute("UPDATE teacher_security SET salt=?,pin_hash=?,kdf_n=?,updated_at=? WHERE id=1",(new_salt,new_hash,65536,now()))
         teacher_session=secrets.token_urlsafe(32)
         teacher_session_until=time.monotonic()+900
         response=JSONResponse({'configured':True,'unlocked':True})
