@@ -225,6 +225,23 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         return safe
 
 
+    def simulation_remaining(row,at=None):
+        if not row or int(row.get('minutes') or 0)<=0:
+            return 0
+        remaining=max(0,int(row.get('remaining_seconds') or 0))
+        if row.get('status')!='active' or not row.get('updated_at'):
+            return remaining
+        try:
+            updated=datetime.fromisoformat(str(row['updated_at']).replace('Z','+00:00'))
+            if updated.tzinfo is None:
+                updated=updated.replace(tzinfo=timezone.utc)
+            current=at or datetime.now(timezone.utc)
+            elapsed=max(0,int((current-updated).total_seconds()))
+            return max(0,remaining-elapsed)
+        except (ValueError,TypeError):
+            return remaining
+
+
     def teacher_configured():
         return bool(db.one("SELECT id FROM teacher_security WHERE id=1"))
 
@@ -1156,17 +1173,36 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         user(profile_id)
         row=db.one("SELECT * FROM simulation_results WHERE user_id=? AND status IN ('active','paused','interrupted') AND result IS NULL ORDER BY COALESCE(updated_at,started_at) DESC LIMIT 1",(profile_id,))
         if not row:return None
+        remaining=simulation_remaining(row)
+        if int(row.get('minutes') or 0)>0 and remaining!=int(row.get('remaining_seconds') or 0):
+            db.execute("UPDATE simulation_results SET remaining_seconds=?,updated_at=? WHERE id=?",(remaining,now(),row['id']))
+            row['remaining_seconds']=remaining
+            row['updated_at']=now()
         row['topics']=json.loads(row['topics']);row['questions']=student_questions(json.loads(row['questions']));row['answers']=json.loads(row['answers'] or '[]')
         return row
 
     @app.post('/api/simulations/{sid}/progress')
     def save_simulation_progress(sid:int,value:SimulationProgress):
         user(value.profile_id)
-        row=db.one('SELECT id FROM simulation_results WHERE id=? AND user_id=?',(sid,value.profile_id))
+        row=db.one('SELECT * FROM simulation_results WHERE id=? AND user_id=?',(sid,value.profile_id))
         if not row:raise HTTPException(404,'No encontramos ese simulacro.')
-        db.execute('UPDATE simulation_results SET answers=?,status=?,updated_at=?,remaining_seconds=COALESCE(?,remaining_seconds) WHERE id=?',(json.dumps(value.answers,ensure_ascii=False),value.status,now(),value.remaining_seconds,sid))
-        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) SELECT user_id,'simulation',id,subject,'',?,? FROM simulation_results WHERE id=?",(value.status,now(),sid))
-        return {'ok':True}
+        if row.get('result'):
+            raise HTTPException(409,'Ese simulacro ya terminó.')
+        questions=json.loads(row['questions'])
+        if len(value.answers)>len(questions):
+            raise HTTPException(422,'Hay más respuestas que preguntas.')
+        remaining=simulation_remaining(row)
+        if int(row.get('minutes') or 0)>0:
+            if value.remaining_seconds is not None:
+                remaining=min(remaining,max(0,value.remaining_seconds))
+            if remaining<=0:
+                value.status='interrupted'
+        else:
+            remaining=0
+        timestamp=now()
+        db.execute('UPDATE simulation_results SET answers=?,status=?,updated_at=?,remaining_seconds=? WHERE id=?',(json.dumps(value.answers,ensure_ascii=False),value.status,timestamp,remaining,sid))
+        db.execute("INSERT OR REPLACE INTO profile_current_activity(user_id,activity_type,reference_id,subject,topic,status,updated_at) SELECT user_id,'simulation',id,subject,'',?,? FROM simulation_results WHERE id=?",(value.status,timestamp,sid))
+        return {'ok':True,'remaining_seconds':remaining,'status':value.status}
 
     @app.post('/api/simulations/{sid}/reinforcement')
     def simulation_reinforcement(sid:int,profile_id:int=1):
@@ -1193,8 +1229,14 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
             weak=result.get('review',[]) if isinstance(result,dict) else []
             return dict(**result,reinforcement=dict(topics=weak,activities=[dict(type='explanation',minutes=10),dict(type='practice',minutes=15),dict(type='flashcards',minutes=5)] if weak else []))
         questions=json.loads(row['questions'])
-        result=grade(questions,value.answers)
-        db.execute("UPDATE simulation_results SET result=?,completed_at=?,status='completed',updated_at=? WHERE id=?",(json.dumps(result,ensure_ascii=False),now(),now(),sid))
+        answers=value.answers
+        remaining=simulation_remaining(row)
+        if int(row.get('minutes') or 0)>0 and remaining<=0:
+            answers=json.loads(row.get('answers') or '[]')
+        if len(answers)>len(questions):
+            raise HTTPException(422,'Hay más respuestas que preguntas.')
+        result=grade(questions,answers)
+        db.execute("UPDATE simulation_results SET result=?,completed_at=?,status='completed',updated_at=?,remaining_seconds=? WHERE id=?",(json.dumps(result,ensure_ascii=False),now(),now(),remaining,sid))
         weak=result.get('review',[]) if isinstance(result,dict) else []
         topics=json.loads(row['topics'])
         for item in result.get('feedback',[]):
