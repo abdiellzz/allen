@@ -12,7 +12,7 @@ APK de demostración que ejecuta ALLEN completo dentro del teléfono, sin servid
 ```text
 WebView (assets del APK)
   ├── public/mobile/ → experiencia educativa inicial
-  ├── frontend/ de ALLEN → interfaz original accesible desde Perfiles
+  ├── frontend/ de ALLEN → recursos heredados, sin acceso alternativo en Perfiles
   ├── allen-android.js  → intercepta fetch('/api/...')
   └── allen-worker.js   → Web Worker con Pyodide (Python 3.13 en WebAssembly)
         └── allen_bridge.py → backend/app.py real (FastAPI + SQLite)
@@ -45,15 +45,19 @@ Desinstalar la app borra todos sus datos del teléfono.
 
 ## Qué funciona y qué no
 
-Funciona: perfiles, quizzes, simulacros, tarjetas, Plan Allen, aventuras, biblioteca,
-cursos, Teacher Studio (importar PDF/TXT/Markdown), progreso, recuperación y Modo Feria.
+El APK publicado es la demo anterior. El código de esta rama abre únicamente la
+experiencia educativa: seis cursos, diagnóstico, práctica, tarjetas, tutor preparado,
+progreso y recuperación por perfil. Modo Feria ya no es un inicio alternativo.
+Teacher Studio y los datos de escritorio se conservan en `/teacher`.
+Ver [UI_SINGLE_HOME.md](../docs/UI_SINGLE_HOME.md).
 
 Limitaciones de la demo:
 
 - El chat con IA generativa responde en modo demo (no hay llama.cpp en el teléfono).
   El tutor de aritmética sí responde.
 - La pantalla móvil permite exportar manualmente el JSON del perfil; no hay guardado nativo de archivos. Course Packs y descargas de la interfaz original siguen pendientes.
-- La interfaz educativa móvil no inicia Python. Python se carga al abrir la interfaz original.
+- La interfaz educativa móvil no inicia Python. Los recursos heredados de Pyodide
+  se conservan por compatibilidad; no se ofrecen como otro inicio al estudiante.
 
 ## Compilar
 

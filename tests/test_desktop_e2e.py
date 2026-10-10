@@ -48,7 +48,7 @@ def test_desktop_guided_learning_smoke_and_viewports():
                 page=browser.new_page(viewport={"width":1366,"height":768})
                 console_security_errors=[]
                 page.on("console",lambda msg: console_security_errors.append(msg.text) if "Refused to apply inline style" in msg.text or "Content Security Policy" in msg.text else None)
-                page.goto(base,wait_until="networkidle")
+                page.goto(base+"/teacher",wait_until="networkidle")
                 page.get_by_role("heading",name="¿Qué quieres descubrir hoy?").wait_for()
                 assert page.locator(".brand-mascot").count()==1
 

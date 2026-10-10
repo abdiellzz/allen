@@ -8,6 +8,9 @@ ALLEN combina aprendizaje guiado, quizzes, tarjetas, planes de estudio, cursos c
 
 ## Primera experiencia móvil (experimental)
 
+Inicio educativo único, menú desplegable compacto y logo original:
+[guía de la UI actual](docs/UI_SINGLE_HOME.md).
+
 La rama de evolución móvil incorpora una **PWA instalable** en `public/mobile/`:
 seis cursos (fracciones, lectura, inglés, Python, ciencias y seguridad digital), diagnóstico, práctica guiada,
 repaso de errores, tutor estructurado y progreso offline por perfil. No es un APK.

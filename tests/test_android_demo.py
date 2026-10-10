@@ -47,7 +47,8 @@ def test_both_interfaces_are_bundled_without_starting_python(tmp_path):
     assert (tmp_path/'index.html').is_file()
     assert (tmp_path/'fair.html').is_file()
     # Existing app requests are still routed to Python when explicitly opened.
-    assert '/static/android/allen-android.js' in (tmp_path/'index.html').read_text()
+    assert '/mobile/index.html' in (tmp_path/'index.html').read_text()
+    assert 'allen-android.js' not in (tmp_path/'index.html').read_text()
 
 
 def test_backend_archive_uses_the_shared_course_snapshot(tmp_path):

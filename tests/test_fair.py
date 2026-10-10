@@ -21,7 +21,7 @@ class FairTests(unittest.TestCase):
     def test_routes_and_protection(self):
         for path in ['/','/fair','/?mode=fair','/static/fair.js']:
             self.assertEqual(self.client.get(path).status_code,200)
-        self.assertIn('fair.js',self.client.get('/?mode=fair').text)
+        self.assertIn('Aprende a tu ritmo',self.client.get('/?mode=fair').text)
         self.assertEqual(self.client.post('/api/fair/sessions',json={},headers={'X-Allen-Token':''}).status_code,403)
         self.assertEqual(set(self.client.get('/api/fair/token').json()),{'token'})
     def test_qr_local_and_invalid_protocol(self):

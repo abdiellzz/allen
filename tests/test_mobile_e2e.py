@@ -33,6 +33,13 @@ def mobile_url():
     thread.join()
 
 
+def navigate(page, name):
+    menu=page.locator('#section-menu')
+    if page.locator('#section-menu[open]').count()==0:
+        menu.locator('summary').click()
+    page.locator('#navigation').get_by_role('button',name=name,exact=True).click()
+
+
 def create_profile(page, name='Estudiante', goal='school'):
     page.get_by_label('¿Cómo quieres que te llame?').fill(name)
     page.get_by_label('¿Qué quieres hacer?').select_option(goal)
@@ -100,7 +107,7 @@ def test_learning_survives_offline_reload_and_all_lessons_complete(mobile_url):
             page.get_by_role('heading', name='Comprobación superada').wait_for()
             page.get_by_role('button', name='Ver mi siguiente paso').click()
         assert state(page)['completed']==['parts','equivalent','sum']
-        page.get_by_role('button', name='Mi progreso', exact=True).click()
+        navigate(page, 'Mi progreso')
         page.get_by_role('heading', name='Tu progreso tiene una historia').wait_for()
         for width in [320,360,390,768,1366]:
             page.set_viewport_size({'width':width,'height':844})
@@ -108,12 +115,12 @@ def test_learning_survives_offline_reload_and_all_lessons_complete(mobile_url):
         page.set_viewport_size({'width':390,'height':844})
         path=ROOT/'artifacts/mobile';path.mkdir(parents=True,exist_ok=True)
         page.screenshot(path=str(path/'progress.png'),full_page=True)
-        page.get_by_role('button', name='Practicar', exact=True).click()
+        navigate(page, 'Practicar')
         page.get_by_role('button', name='Repasar tarjeta').first.click()
         page.get_by_role('button', name='Ver explicación').click()
         page.get_by_role('button', name='Necesito repasarlo').click()
         assert state(page)['cards']['parts']['remembered'] is False
-        page.get_by_role('button', name='Hoy', exact=True).click()
+        navigate(page, 'Hoy')
         page.screenshot(path=str(path/'today.png'),full_page=True)
         page.get_by_role('button',name='Comenzar repaso',exact=True).click()
         page.get_by_role('button',name='Entendido, vamos a practicar').click()
@@ -130,7 +137,7 @@ def test_backup_recovery_profile_isolation_and_safe_import(mobile_url, tmp_path)
         page.goto(mobile_url)
         create_profile(page, 'Uno')
         diagnose(page)
-        page.get_by_role('button', name='Mi progreso', exact=True).click()
+        navigate(page, 'Mi progreso')
         with page.expect_download() as download:
             page.get_by_role('button', name='Exportar mi progreso').click()
         backup=tmp_path/'copy.json';download.value.save_as(backup)
@@ -139,10 +146,10 @@ def test_backup_recovery_profile_isolation_and_safe_import(mobile_url, tmp_path)
         create_profile(page, 'Dos', 'explore')
         assert state(page)['events']==[]
         assert state(page)['profile']['goal']=='explore'
-        page.get_by_role('button', name='Allen', exact=True).click()
+        navigate(page, 'Allen')
         page.get_by_text('La IA generativa está desconectada por defecto.', exact=False).wait_for()
         assert 'Uno' not in page.locator('#content').inner_text()
-        page.get_by_role('button', name='Mi progreso', exact=True).click()
+        navigate(page, 'Mi progreso')
         with page.expect_file_chooser() as chooser:
             page.get_by_role('button', name='Recuperar una copia').click()
         chooser.value.set_files(backup)
@@ -201,12 +208,12 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
         page.goto(mobile_url)
         create_profile(page, 'Luna', 'explore')
         page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
-        page.get_by_role('button',name='Aprender',exact=True).click()
+        navigate(page, 'Aprender')
         page.screenshot(path=str(ROOT/'docs/images/mobile/catalogue.png'),full_page=True)
         assert page.locator('.course-card').count() == 6
         context.set_offline(True)
         for c in catalogue[1:]:
-            page.get_by_role('button',name='Aprender',exact=True).click()
+            navigate(page, 'Aprender')
             page.locator(f'[data-course="{c["id"]}"]').click()
             page.get_by_role('button',name='Hacer diagnóstico',exact=True).click()
             diagnostic = [q for t in c['topics'] for q in t['questions'] if q['kind']=='diagnostic']
@@ -233,7 +240,7 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
             sent.append(route.request.post_data_json)
             route.fulfill(json={'answer':'Una explicación de prueba','source':'Contenido revisable','generated':True})
         page.route('**/api/mobile/tutor',tutor)
-        page.get_by_role('button',name='Allen',exact=True).click()
+        navigate(page, 'Allen')
         before = state(page)['events']
         page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).click()
         page.get_by_label('¿Qué quieres entender?').fill('Dame otra explicación')
@@ -243,7 +250,7 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
         assert set(sent[0])=={'message','topic_id','question_id','last_answer','level'}
         assert state(page)['events']==before
         page.screenshot(path=str(ROOT/'docs/images/mobile/tutor-local.png'),full_page=True)
-        page.get_by_role('button',name='Mi progreso',exact=True).click()
+        navigate(page, 'Mi progreso')
         page.get_by_label('Tamaño del texto').select_option('large')
         page.get_by_role('button',name='Guardar preferencias',exact=True).click()
         page.get_by_text('Preferencias guardadas.',exact=True).wait_for()
@@ -252,7 +259,7 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
         assert page.locator('html').get_attribute('data-text-size')=='large'
         page.get_by_role('button',name='Perfiles',exact=True).click()
         create_profile(page,'Sol')
-        page.get_by_role('button',name='Allen',exact=True).click()
+        navigate(page, 'Allen')
         assert page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).is_visible()
         assert page.get_by_text('Una explicación de prueba',exact=True).count()==0
         assert state(page)['events']==[]
@@ -285,7 +292,7 @@ def test_browser_uses_desktop_bridge_and_handles_model_loss(tmp_path):
             page.goto(f'http://127.0.0.1:{sock.getsockname()[1]}/mobile/')
             create_profile(page)
             page.get_by_role('button',name='Comenzar diagnóstico').click()
-            page.get_by_role('button',name='Allen',exact=True).click()
+            navigate(page, 'Allen')
             page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).click()
             page.get_by_label('¿Qué quieres entender?').fill('Ayúdame a razonar')
             before = state(page)
@@ -324,7 +331,7 @@ def test_bundled_android_ui_search_and_manual_backup(mobile_url):
         page.get_by_text('Contenido incluido · sin Internet',exact=True).wait_for()
         assert page.evaluate('navigator.serviceWorker.getRegistrations().then(r=>r.length)')==0
         assert not any('/api/' in url or 'allen-worker.js' in url for url in requests)
-        page.get_by_role('button',name='Aprender',exact=True).click()
+        navigate(page, 'Aprender')
         page.get_by_label('Buscar un objetivo').fill('cuentas')
         assert page.locator('.course-card').count()==1
         assert page.get_by_role('heading',name='Protege tu vida digital',exact=True).is_visible()
@@ -333,19 +340,57 @@ def test_bundled_android_ui_search_and_manual_backup(mobile_url):
         page.get_by_label('Buscar un objetivo').fill('')
         page.get_by_label('Área de aprendizaje').select_option(label='Ciencias')
         assert page.locator('.course-card').count()==1
-        page.get_by_role('button',name='Practicar',exact=True).click()
+        navigate(page, 'Practicar')
+        page.get_by_text('Misiones de aplicación',exact=True).click()
         page.get_by_role('heading',name='Misiones para la vida real').wait_for()
         assert page.get_by_role('button',name='Preparar esta misión',exact=True).count()==6
-        page.evaluate("document.querySelector('#navigation').hidden=true;document.querySelector('#notice').hidden=true")
+        page.evaluate("document.querySelector('#notice').hidden=true")
         page.locator('.mission-list').screenshot(path=str(ROOT/'docs/images/mobile/missions.png'))
-        page.evaluate("document.querySelector('#navigation').hidden=false")
-        page.get_by_role('button',name='Allen',exact=True).click()
+        navigate(page, 'Allen')
         page.get_by_role('heading',name='Tu tutor está listo sin conexión').wait_for()
         assert page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).count()==0
-        page.get_by_role('button',name='Mi progreso',exact=True).click()
+        navigate(page, 'Mi progreso')
         page.get_by_role('heading',name='Tu mapa de aprendizaje').wait_for()
         page.get_by_role('button',name='Exportar mi progreso',exact=True).click()
         payload=json.loads(page.get_by_label('Tu copia local').input_value())
         assert payload['state']['profile']['name']=='Estudiante'
         page.get_by_role('button',name='Volver a mi progreso',exact=True).click()
+        browser.close()
+
+
+def test_compact_navigation_identity_and_companion(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        page=browser.new_page(viewport={'width':390,'height':844})
+        page.goto(mobile_url)
+        create_profile(page,'Abdiel')
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        assert page.locator('.brand-portrait img').get_attribute('src')=='./assets/allen-user-logo.png'
+        assert not page.locator('#section-menu').get_attribute('open')
+        assert not page.locator('#navigation').is_visible()
+        before=state(page)
+        page.get_by_role('button',name='Hablar con Allen',exact=True).click()
+        page.get_by_text('Vamos paso a paso.',exact=False).wait_for()
+        assert state(page)==before
+        page.locator('#notice').evaluate('(el)=>el.hidden=true')
+        assert page.locator('#content').bounding_box()['height'] < 750
+        page.screenshot(path=str(ROOT/'docs/images/mobile/home-compact.png'),full_page=True)
+        page.get_by_role('button',name='Abrir secciones',exact=True).click()
+        box=page.locator('#navigation').bounding_box()
+        assert box['x']>=14 and box['x']+box['width']<=376
+        page.screenshot(path=str(ROOT/'docs/images/mobile/menu-compact.png'),full_page=True)
+        page.keyboard.press('Escape')
+        assert page.locator('#section-menu[open]').count()==0
+        navigate(page,'Aprender')
+        assert page.locator('#section-menu[open]').count()==0
+        assert page.locator('.route-details[open]').count()==0
+        assert page.locator('.course-grid').evaluate('(el)=>el.scrollWidth>el.clientWidth')
+        page.get_by_role('button',name='Ver cursos siguientes',exact=True).click()
+        page.wait_for_function("()=>document.querySelector('.course-grid').scrollLeft>0")
+        for width in [320,390,768,1440]:
+            page.set_viewport_size({'width':width,'height':900})
+            assert page.evaluate('document.documentElement.scrollWidth-innerWidth')<=2
+        page.set_viewport_size({'width':1440,'height':900})
+        assert page.locator('#content').bounding_box()['width']>=1100
+        page.screenshot(path=str(ROOT/'docs/images/mobile/catalogue-desktop.png'),full_page=True)
         browser.close()

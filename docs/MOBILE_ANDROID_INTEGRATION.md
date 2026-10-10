@@ -17,7 +17,8 @@ APK publicado y correcciones de iconos. Base revisada:
   ni una simulación libre: mantiene el mismo registro de evidencia.
 - Mapa de aprendizaje con temas comprobados y bases pendientes.
 - Código Android inicia directamente la interfaz educativa móvil. La interfaz
-  original sigue accesible desde Perfiles, conservando biblioteca y herramientas.
+  original se conserva para administración en escritorio (`/teacher`); ya no
+  se ofrece desde Perfiles. Ver [UI_SINGLE_HOME.md](UI_SINGLE_HOME.md).
 - La pantalla móvil no inicia Pyodide: cursos y progreso funcionan con assets
   empaquetados e IndexedDB. No necesita service worker dentro del APK.
 - El worker de la interfaz original serializa solicitudes y confirma escrituras

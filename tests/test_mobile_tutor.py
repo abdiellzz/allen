@@ -55,3 +55,15 @@ def test_mobile_retains_license_boundary(tmp_path):
                      require_local_access=False, require_teacher_auth=False)
     with TestClient(app) as client:
         assert client.get('/api/mobile/bootstrap').status_code == 402
+
+
+def test_student_launch_urls_share_one_home_without_deleting_legacy_data(tmp_path):
+    app = create_app(tmp_path/'local.sqlite3', ai=ModelStub(), require_license=False,
+                     require_local_access=False, require_teacher_auth=False)
+    with TestClient(app) as client:
+        for path in ['/', '/index.html', '/?mode=fair', '/fair', '/static/fair.html', '/static/index.html']:
+            response = client.get(path,follow_redirects=False)
+            assert response.status_code == 303
+            assert response.headers['location'] == '/mobile/'
+        assert client.get('/teacher').status_code == 200
+        assert client.get('/api/bootstrap').status_code == 200

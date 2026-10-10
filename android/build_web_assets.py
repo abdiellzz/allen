@@ -100,9 +100,10 @@ def assemble_interfaces(output: Path) -> None:
     (output / "static" / "android").mkdir()
     for name in ("allen-android.js", "allen-worker.js", "allen-android.css"):
         shutil.copy2(ANDROID / "web" / name, output / "static" / "android" / name)
+    # Only the new educational home is bundled as a student entry point.
+    redirect = '<!doctype html><meta http-equiv="refresh" content="0;url=/mobile/index.html"><a href="/mobile/index.html">Abrir ALLEN</a>'
     for page in ("index.html", "fair.html"):
-        html = (ROOT / "frontend" / page).read_text(encoding="utf-8")
-        (output / page).write_text(inject(html), encoding="utf-8")
+        (output / page).write_text(redirect, encoding="utf-8")
     shutil.copytree(ROOT / "public" / "mobile", output / "mobile")
     mobile = output / "mobile" / "index.html"
     mobile.write_text(mobile.read_text(encoding="utf-8").replace(

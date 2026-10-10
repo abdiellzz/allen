@@ -8,9 +8,13 @@
   "display": "standalone",
   "background_color": "#f8f5ef",
   "theme_color": "#f8f5ef",
-  "description": "Lecciones, práctica y progreso local. Curso inicial de fracciones.",
+  "description": "Seis cursos, práctica guiada y progreso local.",
   "icons": [
-    {"src":"./assets/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
-    {"src":"./assets/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}
+    {
+      "src": "./assets/allen-user-logo.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any"
+    }
   ]
 }
