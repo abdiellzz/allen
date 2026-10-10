@@ -5,3 +5,6 @@ app/build/
 local.properties
 app/src/main/assets/www/
 *.apk
+
+# Published demo APK (download link in README).
+!release/ALLEN-demo-android.apk
