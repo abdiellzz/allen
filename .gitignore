@@ -44,3 +44,6 @@ node_modules/
 allen_training/.venv/
 allen_training/output/*
 !allen_training/output/.gitkeep
+
+# Agent review screenshots (.agents/skills/apk-review)
+.agents/review/
