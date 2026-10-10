@@ -9,7 +9,7 @@ ALLEN combina aprendizaje guiado, quizzes, tarjetas, planes de estudio, cursos c
 ## Primera experiencia móvil (experimental)
 
 La rama de evolución móvil incorpora una **PWA instalable** en `public/mobile/`:
-cuatro cursos (fracciones, lectura, inglés y Python), diagnóstico, práctica guiada,
+seis cursos (fracciones, lectura, inglés, Python, ciencias y seguridad digital), diagnóstico, práctica guiada,
 repaso de errores, tutor estructurado y progreso offline por perfil. No es un APK.
 Desde el servidor ALLEN se puede conectar opcionalmente su IA local; la versión
 estática funciona con ayuda preparada. Los pagos están pospuestos.
@@ -29,6 +29,7 @@ La aplicación de escritorio y sus licencias continúan funcionando por separado
 | `frontend/` | Interfaz local de ALLEN |
 | `data/library/` | Biblioteca incluida |
 | `distribution/` | Build Windows, instalador, Portable y eliminador |
+| `android/` | App Android de demostración (APK) |
 | `tools/` | Herramientas administrativas como License Manager |
 | `public/` | Landing estática publicada por Vercel |
 | `tests/` | Pruebas Python, E2E y JavaScript |
@@ -47,6 +48,22 @@ También existe un Portable:
 **Ninguno requiere Python instalado.**
 
 Consulta [Instalación y primera ejecución](docs/INSTALLATION.md).
+
+## ALLEN en Android (demo)
+
+**[Descargar ALLEN-demo-android.apk](https://github.com/abdiellzz/allen/raw/main/android/release/ALLEN-demo-android.apk)** (21 MB · Android 8.0 o superior)
+
+El enlace funciona con una sesión de GitHub que tenga acceso a este repositorio.
+
+1. Descarga el APK en el teléfono, o en el PC y pásalo al teléfono por cable, Drive o WhatsApp.
+2. Abre el archivo desde **Descargas** o **Archivos**.
+3. Si Android avisa que no permite instalar apps desconocidas, pulsa **Configuración** y activa **Permitir de esta fuente**. Vuelve atrás.
+4. Pulsa **Instalar**. Si Play Protect avisa que la app no es conocida, elige **Más detalles → Instalar de todas formas**.
+5. Abre **ALLEN**. La primera vez tarda unos segundos mientras prepara Python en el teléfono.
+
+Es una demo: funciona sin Internet y guarda los datos en el teléfono, pero el chat con IA generativa responde en modo demo y no pide licencia. Desinstalar la app borra sus datos.
+
+Consulta [ALLEN para Android](android/README.md).
 
 ## Licencia offline
 
@@ -191,3 +208,5 @@ El código fuente puede ejecutarse en Linux para desarrollo, pero la distribuci�
 ---
 
 ALLEN · aprendizaje local, privado y diseñado para seguir funcionando sin depender de una nube.
+
+La rama móvil integra esta interfaz en el código Android. El APK de `main` sigue siendo la demo anterior; las mejoras requieren recompilar. Ver [integración y pruebas](docs/MOBILE_ANDROID_INTEGRATION.md).

@@ -1,0 +1,46 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "com.allen.tutor.demo"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.allen.tutor.demo"
+        minSdk 26
+        targetSdk 35
+        versionCode 2
+        versionName file("../../VERSION").text.trim() + "-android-demo"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    androidResources {
+        // Pyodide's wheels and wasm are already compressed; storing them avoids double work.
+        noCompress += ["wasm", "whl", "zip"]
+    }
+}
+
+dependencies {
+    implementation "androidx.webkit:webkit:1.12.1"
+}
+
+tasks.register("checkWebAssets") {
+    doLast {
+        if (!file("src/main/assets/www/index.html").exists() ||
+                !file("src/main/assets/www/mobile/index.html").exists()) {
+            throw new GradleException("Faltan los assets web. Ejecuta primero: python android/build_web_assets.py")
+        }
+    }
+}
+preBuild.dependsOn("checkWebAssets")

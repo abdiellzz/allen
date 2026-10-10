@@ -1,7 +1,7 @@
 # ALLEN móvil: primera entrega PWA
 
-Estado: **PWA experimental instalable**, con cuatro cursos completos y progreso offline.
-No es un APK. Incluye conexión opcional al modelo local de escritorio; no tiene cobros activos. La versión de
+Estado: **PWA experimental instalable**, con seis cursos completos y progreso offline.
+Esta interfaz web se integra ahora también en el código de la demo Android, pendiente de recompilación. Incluye conexión opcional al modelo local de escritorio; no tiene cobros activos. La versión de
 escritorio continúa funcionando con sus bases y licencias actuales.
 
 ## Ejecutar y probar
@@ -95,7 +95,7 @@ con `.allenpack` en esta entrega.
 El tiempo influye en la recomendación y permite pausas con posición guardada;
 no hay temporizador obligatorio ni promesa de duración exacta. El nivel elegido
 ajusta apoyo, no crea preguntas difíciles inventadas. Las dos rutas de entrada
-comparten motor y cuatro cursos: fracciones, comprensión lectora, inglés inicial y Python. Son nueve lecciones y 45 preguntas, sin ejecutar código del estudiante.
+comparten motor y seis cursos: fracciones, comprensión lectora, inglés inicial, Python, ciencias y seguridad digital. Son trece lecciones y 65 preguntas, sin ejecutar código del estudiante.
 
 El contenido amplía `data/library/math/fracciones.md` con ejemplos de fracciones
 elementales. Su autoría es editorial, no generativa. Las pruebas verifican
@@ -212,3 +212,5 @@ SVG originales de lectura, inglés, Python y celebración. No se generaron imág
 realistas ni se cambió la marca.
 
 Detalles de este incremento: [MOBILE_POLISH.md](MOBILE_POLISH.md).
+
+La integración Android conserva el contenedor y Pyodide aportados por Sebastián. El modo móvil empaquetado usa sus assets directamente, sin service worker ni Python, y mantiene el progreso en IndexedDB. La interfaz original sigue accesible desde Perfiles, con su almacenamiento SQLite independiente. Consulta [MOBILE_ANDROID_INTEGRATION.md](MOBILE_ANDROID_INTEGRATION.md).

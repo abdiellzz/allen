@@ -1,3 +1,5 @@
+> Informe del segundo incremento. La integración Android y el catálogo ampliado están en [MOBILE_ANDROID_INTEGRATION.md](MOBILE_ANDROID_INTEGRATION.md).
+
 # ALLEN móvil: catálogo y tutor contextual
 
 Segundo incremento sobre `feature/mobile-learning-pwa`. Los pagos quedan para el

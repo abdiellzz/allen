@@ -203,7 +203,7 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
         page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
         page.get_by_role('button',name='Aprender',exact=True).click()
         page.screenshot(path=str(ROOT/'docs/images/mobile/catalogue.png'),full_page=True)
-        assert page.locator('.course-card').count() == 4
+        assert page.locator('.course-card').count() == 6
         context.set_offline(True)
         for c in catalogue[1:]:
             page.get_by_role('button',name='Aprender',exact=True).click()
@@ -221,10 +221,10 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
                 for i,q in enumerate(practice):
                     answer(page,q['answer'],last=i==len(practice)-1)
                 page.get_by_role('button',name='Ver mi siguiente paso',exact=True).click()
-        assert len(state(page)['completed']) == 6
+        assert len(state(page)['completed']) == 10
         page.reload()
         page.get_by_role('heading',name='Hola, Luna',exact=True).wait_for()
-        assert len(state(page)['completed']) == 6
+        assert len(state(page)['completed']) == 10
         context.set_offline(False)
         # UI contract only: the backend adapter is verified separately with TestClient.
         page.route('**/api/mobile/bootstrap',lambda route:route.fulfill(json={'connected':True,'token':'test-token'}))
@@ -239,7 +239,7 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
         page.get_by_label('¿Qué quieres entender?').fill('Dame otra explicación')
         page.get_by_role('button',name='Pedir explicación',exact=True).click()
         page.get_by_text('Respuesta generada · verificar con el curso',exact=True).wait_for()
-        assert sent[0]['topic_id']=='python-output'
+        assert sent[0]['topic_id']=='science-fair-test'
         assert set(sent[0])=={'message','topic_id','question_id','last_answer','level'}
         assert state(page)['events']==before
         page.screenshot(path=str(ROOT/'docs/images/mobile/tutor-local.png'),full_page=True)
@@ -305,3 +305,47 @@ def test_browser_uses_desktop_bridge_and_handles_model_loss(tmp_path):
         server.should_exit = True
         thread.join(timeout=10)
         sock.close()
+
+
+def test_bundled_android_ui_search_and_manual_backup(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page()
+        requests=[]
+        page.on('request',lambda req:requests.append(req.url))
+        def bundled_html(route):
+            response=route.fetch()
+            html=response.text().replace('</head>','<meta name="allen-runtime" content="bundled-android"></head>',1)
+            route.fulfill(response=response,body=html)
+        page.route('**/mobile/index.html',bundled_html)
+        page.goto(mobile_url+'index.html')
+        create_profile(page)
+        page.get_by_text('Contenido incluido · sin Internet',exact=True).wait_for()
+        assert page.evaluate('navigator.serviceWorker.getRegistrations().then(r=>r.length)')==0
+        assert not any('/api/' in url or 'allen-worker.js' in url for url in requests)
+        page.get_by_role('button',name='Aprender',exact=True).click()
+        page.get_by_label('Buscar un objetivo').fill('cuentas')
+        assert page.locator('.course-card').count()==1
+        assert page.get_by_role('heading',name='Protege tu vida digital',exact=True).is_visible()
+        page.get_by_label('Buscar un objetivo').fill('no existe esta ruta')
+        assert page.locator('.course-card').count()==0
+        page.get_by_label('Buscar un objetivo').fill('')
+        page.get_by_label('Área de aprendizaje').select_option(label='Ciencias')
+        assert page.locator('.course-card').count()==1
+        page.get_by_role('button',name='Practicar',exact=True).click()
+        page.get_by_role('heading',name='Misiones para la vida real').wait_for()
+        assert page.get_by_role('button',name='Preparar esta misión',exact=True).count()==6
+        page.evaluate("document.querySelector('#navigation').hidden=true;document.querySelector('#notice').hidden=true")
+        page.locator('.mission-list').screenshot(path=str(ROOT/'docs/images/mobile/missions.png'))
+        page.evaluate("document.querySelector('#navigation').hidden=false")
+        page.get_by_role('button',name='Allen',exact=True).click()
+        page.get_by_role('heading',name='Tu tutor está listo sin conexión').wait_for()
+        assert page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).count()==0
+        page.get_by_role('button',name='Mi progreso',exact=True).click()
+        page.get_by_role('heading',name='Tu mapa de aprendizaje').wait_for()
+        page.get_by_role('button',name='Exportar mi progreso',exact=True).click()
+        payload=json.loads(page.get_by_label('Tu copia local').input_value())
+        assert payload['state']['profile']['name']=='Estudiante'
+        page.get_by_role('button',name='Volver a mi progreso',exact=True).click()
+        browser.close()

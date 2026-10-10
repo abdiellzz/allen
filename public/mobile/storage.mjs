@@ -1,5 +1,5 @@
 import {newState, RULES_VERSION} from './engine.mjs';
-import {course, allTopics, getCourse, topicById, questionById} from './course.mjs';
+import {course, courses, allTopics, getCourse, topicById, questionById} from './course.mjs';
 const NAME='allen-mobile-v1';
 const requestResult = request => new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
 const done = tx => new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error??Error('No se pudo guardar.'));});
@@ -42,7 +42,7 @@ const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3
 export function validateState(s){
   if(!s||s.version!==1||s.rulesVersion!==RULES_VERSION||s.courseId!==course.id||!Number.isSafeInteger(s.revision)||s.revision<0)fail();
   if(s.activeCourse!==undefined&&!getCourse(s.activeCourse))fail();
-  if(s.diagnosticCourses!==undefined&&(!Array.isArray(s.diagnosticCourses)||s.diagnosticCourses.length>4||s.diagnosticCourses.some(id=>!getCourse(id))||new Set(s.diagnosticCourses).size!==s.diagnosticCourses.length))fail();
+  if(s.diagnosticCourses!==undefined&&(!Array.isArray(s.diagnosticCourses)||s.diagnosticCourses.length>courses.length||s.diagnosticCourses.some(id=>!getCourse(id))||new Set(s.diagnosticCourses).size!==s.diagnosticCourses.length))fail();
   if(s.preferences!==undefined&&(!s.preferences||!['normal','large'].includes(s.preferences.textSize)))fail();
   const p=s.profile;if(!p||!uuid(p.id)||typeof p.name!=='string'||p.name.trim().length<1||p.name.length>40||!['school','explore'].includes(p.goal)||!['bases','practice','challenge'].includes(p.level)||![5,10,15].includes(p.minutes))fail();
   if(typeof s.diagnosticComplete!=='boolean'||!Array.isArray(s.completed)||s.completed.length>allTopics.length||new Set(s.completed).size!==s.completed.length||s.completed.some(id=>!topicById(id)))fail();
