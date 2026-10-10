@@ -2,7 +2,18 @@
 // Loaded as a classic script before the app module so the very first API call already waits for Python.
 (function () {
   // Scopes allen-android.css to the APK; set on <html> because <body> does not exist yet.
-  document.documentElement.classList.add("allen-android");
+  const root = document.documentElement;
+  root.classList.add("allen-android");
+  // The phone's light/dark setting applies until the user picks a theme with ALLEN's toggle.
+  let themeChosen = false;
+  try { themeChosen = Boolean(localStorage.getItem("allen-theme")); } catch (error) { /* storage blocked */ }
+  if (!themeChosen) root.classList.add("allen-theme-system");
+  document.addEventListener("click", event => {
+    if (!root.classList.contains("allen-theme-system") || !event.target.closest("#theme-toggle")) return;
+    // Runs before app.js's handler, which flips data-theme: start from what is on screen.
+    if (matchMedia("(prefers-color-scheme: dark)").matches) root.dataset.theme = "dark";
+    root.classList.remove("allen-theme-system");
+  }, true);
   const nativeFetch = window.fetch.bind(window);
   const worker = new Worker("/static/android/allen-worker.js");
   const pending = new Map();
@@ -54,4 +65,5 @@
     });
     return new Response(result.body, { status: result.status, headers: result.headers });
   };
+
 })();

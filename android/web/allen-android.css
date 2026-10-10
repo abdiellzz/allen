@@ -12,6 +12,9 @@ html.allen-android {
   --p-help: #808988;
   --p-accent: #c8662a;
   --p-accent-press: #ad4c12;
+  /* Accent for text and behind button labels: #c8662a is under 4.5:1 there. */
+  --p-accent-ink: #ad4c12;
+  --p-accent-ink-press: #8f3e0f;
   --p-accent-soft: #f6e2d3;
   --p-on-accent: #fffdf8;
   --p-success: #55796f;
@@ -28,7 +31,7 @@ html.allen-android {
   --p-top-h: 56px;
 
   /* Remap the app's own variables so its rules pick up the palette. */
-  --orange: var(--p-accent);
+  --orange: var(--p-accent-ink);
   --ink: var(--p-text);
   --muted: var(--p-text-2);
   --border: var(--p-line);
@@ -39,12 +42,12 @@ html.allen-android {
   --allen-orange-200: var(--p-accent-soft);
   --allen-orange-400: var(--p-accent);
   --allen-orange-500: var(--p-accent);
-  --allen-orange-600: var(--p-accent-press);
+  --allen-orange-600: var(--p-accent-ink);
   --v2-paper: var(--p-raised);
   --v2-cream: var(--p-bg);
   --v2-ink: var(--p-text);
   --v2-muted: var(--p-text-2);
-  --v2-orange: var(--p-accent);
+  --v2-orange: var(--p-accent-ink);
   --v2-orange-soft: var(--p-accent-soft);
   --v2-green: var(--p-success);
   --v2-green-soft: var(--p-success-soft);
@@ -56,7 +59,7 @@ html.allen-android {
   --v3-border: var(--p-line);
   --v3-text: var(--p-text);
   --v3-muted: var(--p-text-2);
-  --v3-accent: var(--p-accent);
+  --v3-accent: var(--p-accent-ink);
   --v3-accent-soft: var(--p-accent-soft);
   --v3-success: var(--p-success);
   --v3-radius-sm: var(--p-r-btn);
@@ -73,9 +76,10 @@ html.allen-android {
   background: var(--p-bg);
   font-family: var(--p-sans);
 }
-/* Dark parchment: follows the phone setting, and also the in-app theme toggle. */
+/* Dark parchment: follows the phone until the user picks a theme with ALLEN's toggle
+   (allen-android.js keeps .allen-theme-system until then), and always follows data-theme="dark". */
 @media (prefers-color-scheme: dark) {
-  html.allen-android {
+  html.allen-android.allen-theme-system {
     --p-bg: #1d1712;
     --p-surface: #2a221b;
     --p-raised: #312820;
@@ -85,6 +89,8 @@ html.allen-android {
     --p-help: #9c8a78;
     --p-accent: #e08a55;
     --p-accent-press: #c8662a;
+    --p-accent-ink: #e08a55;
+    --p-accent-ink-press: #c8662a;
     --p-accent-soft: #3a2a1f;
     --p-on-accent: #1d1712;
     --p-success: #8fb5a8;
@@ -104,6 +110,8 @@ html.allen-android[data-theme="dark"] {
   --p-help: #9c8a78;
   --p-accent: #e08a55;
   --p-accent-press: #c8662a;
+  --p-accent-ink: #e08a55;
+  --p-accent-ink-press: #c8662a;
   --p-accent-soft: #3a2a1f;
   --p-on-accent: #1d1712;
   --p-success: #8fb5a8;
@@ -160,11 +168,11 @@ html.allen-android h3 { color: var(--p-text); }
 html.allen-android p,
 html.allen-android .muted,
 html.allen-android small { color: var(--p-text-2); }
-html.allen-android a { color: var(--p-accent); }
+html.allen-android a { color: var(--p-accent-ink); }
 html.allen-android .eyebrow,
 html.allen-android .v2-home-strip span,
 html.allen-android .nav-label {
-  color: var(--p-accent);
+  color: var(--p-accent-ink);
   font-family: var(--p-sans);
   font-size: 12px;
   font-weight: 700;
@@ -188,15 +196,15 @@ html.allen-android .button-like:hover { background: var(--p-surface); border-col
 html.allen-android button.primary,
 html.allen-android .primary,
 html.allen-android .button-like.primary {
-  background: var(--p-accent);
-  border-color: var(--p-accent);
+  background: var(--p-accent-ink);
+  border-color: var(--p-accent-ink);
   color: var(--p-on-accent);
   font-weight: 700;
 }
 html.allen-android button.primary:hover,
-html.allen-android .primary:hover { background: var(--p-accent); color: var(--p-on-accent); }
+html.allen-android .primary:hover { background: var(--p-accent-ink); color: var(--p-on-accent); }
 html.allen-android button.primary:active,
-html.allen-android .primary:active { background: var(--p-accent-press); border-color: var(--p-accent-press); }
+html.allen-android .primary:active { background: var(--p-accent-ink-press); border-color: var(--p-accent-ink-press); }
 html.allen-android button.quiet { background: transparent; border-color: transparent; color: var(--p-text-2); }
 html.allen-android button.danger,
 html.allen-android .danger { color: #a23b2a; }
@@ -331,23 +339,20 @@ html.allen-android .v2-home-local {
   border-color: #55796f;
   color: #fffdf8;
 }
-html.allen-android .v2-home-local p,
-html.allen-android .v2-home-local h2 { color: #fffdf8; }
-html.allen-android[data-theme="dark"] .v2-home-local h2,
-html.allen-android[data-theme="dark"] .v2-home-local p { color: #fffdf8; }
+html.allen-android .v2-home-local :is(p, h2, .eyebrow) { color: #fffdf8; }
 
 /* ---------- Navigation (all sizes) ---------- */
 html.allen-android .sidebar { background: var(--p-raised); border-color: var(--p-line); }
 html.allen-android .nav-btn { color: var(--p-text-2); background: transparent; border: 0; }
-html.allen-android .nav-btn.active { background: var(--p-accent-soft); color: var(--p-accent); }
-html.allen-android .brand { color: var(--p-accent); }
+html.allen-android .nav-btn.active { background: var(--p-accent-soft); color: var(--p-accent-ink); }
+html.allen-android .brand { color: var(--p-accent-ink); }
 html.allen-android .workspace-mode { background: var(--p-surface); border: 1px solid var(--p-line); border-radius: var(--p-r-chip); }
 html.allen-android .workspace-mode button { border: 0; background: transparent; color: var(--p-text-2); border-radius: var(--p-r-chip); }
-html.allen-android .workspace-mode button.active { background: var(--p-raised); color: var(--p-accent); box-shadow: var(--p-shadow); }
+html.allen-android .workspace-mode button.active { background: var(--p-raised); color: var(--p-accent-ink); box-shadow: var(--p-shadow); }
 html.allen-android .topbar { background: var(--p-glass); border-bottom: 1px solid var(--p-line); color: var(--p-text-2); }
 html.allen-android .icon-action { background: transparent; border-color: var(--p-line); color: var(--p-text); }
 html.allen-android .profile-picker select { background: var(--p-surface); border-color: var(--p-line); border-radius: var(--p-r-chip); color: var(--p-text); }
-html.allen-android footer { color: var(--p-help); }
+html.allen-android footer { color: var(--p-text-2); }
 
 /* ---------- Practice: quiz, adventure, cards ---------- */
 html.allen-android .answer-option,
@@ -378,14 +383,313 @@ html.allen-android .v2-feedback:not(.retry) {
   background: var(--p-success-soft);
   border-color: color-mix(in srgb, var(--p-success) 35%, transparent);
 }
-html.allen-android .quiz-feedback.correct h2,
 html.allen-android .quiz-feedback.correct h2 svg { color: var(--p-success); }
 html.allen-android .v2-achievement:not(.locked) { border-color: var(--p-gold); }
-html.allen-android .v2-achievement:not(.locked) .eyebrow { color: #9a7322; }
+html.allen-android .v2-achievement:not(.locked) .eyebrow { color: #7d5c14; }
 html.allen-android[data-theme="dark"] .v2-achievement:not(.locked) .eyebrow { color: var(--p-gold); }
 @media (prefers-color-scheme: dark) {
-  html.allen-android .v2-achievement:not(.locked) .eyebrow { color: var(--p-gold); }
+  html.allen-android.allen-theme-system .v2-achievement:not(.locked) .eyebrow { color: var(--p-gold); }
 }
-html.allen-android .v2-mission-status { background: var(--p-accent-soft); color: var(--p-accent); border-radius: var(--p-r-chip); }
+html.allen-android .v2-mission-status { background: var(--p-accent-soft); color: var(--p-accent-ink); border-radius: var(--p-r-chip); }
 
 html.allen-android #toast { border-radius: var(--p-r-btn); }
+
+
+/* ---------- Phone layout (APK only) ---------- */
+@media (max-width: 640px) {
+  html.allen-android h1,
+  html.allen-android .welcome h1,
+  html.allen-android .v3-home-hero h1,
+  html.allen-android .page-heading h1,
+  html.allen-android .v2-page-heading h1 { font-size: 28px; line-height: 1.15; }
+  html.allen-android h2,
+  html.allen-android .v3-focus-card h2,
+  html.allen-android .v3-recommendation h2,
+  html.allen-android .v2-stage-top h2,
+  html.allen-android .flashcard h2,
+  html.allen-android .quiz-feedback h2 { font-size: 22px; line-height: 1.2; }
+  html.allen-android h3 { font-size: 18px; }
+  html.allen-android body,
+  html.allen-android .welcome p { font-size: 16px; }
+  html.allen-android .quiz-step legend { font-size: 20px; line-height: 1.35; }
+
+  /* Sidebar collapses to just the bottom bar. */
+  html.allen-android .layout { display: block; }
+  html.allen-android .sidebar {
+    position: static;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+  html.allen-android .sidebar > .brand,
+  html.allen-android .sidebar > .collapse-button,
+  html.allen-android .sidebar > .nav-label,
+  html.allen-android .sidebar > .sidebar-bottom { display: none; }
+
+  /* Bottom navigation bar. */
+  html.allen-android #nav,
+  html.allen-android .sidebar-collapsed .sidebar nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: 0;
+    max-width: none;
+    margin: 0;
+    padding: 0 4px env(safe-area-inset-bottom);
+    overflow: visible;
+    background: var(--p-raised);
+    border-top: 1px solid var(--p-line);
+  }
+  html.allen-android .nav-group { display: contents; }
+  html.allen-android .nav-group-label { display: none; }
+  html.allen-android body[data-workspace-mode="student"] #nav [data-nav-mode="teacher"],
+  html.allen-android body[data-workspace-mode="teacher"] #nav [data-nav-mode="student"] { display: none; }
+  /* Five tabs for students; the other pages stay in the DOM (search, home cards). */
+  html.allen-android body[data-workspace-mode="student"] #nav :is(
+    [data-page="Cursos"], [data-page="Método Allen"], [data-page="Plan Allen"], [data-page="Biblioteca"],
+    [data-page="Aventura"], [data-page="Tarjetas"], [data-page="Configuración"]) { display: none; }
+  html.allen-android #nav .nav-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    min-height: var(--p-nav-h);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 8px 2px 6px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--p-text-2);
+    font-weight: 600;
+  }
+  html.allen-android #nav .nav-btn::before { display: none; }
+  html.allen-android #nav .nav-icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 30px;
+    border-radius: var(--p-r-chip);
+    transition: background-color .16s ease;
+  }
+  html.allen-android #nav .nav-icon svg { width: 22px; height: 22px; max-width: none; flex: none; }
+  html.allen-android #nav .nav-text {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    line-height: 1.2;
+    letter-spacing: .01em;
+  }
+  html.allen-android #nav .nav-btn.active { color: var(--p-accent-ink); background: transparent; font-weight: 700; }
+  html.allen-android #nav .nav-btn.active .nav-icon { background: var(--p-accent-soft); }
+  html.allen-android #nav .nav-btn:active .nav-icon { background: var(--p-surface); }
+
+  /* Student/Teacher switch: out of the bar, shown as a slim strip under the topbar on
+     Perfil and Configuración (it stays inside #nav, where app.js listens for it). */
+  html.allen-android #nav .workspace-mode { display: none; }
+  html.allen-android body:has(#content .v2-profile-hero, #content .license-settings) #nav .workspace-mode {
+    position: fixed;
+    top: calc(var(--p-top-h) + 8px);
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    z-index: 55;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    width: min(320px, calc(100vw - 32px));
+    min-width: 0;
+    height: auto;
+    margin: 0;
+    padding: 3px;
+    transform: translateX(-50%);
+    background: var(--p-surface);
+    border: 1px solid var(--p-line);
+    border-radius: var(--p-r-chip);
+    box-shadow: var(--p-shadow);
+  }
+  html.allen-android #nav .workspace-mode button { min-height: 42px; padding: 0 12px; font-size: 14px; font-weight: 700; }
+  html.allen-android body:has(#content .v2-profile-hero, #content .license-settings) main { padding-top: 76px; }
+
+  /* Slim topbar: logo, one-line breadcrumb, actions and profile on the right. */
+  html.allen-android .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    height: var(--p-top-h);
+    min-height: 0;
+    padding: 0 12px;
+    background: var(--p-glass);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+  html.allen-android .topbar::before {
+    content: "";
+    flex: none;
+    width: 30px;
+    height: 30px;
+    background: url("/static/assets/allen-brand.svg") center / contain no-repeat;
+  }
+  html.allen-android .topbar > #breadcrumb {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--p-text-2);
+  }
+  html.allen-android .top-actions {
+    display: flex;
+    flex: none;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+    width: auto;
+  }
+  html.allen-android .top-actions .network { display: none; }
+  html.allen-android .top-actions .icon-action {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    justify-content: center;
+    border: 0;
+    border-radius: var(--p-r-chip);
+    background: transparent;
+  }
+  html.allen-android .top-actions .icon-action > span,
+  html.allen-android .top-actions .icon-action > kbd { display: none; }
+  html.allen-android .top-actions .icon-action:active { background: var(--p-surface); }
+  html.allen-android .profile-picker { margin: 0; }
+  html.allen-android .profile-picker select {
+    width: auto;
+    max-width: 118px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 30px 0 14px;
+    font-size: 16px;
+    text-overflow: ellipsis;
+  }
+
+  /* Content area clears the bottom bar. */
+  html.allen-android main { padding: 16px 16px 24px; min-height: 0; }
+  html.allen-android .workspace { padding-bottom: calc(var(--p-nav-h) + env(safe-area-inset-bottom)); }
+  html.allen-android footer { padding: 8px 16px 16px; font-size: 12px; }
+
+  /* Touch targets. */
+  html.allen-android main button,
+  html.allen-android main .button-like,
+  html.allen-android main select,
+  html.allen-android main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) { min-height: 48px; }
+  html.allen-android main button,
+  html.allen-android main .button-like { padding-left: 18px; padding-right: 18px; }
+
+  /* Cards: smaller padding, no hover lift, soft shadows only. */
+  html.allen-android .panel,
+  html.allen-android .welcome,
+  html.allen-android .v3-home-hero,
+  html.allen-android .module-card,
+  html.allen-android .v2-stage-card,
+  html.allen-android .v2-mission-complete,
+  html.allen-android .v2-profile-hero,
+  html.allen-android .v4-progress-hero,
+  html.allen-android .flashcard,
+  html.allen-android .v3-focus-card,
+  html.allen-android .v3-recommendation { padding: 18px; }
+  html.allen-android .module-card { min-height: 0; }
+  html.allen-android :is(.module-card, .v2-mission-card, .v2-library-card, button, .button-like):hover { transform: none; }
+  html.allen-android :is(.module-card, .v2-mission-card, .v2-library-card):hover { box-shadow: none; border-color: var(--p-line); }
+  html.allen-android .module-card:hover .module-icon { transform: none; }
+  html.allen-android .welcome-art .allen-mascot,
+  html.allen-android .welcome-art img { filter: none; }
+
+  /* Grids: one column, two for small KPIs. */
+  html.allen-android :is(.v2-home-grid, .v2-home-feature, .v2-path-panel, .v2-mission-grid, .v2-library-grid,
+    .v2-library-toolbar, .v2-library-hero, .v2-adventure-hero, .v2-stage-options, .v2-progress-insights,
+    .v2-recommendation, .v2-profile-hero, .v2-method-grid, .allen-guide-card, .license-machine,
+    .cards-grid, .cards-grid.four, .field-grid, .bottom-grid, .mastery-grid, .v3-focus-card,
+    .v3-recommendation, .v4-progress-grid, .plan-allen-days) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  html.allen-android :is(.v2-home-strip, .v4-kpi-grid, .stats, .license-summary, .v2-path-steps, .v2-achievements,
+    .analytics-kpis, .course-coverage) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+  html.allen-android .v2-home-strip article:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  html.allen-android .v2-achievement { grid-template-columns: minmax(0, 1fr); text-align: left; }
+  html.allen-android main :is(p, h1, h2, h3, strong, span, small, b, li) { overflow-wrap: break-word; }
+
+  /* Hero art: smaller, Allen stays visible. */
+  html.allen-android .welcome-art img,
+  html.allen-android .v2-library-hero img,
+  html.allen-android .v2-adventure-hero img,
+  html.allen-android .v2-profile-hero img,
+  html.allen-android .continuity-hero img { max-height: 160px !important; width: auto; max-width: 100%; margin-inline: auto; }
+  html.allen-android .allen-mascot.large { width: 140px; height: 140px; }
+  html.allen-android .v3-focus-card img,
+  html.allen-android .v3-recommendation img { display: block; height: 96px; width: auto; margin: 0 auto; }
+  html.allen-android .v2-mission-card img,
+  html.allen-android .v2-library-card img { max-height: 160px; width: 100%; object-fit: contain; }
+  html.allen-android .quiz-feedback { grid-template-columns: minmax(0, 1fr); text-align: left; }
+  html.allen-android .quiz-feedback .allen-mascot { width: 72px; height: 72px; margin: 0; }
+
+  /* Quiz and adventure: one column, roomy options, main action pinned above the bar. */
+  html.allen-android .quiz-step { margin: 8px 0; }
+  html.allen-android .answer-option,
+  html.allen-android .v2-stage-options button {
+    min-height: 56px;
+    margin: 8px 0;
+    padding: 12px 16px;
+    font-size: 16px;
+    line-height: 1.35;
+    text-align: left;
+    justify-content: flex-start;
+  }
+  html.allen-android .v2-stage-options { gap: 0; margin: 16px 0; }
+  html.allen-android .v2-stage-top { flex-direction: column; gap: 8px; }
+  html.allen-android #answers > button.primary:not(:disabled),
+  html.allen-android #next-question {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(var(--p-nav-h) + env(safe-area-inset-bottom) + 12px);
+    z-index: 45;
+    min-height: 52px;
+    box-shadow: 0 6px 18px rgba(82, 54, 33, .16);
+  }
+  html.allen-android .workspace:has(#answers, #next-question) { padding-bottom: calc(var(--p-nav-h) + env(safe-area-inset-bottom) + 76px); }
+  html.allen-android .v2-feedback,
+  html.allen-android .quiz-feedback { padding: 16px; }
+
+  /* Flashcards, palette, toasts. */
+  html.allen-android .flashcard { min-height: 200px; }
+  html.allen-android .flashcard .row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  html.allen-android .command-dialog { border-radius: var(--p-r-card); }
+  html.allen-android .teacher-studio-nav { top: calc(var(--p-top-h) + 4px); }
+  html.allen-android #toast { bottom: calc(var(--p-nav-h) + env(safe-area-inset-bottom) + 12px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.allen-android #nav .nav-icon { transition: none; }
+}
