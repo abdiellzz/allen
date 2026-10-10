@@ -66,4 +66,29 @@
     return new Response(result.body, { status: result.status, headers: result.headers });
   };
 
+  // APK-only option in Configuración to get the newest demo APK. MainActivity opens links that
+  // leave the app in the phone's browser, so ALLEN itself still needs no Internet permission.
+  const APK_URL = "https://github.com/abdiellzz/allen/raw/main/android/release/ALLEN-demo-android.apk";
+  const installedVersion = nativeFetch("/allen-manifest.json")
+    .then(response => response.json())
+    .then(manifest => manifest.allen || "", () => "");
+  function addUpdateOption(content) {
+    if (!content.querySelector(".license-settings") || content.querySelector("#allen-apk-update")) return;
+    const panel = document.createElement("section");
+    panel.id = "allen-apk-update";
+    panel.className = "panel allen-apk-update";
+    panel.innerHTML =
+      '<span class="eyebrow">App de Android</span><h2>Actualizar ALLEN</h2>' +
+      '<p>Versión instalada: <b class="allen-apk-version">demo</b>. Descarga el APK más reciente e ' +
+      "instálalo encima de esta versión: tus datos se conservan.</p>" +
+      '<a class="button-like primary" href="' + APK_URL + '">Descargar actualización</a>' +
+      "<small>Se abre en el navegador del teléfono y necesita una cuenta de GitHub con acceso a ALLEN.</small>";
+    installedVersion.then(version => { if (version) panel.querySelector(".allen-apk-version").textContent = version; });
+    const heading = content.querySelector(".page-heading");
+    if (heading) heading.after(panel); else content.prepend(panel);
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    const content = document.getElementById("content");
+    if (content) new MutationObserver(() => addUpdateOption(content)).observe(content, { childList: true });
+  });
 })();

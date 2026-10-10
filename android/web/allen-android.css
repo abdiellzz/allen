@@ -394,6 +394,25 @@ html.allen-android .v2-mission-status { background: var(--p-accent-soft); color:
 
 html.allen-android #toast { border-radius: var(--p-r-btn); }
 
+/* ---------- Settings: "Actualizar ALLEN" (added by allen-android.js) ---------- */
+html.allen-android .allen-apk-update {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+html.allen-android .allen-apk-update h2,
+html.allen-android .allen-apk-update p { margin: 0; }
+html.allen-android .allen-apk-update .button-like {
+  min-height: 48px;
+  margin-top: 4px;
+  padding: 0 20px;
+  text-decoration: none;
+}
+html.allen-android .allen-apk-update small { color: var(--p-text-2); font-size: 13px; }
+@media (max-width: 640px) {
+  html.allen-android .allen-apk-update .button-like { justify-self: stretch; }
+}
 
 /* ---------- Phone layout (APK only) ---------- */
 @media (max-width: 640px) {
