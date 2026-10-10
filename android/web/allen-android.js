@@ -1,6 +1,8 @@
 // ALLEN Android demo: routes fetch('/api/...') to the Python backend running in allen-worker.js.
 // Loaded as a classic script before the app module so the very first API call already waits for Python.
 (function () {
+  // Scopes allen-android.css to the APK; set on <html> because <body> does not exist yet.
+  document.documentElement.classList.add("allen-android");
   const nativeFetch = window.fetch.bind(window);
   const worker = new Worker("/static/android/allen-worker.js");
   const pending = new Map();
