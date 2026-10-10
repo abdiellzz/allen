@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="allen_cream">#FFF9F0</color>
+    <color name="allen_orange">#F07C1A</color>
+    <style name="AllenTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/allen_cream</item>
+        <item name="android:colorPrimary">@color/allen_orange</item>
+        <item name="android:colorAccent">@color/allen_orange</item>
+    </style>
+</resources>
