@@ -1,0 +1,914 @@
+[
+  {
+    "id": "fractions-v1",
+    "version": 1,
+    "title": "Fracciones, paso a paso",
+    "subject": "Matemáticas",
+    "source": "Biblioteca ALLEN · Fracciones · contenido inicial revisable",
+    "topics": [
+      {
+        "id": "parts",
+        "title": "Partes de un entero",
+        "prerequisite": null,
+        "objective": "Representar partes iguales de un entero con una fracción.",
+        "explanation": "Una fracción expresa cuántas partes iguales tomas de un entero. El denominador indica en cuántas partes iguales se divide. El numerador indica cuántas tomas.",
+        "simple": "Divide una pizza en 4 partes iguales. Si tomas 1, tienes 1/4. Abajo va el total de partes; arriba, las que tomas.",
+        "example": "Una barra tiene 8 partes iguales. Comes 3. La fracción que comiste es 3/8: numerador 3, denominador 8.",
+        "alternative": "Un dibujo tiene 6 regiones del mismo tamaño. Coloreas 2: has coloreado 2/6 del dibujo.",
+        "visual": {
+          "total": 8,
+          "selected": 3
+        },
+        "card": {
+          "front": "¿Qué indica el denominador?",
+          "back": "El número de partes iguales en que se divide un entero."
+        },
+        "questions": [
+          {
+            "id": "p-d1",
+            "kind": "diagnostic",
+            "prompt": "Una pizza tiene 4 partes iguales y tomas 1. ¿Qué fracción tomaste?",
+            "options": [
+              "1/4",
+              "4/1",
+              "1/3"
+            ],
+            "answer": "1/4",
+            "hints": [
+              "El total de partes va abajo.",
+              "Tomaste 1 de 4 partes."
+            ],
+            "feedback": "Tomaste 1 parte de un total de 4: 1/4. Invertir los números cambia el significado."
+          },
+          {
+            "id": "p-d2",
+            "kind": "diagnostic",
+            "prompt": "En 3/8, ¿cuál es el denominador?",
+            "options": [
+              "3",
+              "8",
+              "11"
+            ],
+            "answer": "8",
+            "hints": [
+              "Busca el número de abajo.",
+              "Ese número indica el total de partes iguales."
+            ],
+            "feedback": "El denominador es 8. El 3 es el numerador: las partes tomadas."
+          },
+          {
+            "id": "p-1",
+            "kind": "practice",
+            "prompt": "Una barra tiene 8 partes iguales. Comes 3. ¿Qué fracción comiste?",
+            "options": [
+              "8/3",
+              "3/8",
+              "5/8"
+            ],
+            "answer": "3/8",
+            "hints": [
+              "El numerador cuenta lo que comiste.",
+              "Comiste 3 y había 8 partes."
+            ],
+            "feedback": "Comiste 3/8. La fracción 5/8 representa lo que queda, no lo que comiste."
+          },
+          {
+            "id": "p-2",
+            "kind": "practice",
+            "prompt": "Coloreas 2 de 6 regiones iguales. ¿Qué fracción está coloreada?",
+            "options": [
+              "2/6",
+              "6/2",
+              "4/6"
+            ],
+            "answer": "2/6",
+            "hints": [
+              "Cuenta las regiones coloreadas.",
+              "Pon 2 arriba y 6 abajo."
+            ],
+            "feedback": "Son 2 de 6 regiones: 2/6. Las 4 regiones restantes representan 4/6."
+          },
+          {
+            "id": "p-c",
+            "kind": "check",
+            "prompt": "Un jardín está dividido en 5 parcelas iguales. Sembraste 4. ¿Qué fracción sembraste?",
+            "options": [
+              "1/5",
+              "5/4",
+              "4/5"
+            ],
+            "answer": "4/5",
+            "hints": [
+              "El entero es el jardín completo.",
+              "Sembraste 4 de 5 parcelas."
+            ],
+            "feedback": "Sembraste 4/5 del jardín. La parcela sin sembrar representa 1/5."
+          }
+        ]
+      },
+      {
+        "id": "equivalent",
+        "title": "Fracciones equivalentes",
+        "prerequisite": "parts",
+        "objective": "Reconocer fracciones que representan la misma cantidad.",
+        "explanation": "Dos fracciones son equivalentes cuando representan la misma cantidad. Multiplica o divide numerador y denominador por el mismo número distinto de cero para conservar esa cantidad.",
+        "simple": "La mitad sigue siendo la mitad aunque cortes cada parte en pedazos más pequeños: 1/2 y 2/4 ocupan lo mismo.",
+        "example": "1/2 = 2/4. Multiplicamos arriba y abajo por 2: (1 × 2)/(2 × 2) = 2/4.",
+        "alternative": "2/3 = 4/6. Cada tercio se divide en dos. Ahora tomas 4 de 6 partes, la misma cantidad.",
+        "visual": {
+          "total": 4,
+          "selected": 2
+        },
+        "card": {
+          "front": "¿Cómo obtienes una fracción equivalente?",
+          "back": "Multiplica o divide ambos números por el mismo número distinto de cero."
+        },
+        "questions": [
+          {
+            "id": "e-d1",
+            "kind": "diagnostic",
+            "prompt": "¿Qué fracción equivale a 1/2?",
+            "options": [
+              "1/4",
+              "2/4",
+              "2/3"
+            ],
+            "answer": "2/4",
+            "hints": [
+              "Multiplica ambos números por 2.",
+              "1 × 2 = 2 y 2 × 2 = 4."
+            ],
+            "feedback": "2/4 es equivalente a 1/2. Multiplicar solo uno de los números cambia la cantidad."
+          },
+          {
+            "id": "e-d2",
+            "kind": "diagnostic",
+            "prompt": "¿Qué fracción equivale a 2/3?",
+            "options": [
+              "4/6",
+              "2/6",
+              "3/4"
+            ],
+            "answer": "4/6",
+            "hints": [
+              "Multiplica arriba y abajo por el mismo número.",
+              "Prueba multiplicar ambos por 2."
+            ],
+            "feedback": "2/3 = 4/6 porque ambos números se multiplicaron por 2."
+          },
+          {
+            "id": "e-1",
+            "kind": "practice",
+            "prompt": "Completa: 1/2 = ?/6",
+            "options": [
+              "1",
+              "3",
+              "6"
+            ],
+            "answer": "3",
+            "hints": [
+              "De 2 a 6 multiplicas por 3.",
+              "Haz lo mismo con el numerador: 1 × 3."
+            ],
+            "feedback": "1/2 = 3/6. Multiplicamos numerador y denominador por 3."
+          },
+          {
+            "id": "e-2",
+            "kind": "practice",
+            "prompt": "¿Qué fracción equivale a 3/4?",
+            "options": [
+              "3/8",
+              "6/8",
+              "4/6"
+            ],
+            "answer": "6/8",
+            "hints": [
+              "La misma operación debe aplicarse a ambos números.",
+              "Multiplica 3 y 4 por 2."
+            ],
+            "feedback": "3/4 = 6/8. Cambiar solo el denominador a 8 daría una cantidad diferente."
+          },
+          {
+            "id": "e-c",
+            "kind": "check",
+            "prompt": "Una receta usa 2/5 de taza. ¿Qué medida representa la misma cantidad?",
+            "options": [
+              "2/10",
+              "5/2",
+              "4/10"
+            ],
+            "answer": "4/10",
+            "hints": [
+              "Busca una fracción equivalente.",
+              "Multiplica 2 y 5 por 2."
+            ],
+            "feedback": "2/5 = 4/10. Ambas medidas representan la misma cantidad de taza."
+          }
+        ]
+      },
+      {
+        "id": "sum",
+        "title": "Sumar partes del mismo tamaño",
+        "prerequisite": "equivalent",
+        "objective": "Sumar fracciones con el mismo denominador y explicar el resultado.",
+        "explanation": "Si las partes son del mismo tamaño, suma los numeradores y conserva el denominador. El denominador no se suma porque el tamaño de las partes no cambió.",
+        "simple": "Un cuarto más dos cuartos son tres cuartos. Sigues contando cuartos: 1/4 + 2/4 = 3/4.",
+        "example": "2/8 + 3/8 = 5/8. Sumamos las partes tomadas: 2 + 3 = 5. Cada parte sigue siendo un octavo.",
+        "alternative": "Estudiaste 1/5 de un libro y después 2/5 más. En total estudiaste 3/5 del libro.",
+        "visual": {
+          "total": 8,
+          "selected": 5
+        },
+        "card": {
+          "front": "¿Sumas los denominadores si son iguales?",
+          "back": "No. Sumas los numeradores y conservas el denominador, pues el tamaño de las partes no cambia."
+        },
+        "questions": [
+          {
+            "id": "s-d1",
+            "kind": "diagnostic",
+            "prompt": "¿Cuánto es 1/4 + 2/4?",
+            "options": [
+              "3/8",
+              "3/4",
+              "2/4"
+            ],
+            "answer": "3/4",
+            "hints": [
+              "Ambas fracciones cuentan cuartos.",
+              "Suma 1 + 2 y conserva el 4."
+            ],
+            "feedback": "1/4 + 2/4 = 3/4. Sumar los denominadores cambiaría el tamaño de las partes."
+          },
+          {
+            "id": "s-d2",
+            "kind": "diagnostic",
+            "prompt": "¿Cuánto es 2/8 + 3/8?",
+            "options": [
+              "5/16",
+              "6/8",
+              "5/8"
+            ],
+            "answer": "5/8",
+            "hints": [
+              "Las partes son octavos en ambas fracciones.",
+              "Suma 2 + 3."
+            ],
+            "feedback": "Son 5 octavos: 5/8. El denominador permanece en 8."
+          },
+          {
+            "id": "s-1",
+            "kind": "practice",
+            "prompt": "¿Cuánto es 1/6 + 2/6?",
+            "options": [
+              "3/12",
+              "3/6",
+              "2/6"
+            ],
+            "answer": "3/6",
+            "hints": [
+              "Conserva el denominador.",
+              "1 + 2 = 3."
+            ],
+            "feedback": "El resultado es 3/6, equivalente a 1/2. Sigues sumando sextos."
+          },
+          {
+            "id": "s-2",
+            "kind": "practice",
+            "prompt": "¿Cuánto es 2/7 + 3/7?",
+            "options": [
+              "5/7",
+              "5/14",
+              "6/7"
+            ],
+            "answer": "5/7",
+            "hints": [
+              "Ambas fracciones tienen denominador 7.",
+              "Suma los numeradores: 2 + 3."
+            ],
+            "feedback": "2/7 + 3/7 = 5/7. Cada parte sigue siendo un séptimo."
+          },
+          {
+            "id": "s-c",
+            "kind": "check",
+            "prompt": "Caminaste 2/9 de una ruta y luego 4/9 más. ¿Qué fracción recorriste?",
+            "options": [
+              "6/18",
+              "6/9",
+              "8/9"
+            ],
+            "answer": "6/9",
+            "hints": [
+              "Suma las partes recorridas, del mismo tamaño.",
+              "2 + 4 = 6; conserva el 9."
+            ],
+            "feedback": "Recorriste 6/9 de la ruta, equivalente a 2/3. Sumar 9 + 9 no corresponde."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "reading-v1",
+    "title": "Lee, comprende y explica",
+    "subject": "Comprensión lectora",
+    "asset": "allen-reading-official.svg",
+    "source": "ALLEN · textos originales de práctica de comprensión lectora",
+    "topics": [
+      {
+        "id": "reading-main",
+        "title": "Encontrar la idea principal",
+        "objective": "Distinguir la idea principal de los detalles de un texto.",
+        "explanation": "La idea principal resume lo más importante del texto. Los detalles aportan ejemplos o explicaciones. Para encontrarla, pregunta: ¿de qué trata todo el texto?",
+        "simple": "Busca una frase que explique el texto completo, no solo una palabra o un detalle.",
+        "example": "Texto: «El huerto escolar nos permite aprender. Sembramos semillas, observamos su crecimiento y registramos los cambios». Idea principal: el huerto ayuda a aprender. Sembrar y registrar son detalles.",
+        "alternative": "Texto: «Dormir ayuda al cuerpo y a la atención. Después de descansar, podemos concentrarnos mejor». La idea principal es el beneficio de dormir.",
+        "card": {
+          "front": "¿Cómo encuentras la idea principal?",
+          "back": "Busca lo que resume el texto completo y distingue los detalles que lo apoyan."
+        },
+        "questions": [
+          {
+            "id": "r-d1",
+            "kind": "diagnostic",
+            "prompt": "«La biblioteca ofrece libros, talleres y espacios de lectura». ¿Qué resume el texto?",
+            "options": [
+              "La biblioteca ofrece recursos para aprender",
+              "Solo hay talleres",
+              "No hay libros"
+            ],
+            "answer": "La biblioteca ofrece recursos para aprender",
+            "hints": [
+              "Piensa en todos los elementos mencionados.",
+              "La respuesta debe incluir libros y talleres, sin excluirlos."
+            ],
+            "feedback": "La biblioteca ofrece varios recursos; escoger solo los talleres omite parte del texto."
+          },
+          {
+            "id": "r-d2",
+            "kind": "diagnostic",
+            "prompt": "En «El huerto ayuda a aprender: observamos plantas», ¿qué es un detalle?",
+            "options": [
+              "El huerto ayuda a aprender",
+              "Observamos plantas",
+              "El texto no tiene detalles"
+            ],
+            "answer": "Observamos plantas",
+            "hints": [
+              "Busca el ejemplo que apoya la idea.",
+              "La observación explica cómo aprendemos."
+            ],
+            "feedback": "Observar plantas es un detalle que apoya la idea general de aprender con el huerto."
+          },
+          {
+            "id": "r-1",
+            "kind": "practice",
+            "prompt": "«La bicicleta facilita desplazarse. Sirve para ir a la escuela y visitar amigos». ¿Cuál es la idea principal?",
+            "options": [
+              "Visitar amigos es obligatorio",
+              "La bicicleta facilita desplazarse",
+              "La bicicleta solo sirve para la escuela"
+            ],
+            "answer": "La bicicleta facilita desplazarse",
+            "hints": [
+              "Busca la frase más amplia.",
+              "Los viajes a la escuela y a amigos son ejemplos."
+            ],
+            "feedback": "La idea principal es el desplazamiento; la escuela y los amigos son destinos que la apoyan."
+          },
+          {
+            "id": "r-2",
+            "kind": "practice",
+            "prompt": "«Leer amplía el vocabulario. En un cuento conocí palabras nuevas». ¿Qué apoya la idea principal?",
+            "options": [
+              "Conocer palabras nuevas en un cuento",
+              "Todos deben leer el mismo cuento",
+              "Leer nunca enseña palabras"
+            ],
+            "answer": "Conocer palabras nuevas en un cuento",
+            "hints": [
+              "Encuentra el ejemplo que aparece realmente.",
+              "El ejemplo habla de un cuento y palabras."
+            ],
+            "feedback": "Las palabras nuevas del cuento son evidencia del ejemplo, no una regla sobre todos los cuentos."
+          },
+          {
+            "id": "r-c",
+            "kind": "check",
+            "prompt": "«Cuidamos el parque juntos: recogemos basura y protegemos las plantas». ¿Qué título resume mejor el texto?",
+            "options": [
+              "Una planta particular",
+              "Solo basura",
+              "Cuidar el parque en comunidad"
+            ],
+            "answer": "Cuidar el parque en comunidad",
+            "hints": [
+              "Incluye las dos acciones.",
+              "El texto también dice que se hace en conjunto."
+            ],
+            "feedback": "Cuidar el parque en comunidad resume ambas acciones y el trabajo conjunto."
+          }
+        ],
+        "prerequisite": null
+      },
+      {
+        "id": "reading-evidence",
+        "title": "Responder con evidencia",
+        "objective": "Separar lo que dice el texto de una suposición.",
+        "explanation": "Una respuesta sustentada se apoya en información del texto. Una inferencia usa pistas para deducir algo, pero no debe inventar detalles que esas pistas no permiten conocer.",
+        "simple": "Si el texto no lo dice ni da pistas suficientes, responde que no podemos saberlo.",
+        "example": "«Sara guardó un paraguas al ver nubes oscuras». Podemos inferir que se preparó por si llovía. No sabemos si después llovió.",
+        "alternative": "«Luis lleva un libro a la sala». Sabemos que lleva un libro. No sabemos su título ni si lo terminó.",
+        "card": {
+          "front": "¿Qué haces si el texto no permite responder?",
+          "back": "Reconoces que falta información en lugar de inventar un detalle."
+        },
+        "questions": [
+          {
+            "id": "re-d1",
+            "kind": "diagnostic",
+            "prompt": "«Ana salió a las siete». ¿Podemos saber adónde fue?",
+            "options": [
+              "A la escuela",
+              "No, falta información",
+              "Al parque"
+            ],
+            "answer": "No, falta información",
+            "hints": [
+              "El texto solo da una hora.",
+              "No menciona un destino."
+            ],
+            "feedback": "No podemos conocer el destino a partir de la hora de salida."
+          },
+          {
+            "id": "re-d2",
+            "kind": "diagnostic",
+            "prompt": "«Tomás tomó agua después de correr». ¿Qué afirma el texto?",
+            "options": [
+              "Tomó agua",
+              "Ganó una carrera",
+              "Corrió diez kilómetros"
+            ],
+            "answer": "Tomó agua",
+            "hints": [
+              "Busca una acción explícita.",
+              "La distancia y el resultado no aparecen."
+            ],
+            "feedback": "El texto dice que tomó agua después de correr; no indica distancia ni victoria."
+          },
+          {
+            "id": "re-1",
+            "kind": "practice",
+            "prompt": "«Elena abrió su cuaderno y comenzó a escribir». ¿Qué está sustentado?",
+            "options": [
+              "Terminó un examen",
+              "Comenzó a escribir",
+              "Escribió una novela"
+            ],
+            "answer": "Comenzó a escribir",
+            "hints": [
+              "No inventes el tipo de actividad.",
+              "Identifica el verbo que sí aparece."
+            ],
+            "feedback": "Comenzó a escribir es la acción explícita. No sabemos si fue un examen o una novela."
+          },
+          {
+            "id": "re-2",
+            "kind": "practice",
+            "prompt": "«Vimos nubes oscuras y llevamos paraguas». ¿Qué inferencia es razonable?",
+            "options": [
+              "Se prepararon por si llovía",
+              "Ya había una inundación",
+              "Llovió toda la noche"
+            ],
+            "answer": "Se prepararon por si llovía",
+            "hints": [
+              "Relaciona las nubes con el paraguas.",
+              "La preparación no demuestra que después lloviera."
+            ],
+            "feedback": "Llevar paraguas sugiere preparación ante posible lluvia; no prueba una inundación ni la duración de la lluvia."
+          },
+          {
+            "id": "re-c",
+            "kind": "check",
+            "prompt": "«Diego devolvió un libro el martes». ¿Cuándo comenzó a leerlo?",
+            "options": [
+              "El lunes",
+              "El domingo",
+              "No se puede saber con ese texto"
+            ],
+            "answer": "No se puede saber con ese texto",
+            "hints": [
+              "La devolución y el inicio son momentos distintos.",
+              "Solo se conoce el día de devolución."
+            ],
+            "feedback": "El texto no da la fecha de inicio. Una respuesta fiable reconoce esa falta de información."
+          }
+        ],
+        "prerequisite": "reading-main"
+      }
+    ]
+  },
+  {
+    "id": "english-v1",
+    "title": "Inglés para empezar",
+    "subject": "Inglés",
+    "asset": "allen-english-book.svg",
+    "source": "ALLEN · práctica editorial de inglés inicial",
+    "topics": [
+      {
+        "id": "english-greetings",
+        "title": "Saludar y presentarte",
+        "objective": "Elegir saludos y una presentación breve en inglés.",
+        "explanation": "Hello y Hi son saludos. Good morning se usa por la mañana. Para presentarte, puedes decir My name is… o I am… seguido de tu nombre.",
+        "simple": "Hello significa hola. My name is Ana significa Me llamo Ana.",
+        "example": "A: Hello! My name is Ana. B: Hi, Ana! I am Luis.",
+        "alternative": "Por la mañana: Good morning! My name is Sara. Significa: ¡Buenos días! Me llamo Sara.",
+        "card": {
+          "front": "¿Cómo dices Me llamo Ana?",
+          "back": "My name is Ana. También puedes decir I am Ana."
+        },
+        "questions": [
+          {
+            "id": "en-d1",
+            "kind": "diagnostic",
+            "prompt": "¿Qué significa Hello?",
+            "options": [
+              "Adiós",
+              "Hola",
+              "Gracias"
+            ],
+            "answer": "Hola",
+            "hints": [
+              "Es un saludo.",
+              "Lo usamos al comenzar una conversación."
+            ],
+            "feedback": "Hello es un saludo: Hola."
+          },
+          {
+            "id": "en-d2",
+            "kind": "diagnostic",
+            "prompt": "¿Qué frase significa Me llamo Ana?",
+            "options": [
+              "My name is Ana",
+              "Goodbye, Ana",
+              "Thank you, Ana"
+            ],
+            "answer": "My name is Ana",
+            "hints": [
+              "Busca la frase sobre el nombre.",
+              "Name significa nombre."
+            ],
+            "feedback": "My name is Ana presenta el nombre; Goodbye se usa para despedirse."
+          },
+          {
+            "id": "en-1",
+            "kind": "practice",
+            "prompt": "Llegas por la mañana. ¿Qué saludo corresponde?",
+            "options": [
+              "Good night",
+              "Good morning",
+              "Goodbye"
+            ],
+            "answer": "Good morning",
+            "hints": [
+              "Morning significa mañana.",
+              "Night significa noche."
+            ],
+            "feedback": "Good morning es Buenos días. Good night suele usarse al despedirse por la noche o al ir a dormir."
+          },
+          {
+            "id": "en-2",
+            "kind": "practice",
+            "prompt": "Completa la presentación: «My ___ is Luis».",
+            "options": [
+              "name",
+              "morning",
+              "bye"
+            ],
+            "answer": "name",
+            "hints": [
+              "La frase comunica tu nombre.",
+              "Name es la palabra que necesitas."
+            ],
+            "feedback": "My name is Luis significa Me llamo Luis."
+          },
+          {
+            "id": "en-c",
+            "kind": "check",
+            "prompt": "Conoces a alguien y quieres saludar y presentarte. ¿Qué eliges?",
+            "options": [
+              "Hello! My name is Sara.",
+              "Goodbye! Thank you.",
+              "Good night! Bye."
+            ],
+            "answer": "Hello! My name is Sara.",
+            "hints": [
+              "Necesitas saludo y nombre.",
+              "Hello inicia la conversación."
+            ],
+            "feedback": "Hello! My name is Sara combina un saludo con una presentación clara."
+          }
+        ],
+        "prerequisite": null
+      },
+      {
+        "id": "english-am",
+        "title": "Usar I am y You are",
+        "objective": "Completar oraciones sencillas con el verbo to be.",
+        "explanation": "Para hablar de ti, usa I am. Para dirigirte a otra persona, usa You are. Am y are son formas del verbo to be. I am a student significa Soy estudiante.",
+        "simple": "I va con am. You va con are. Aprende primero esas dos combinaciones.",
+        "example": "I am a student. You are a teacher. Soy estudiante. Tú eres docente.",
+        "alternative": "I am happy: Estoy feliz. You are ready: Estás listo o lista.",
+        "card": {
+          "front": "¿Qué formas acompañan a I y You?",
+          "back": "I am y You are."
+        },
+        "questions": [
+          {
+            "id": "ea-d1",
+            "kind": "diagnostic",
+            "prompt": "Completa: «I ___ a student».",
+            "options": [
+              "are",
+              "am",
+              "is"
+            ],
+            "answer": "am",
+            "hints": [
+              "Mira el pronombre I.",
+              "I se combina con am."
+            ],
+            "feedback": "I am a student es la combinación correcta para hablar de ti."
+          },
+          {
+            "id": "ea-d2",
+            "kind": "diagnostic",
+            "prompt": "Completa: «You ___ ready».",
+            "options": [
+              "am",
+              "is",
+              "are"
+            ],
+            "answer": "are",
+            "hints": [
+              "Mira el pronombre You.",
+              "You se combina con are."
+            ],
+            "feedback": "You are ready significa Estás listo o lista."
+          },
+          {
+            "id": "ea-1",
+            "kind": "practice",
+            "prompt": "¿Qué frase significa Estoy feliz?",
+            "options": [
+              "I am happy",
+              "You am happy",
+              "I are happy"
+            ],
+            "answer": "I am happy",
+            "hints": [
+              "La frase habla de ti.",
+              "I necesita am."
+            ],
+            "feedback": "I am happy es correcto. La combinación I are no corresponde."
+          },
+          {
+            "id": "ea-2",
+            "kind": "practice",
+            "prompt": "Completa: «You ___ a teacher».",
+            "options": [
+              "is",
+              "are",
+              "am"
+            ],
+            "answer": "are",
+            "hints": [
+              "La frase se dirige a otra persona.",
+              "Usa You are."
+            ],
+            "feedback": "You are a teacher significa Tú eres docente."
+          },
+          {
+            "id": "ea-c",
+            "kind": "check",
+            "prompt": "Quieres decir Soy estudiante en una presentación. ¿Qué dices?",
+            "options": [
+              "I are a student",
+              "I am a student",
+              "You am a student"
+            ],
+            "answer": "I am a student",
+            "hints": [
+              "Hablas de ti, así que usa I.",
+              "Combina I con am."
+            ],
+            "feedback": "I am a student expresa correctamente que eres estudiante."
+          }
+        ],
+        "prerequisite": "english-greetings"
+      }
+    ]
+  },
+  {
+    "id": "python-v1",
+    "title": "Tus primeros pasos en Python",
+    "subject": "Programación",
+    "asset": "allen-python.svg",
+    "source": "ALLEN · ejemplos editoriales de Python 3, sin ejecución de código",
+    "topics": [
+      {
+        "id": "python-values",
+        "title": "Valores y variables",
+        "objective": "Reconocer cómo una variable guarda un valor en Python.",
+        "explanation": "Una variable vincula un nombre con un valor. En edad = 12, el nombre edad se vincula al número 12. El signo = asigna; no es una comparación. Los textos se escriben entre comillas.",
+        "simple": "Piensa en un nombre que apunta a un dato: puntos = 5. Puedes usar puntos para recordar ese 5.",
+        "example": "puntos = 5\npuntos = puntos + 2\nAhora puntos vale 7: sumamos 2 al valor anterior y guardamos el resultado.",
+        "alternative": "nombre = \"Ana\" guarda un texto. cantidad = 3 guarda un número. Las comillas distinguen el texto.",
+        "card": {
+          "front": "¿Qué hace = en una asignación de Python?",
+          "back": "Vincula el nombre de la izquierda al valor de la derecha."
+        },
+        "questions": [
+          {
+            "id": "py-d1",
+            "kind": "diagnostic",
+            "prompt": "Después de «puntos = 5», ¿qué valor tiene puntos?",
+            "options": [
+              "5",
+              "puntos",
+              "0"
+            ],
+            "answer": "5",
+            "hints": [
+              "Mira lo que está a la derecha del signo =.",
+              "El número asignado es 5."
+            ],
+            "feedback": "puntos queda vinculado al valor 5."
+          },
+          {
+            "id": "py-d2",
+            "kind": "diagnostic",
+            "prompt": "¿Cuál de estos valores es texto en Python?",
+            "options": [
+              "12",
+              "\"Ana\"",
+              "3 + 2"
+            ],
+            "answer": "\"Ana\"",
+            "hints": [
+              "Busca las comillas.",
+              "Una cadena de texto se escribe entre comillas."
+            ],
+            "feedback": "\"Ana\" es texto. 12 es un número y 3 + 2 es una expresión numérica."
+          },
+          {
+            "id": "py-1",
+            "kind": "practice",
+            "prompt": "«puntos = 5» y luego «puntos = puntos + 2». ¿Qué valor queda?",
+            "options": [
+              "5",
+              "2",
+              "7"
+            ],
+            "answer": "7",
+            "hints": [
+              "Usa el valor anterior de puntos.",
+              "Calcula 5 + 2."
+            ],
+            "feedback": "El valor final es 7. La segunda línea suma 2 al 5 anterior y vuelve a asignar."
+          },
+          {
+            "id": "py-2",
+            "kind": "practice",
+            "prompt": "¿Qué línea guarda el texto Ana en nombre?",
+            "options": [
+              "nombre = Ana",
+              "nombre = \"Ana\"",
+              "\"nombre\" = Ana"
+            ],
+            "answer": "nombre = \"Ana\"",
+            "hints": [
+              "El texto necesita comillas.",
+              "El nombre de la variable va a la izquierda."
+            ],
+            "feedback": "nombre = \"Ana\" asigna el texto. Sin comillas, Ana se interpretaría como un nombre de variable."
+          },
+          {
+            "id": "py-c",
+            "kind": "check",
+            "prompt": "«total = 4» y luego «total = total + 3». ¿Qué valor tiene total?",
+            "options": [
+              "3",
+              "4",
+              "7"
+            ],
+            "answer": "7",
+            "hints": [
+              "Suma al valor guardado inicialmente.",
+              "4 + 3 = 7."
+            ],
+            "feedback": "total termina en 7. La asignación actualiza el valor anterior."
+          }
+        ],
+        "prerequisite": null
+      },
+      {
+        "id": "python-output",
+        "title": "Mostrar resultados con print",
+        "objective": "Predecir la salida de instrucciones básicas de Python.",
+        "explanation": "print muestra un resultado. print(\"Hola\") muestra Hola, sin las comillas. print(2 + 3) calcula la expresión y muestra 5. Esto es una explicación de código, no un ejecutor.",
+        "simple": "print es una instrucción para mostrar. Lo que quieres mostrar va entre paréntesis.",
+        "example": "nombre = \"Ana\"\nprint(nombre)\nLa salida es Ana. print usa el valor guardado en la variable.",
+        "alternative": "print(\"2 + 3\") muestra el texto 2 + 3. print(2 + 3) muestra 5. Las comillas cambian cómo se interpreta el contenido.",
+        "card": {
+          "front": "¿Qué diferencia hay entre print(\"2 + 3\") y print(2 + 3)?",
+          "back": "El primero muestra texto; el segundo calcula y muestra 5."
+        },
+        "questions": [
+          {
+            "id": "po-d1",
+            "kind": "diagnostic",
+            "prompt": "¿Qué muestra print(\"Hola\")?",
+            "options": [
+              "Hola",
+              "\"Hola\" con comillas",
+              "Nada"
+            ],
+            "answer": "Hola",
+            "hints": [
+              "Las comillas delimitan el texto.",
+              "No forman parte del texto mostrado."
+            ],
+            "feedback": "print(\"Hola\") muestra Hola; las comillas indican que es texto."
+          },
+          {
+            "id": "po-d2",
+            "kind": "diagnostic",
+            "prompt": "¿Qué muestra print(2 + 3)?",
+            "options": [
+              "2 + 3",
+              "5",
+              "23"
+            ],
+            "answer": "5",
+            "hints": [
+              "No hay comillas.",
+              "Se calcula la suma antes de mostrarla."
+            ],
+            "feedback": "La expresión 2 + 3 se evalúa y print muestra 5."
+          },
+          {
+            "id": "po-1",
+            "kind": "practice",
+            "prompt": "«cantidad = 3» y luego «print(cantidad)». ¿Qué aparece?",
+            "options": [
+              "cantidad",
+              "3",
+              "0"
+            ],
+            "answer": "3",
+            "hints": [
+              "print consulta el valor de la variable.",
+              "cantidad guarda 3."
+            ],
+            "feedback": "Se muestra 3, el valor guardado en cantidad, no el nombre de la variable."
+          },
+          {
+            "id": "po-2",
+            "kind": "practice",
+            "prompt": "¿Qué muestra print(\"2 + 3\")?",
+            "options": [
+              "5",
+              "23",
+              "2 + 3"
+            ],
+            "answer": "2 + 3",
+            "hints": [
+              "El contenido está entre comillas.",
+              "Las comillas indican texto, no una suma para calcular."
+            ],
+            "feedback": "Se muestra el texto 2 + 3. Para calcularlo, la expresión no debe estar entre comillas."
+          },
+          {
+            "id": "po-c",
+            "kind": "check",
+            "prompt": "«puntos = 4» y luego «print(puntos + 2)». ¿Qué aparece?",
+            "options": [
+              "4",
+              "6",
+              "puntos + 2"
+            ],
+            "answer": "6",
+            "hints": [
+              "Usa el valor de puntos.",
+              "Calcula 4 + 2."
+            ],
+            "feedback": "Se muestra 6. print evalúa la expresión usando el valor de puntos."
+          }
+        ],
+        "prerequisite": "python-values"
+      }
+    ]
+  }
+]

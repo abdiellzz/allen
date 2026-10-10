@@ -1,7 +1,7 @@
 # ALLEN móvil: primera entrega PWA
 
-Estado: **PWA experimental instalable**, con un curso completo y progreso offline.
-No es un APK, no incorpora IA generativa y no tiene cobros activos. La versión de
+Estado: **PWA experimental instalable**, con cuatro cursos completos y progreso offline.
+No es un APK. Incluye conexión opcional al modelo local de escritorio; no tiene cobros activos. La versión de
 escritorio continúa funcionando con sus bases y licencias actuales.
 
 ## Ejecutar y probar
@@ -41,9 +41,9 @@ solo controla `/mobile/` y solo cachea una lista explícita de archivos estátic
 | Motor educativo | `engine.mjs`, en el navegador; reglas deterministas |
 | Perfiles, sesiones y evidencia | IndexedDB local `allen-mobile-v1`; sin sincronización |
 | Curso descargado y UI | Cache Storage mediante `sw.js`; instalación inicial atómica |
-| Tutor | Explicaciones, ejemplos y pistas editoriales de `course.mjs`; sin LLM |
-| IA local o remota | No conectada; `capabilities.mjs` informa indisponibilidad |
-| Derechos comerciales | Solo funciones gratuitas; Premium e Instituciones informativos |
+| Tutor | Ayuda editorial offline y conexión generativa local opcional |
+| IA local o remota | Local: modelo en computadora ALLEN, opt-in desde `/mobile/`. Remota: no configurada |
+| Derechos comerciales | Cursos gratuitos; pagos pospuestos, permisos comerciales inactivos |
 | Teacher Studio, importación PDF y `.allenpack` | Siguen en escritorio; no hay importación de cursos en móvil todavía |
 | Backups | Exportación JSON del perfil activo y recuperación como perfil nuevo |
 
@@ -95,7 +95,7 @@ con `.allenpack` en esta entrega.
 El tiempo influye en la recomendación y permite pausas con posición guardada;
 no hay temporizador obligatorio ni promesa de duración exacta. El nivel elegido
 ajusta apoyo, no crea preguntas difíciles inventadas. Las dos rutas de entrada
-usan este mismo curso inicial; el catálogo general aún no está implementado.
+comparten motor y cuatro cursos: fracciones, comprensión lectora, inglés inicial y Python. Son nueve lecciones y 45 preguntas, sin ejecutar código del estudiante.
 
 El contenido amplía `data/library/math/fracciones.md` con ejemplos de fracciones
 elementales. Su autoría es editorial, no generativa. Las pruebas verifican
@@ -130,19 +130,29 @@ por docentes antes de presentarse como currículo escolar validado.
 
 ## IA y monetización: contratos pendientes
 
-`capabilities.mjs` es la frontera de capacidades. El tutor estructurado funciona
-siempre con el curso. `requestGenerativeTutor()` falla de forma explícita y no
-realiza solicitudes. La indisponibilidad se muestra en la UI.
+El tutor preparado funciona sin conexión. La IA generativa está desconectada por
+ defecto; el botón de conexión explica qué contexto se envía al modelo local.
+`backend/mobile_tutor.py` reutiliza `LocalAI` y sus reglas educativas: recibe solo
+una pregunta, tema autorizado, ejercicio y respuesta relevante. No recibe un ID
+ del perfil, apodo ni el historial completo. No usa la biblioteca privada, no
+guarda chats y nunca altera dominio o calificaciones. Las respuestas generadas
+se identifican y se escapan como texto. El límite es 600 caracteres por pregunta,
+320 tokens por respuesta y 20 solicitudes en diez minutos por instalación,
+con timeout de 35 segundos. Estos límites protegen recursos; no son facturación.
 
-Antes de conectar un proveedor generativo se necesitan:
+Para probar el puente, inicia ALLEN de la forma habitual, inicia su modelo local
+y abre `/mobile/` en el mismo navegador autenticado del escritorio. También puedes
+ usar el enlace de lanzamiento de la app cambiando su ruta a `/mobile/` antes de
+abrirlo; el secreto es de un solo uso. Conserva licencias, cookie local, aislamiento
+del modo Feria, protección de origen y token CSRF. No expone el servicio a la LAN.
+El servidor estático del ejemplo anterior no ofrece IA generativa. Un teléfono
+Android con la PWA instalada conserva el tutor preparado: no ejecuta FastAPI ni
+este modelo de computadora. No hay conexión a la nube ni credenciales remotas.
 
-- consentimiento claro y configuración opcional para datos que salen del dispositivo;
-- contexto limitado al perfil y materiales revisados, separado de las instrucciones;
-- verificación de fidelidad, lenguaje, ayuda pedagógica y resistencia a instrucciones
-  maliciosas del material importado;
-- límites configurables de solicitudes/tokens, timeout y costo por sesión;
-- uso de secretos únicamente en servidor, nunca en el frontend;
-- mediciones de memoria, latencia y batería para IA local en Android, con fallback.
+La integración se verificó con respuestas simuladas, no con pesos de un modelo.
+Faltan evaluaciones de calidad del modelo real y mediciones en dispositivos.
+Una IA remota posterior requerirá configuración explícita, límites de costo,
+verificación de permisos y consentimiento visible sobre datos que salen.
 
 No se promete inferencia móvil universal. No se reutiliza Machine ID ni se
 modifica Ed25519 del escritorio. Gratis funciona sin permisos comerciales.
@@ -182,5 +192,23 @@ Resultados y límites de la ejecución: [MOBILE_VERIFICATION.md](MOBILE_VERIFICA
 Validar esta PWA en un teléfono Android físico antes de elegir distribución
 nativa. Priorizar revisión docente y observación de aprendizaje con usuarios,
 después interoperabilidad de cursos revisados, contenido de comprensión lectora
-e inglés y una integración comercial verificable. La IA generativa se añade
-cuando mejore el aprendizaje con calidad y costos medidos.
+e inglés, importación revisada y sincronización opcional. Evaluar el tutor con un modelo real y medir calidad y costos. Los pagos se dejan para el final.
+
+
+## Catálogo y actualización del contenido
+
+Los módulos `course.mjs` y `extra-courses.mjs` son la fuente editorial. Después de
+modificarlos, ejecutar `node scripts/export_mobile_catalogue.mjs` y las pruebas;
+el JSON generado permite que Python use exactamente las mismas lecciones sin
+copiar reglas. La prueba de igualdad impide publicar snapshots desactualizados.
+
+El esquema de backup sigue en versión 1 con campos nuevos opcionales: curso activo,
+diagnósticos por curso y tamaño de texto. Las copias anteriores de fracciones se
+recuperan sin perder evidencia. IndexedDB conserva sus perfiles existentes y la
+actualización del service worker reemplaza solo la caché estática.
+
+La mascota sigue siendo el mono naranja de ALLEN: se reutilizaron ilustraciones
+SVG originales de lectura, inglés, Python y celebración. No se generaron imágenes
+realistas ni se cambió la marca.
+
+Detalles de este incremento: [MOBILE_POLISH.md](MOBILE_POLISH.md).

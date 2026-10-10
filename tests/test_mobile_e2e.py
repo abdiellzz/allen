@@ -140,7 +140,7 @@ def test_backup_recovery_profile_isolation_and_safe_import(mobile_url, tmp_path)
         assert state(page)['events']==[]
         assert state(page)['profile']['goal']=='explore'
         page.get_by_role('button', name='Allen', exact=True).click()
-        page.get_by_text('La IA generativa no está conectada en esta versión móvil.', exact=False).wait_for()
+        page.get_by_text('La IA generativa está desconectada por defecto.', exact=False).wait_for()
         assert 'Uno' not in page.locator('#content').inner_text()
         page.get_by_role('button', name='Mi progreso', exact=True).click()
         with page.expect_file_chooser() as chooser:
@@ -190,3 +190,118 @@ def test_stale_tab_and_failed_write_do_not_overwrite_saved_progress(mobile_url):
         page.get_by_role('heading',name='Pregunta 1 de 6').wait_for()
         assert state(page)['events']==[]
         browser.close()
+
+
+def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
+    catalogue = json.loads((ROOT/'public/mobile/catalogue.json').read_text())
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        context = browser.new_context(viewport={'width':390,'height':844})
+        page = context.new_page()
+        page.goto(mobile_url)
+        create_profile(page, 'Luna', 'explore')
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        page.get_by_role('button',name='Aprender',exact=True).click()
+        page.screenshot(path=str(ROOT/'docs/images/mobile/catalogue.png'),full_page=True)
+        assert page.locator('.course-card').count() == 4
+        context.set_offline(True)
+        for c in catalogue[1:]:
+            page.get_by_role('button',name='Aprender',exact=True).click()
+            page.locator(f'[data-course="{c["id"]}"]').click()
+            page.get_by_role('button',name='Hacer diagnóstico',exact=True).click()
+            diagnostic = [q for t in c['topics'] for q in t['questions'] if q['kind']=='diagnostic']
+            for i,q in enumerate(diagnostic):
+                answer(page,q['answer'],last=i==len(diagnostic)-1)
+            page.get_by_role('button',name='Ver mi siguiente paso',exact=True).click()
+            for t in c['topics']:
+                page.get_by_role('button',name='Empezar lección',exact=True).click()
+                page.get_by_role('button',name='Dame otro ejemplo',exact=True).click()
+                page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+                practice = [q for q in t['questions'] if q['kind']!='diagnostic']
+                for i,q in enumerate(practice):
+                    answer(page,q['answer'],last=i==len(practice)-1)
+                page.get_by_role('button',name='Ver mi siguiente paso',exact=True).click()
+        assert len(state(page)['completed']) == 6
+        page.reload()
+        page.get_by_role('heading',name='Hola, Luna',exact=True).wait_for()
+        assert len(state(page)['completed']) == 6
+        context.set_offline(False)
+        # UI contract only: the backend adapter is verified separately with TestClient.
+        page.route('**/api/mobile/bootstrap',lambda route:route.fulfill(json={'connected':True,'token':'test-token'}))
+        sent = []
+        def tutor(route):
+            sent.append(route.request.post_data_json)
+            route.fulfill(json={'answer':'Una explicación de prueba','source':'Contenido revisable','generated':True})
+        page.route('**/api/mobile/tutor',tutor)
+        page.get_by_role('button',name='Allen',exact=True).click()
+        before = state(page)['events']
+        page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).click()
+        page.get_by_label('¿Qué quieres entender?').fill('Dame otra explicación')
+        page.get_by_role('button',name='Pedir explicación',exact=True).click()
+        page.get_by_text('Respuesta generada · verificar con el curso',exact=True).wait_for()
+        assert sent[0]['topic_id']=='python-output'
+        assert set(sent[0])=={'message','topic_id','question_id','last_answer','level'}
+        assert state(page)['events']==before
+        page.screenshot(path=str(ROOT/'docs/images/mobile/tutor-local.png'),full_page=True)
+        page.get_by_role('button',name='Mi progreso',exact=True).click()
+        page.get_by_label('Tamaño del texto').select_option('large')
+        page.get_by_role('button',name='Guardar preferencias',exact=True).click()
+        page.get_by_text('Preferencias guardadas.',exact=True).wait_for()
+        page.reload()
+        page.get_by_role('heading',name='Hola, Luna',exact=True).wait_for()
+        assert page.locator('html').get_attribute('data-text-size')=='large'
+        page.get_by_role('button',name='Perfiles',exact=True).click()
+        create_profile(page,'Sol')
+        page.get_by_role('button',name='Allen',exact=True).click()
+        assert page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).is_visible()
+        assert page.get_by_text('Una explicación de prueba',exact=True).count()==0
+        assert state(page)['events']==[]
+        browser.close()
+
+
+def test_browser_uses_desktop_bridge_and_handles_model_loss(tmp_path):
+    import socket
+    import time
+    import uvicorn
+    from backend.app import create_app
+    from tests.test_mobile_tutor import ModelStub
+
+    model = ModelStub()
+    app = create_app(tmp_path/'bridge.sqlite3',ai=model,require_license=False,
+                     require_local_access=False,require_teacher_auth=False)
+    sock = socket.socket()
+    sock.bind(('127.0.0.1',0))
+    server = uvicorn.Server(uvicorn.Config(app,log_level='error'))
+    thread = threading.Thread(target=server.run,kwargs={'sockets':[sock]},daemon=True)
+    thread.start()
+    try:
+        deadline = time.monotonic()+10
+        while not server.started and time.monotonic()<deadline:
+            time.sleep(.02)
+        assert server.started
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={'width':390,'height':844})
+            page.goto(f'http://127.0.0.1:{sock.getsockname()[1]}/mobile/')
+            create_profile(page)
+            page.get_by_role('button',name='Comenzar diagnóstico').click()
+            page.get_by_role('button',name='Allen',exact=True).click()
+            page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).click()
+            page.get_by_label('¿Qué quieres entender?').fill('Ayúdame a razonar')
+            before = state(page)
+            page.get_by_role('button',name='Pedir explicación',exact=True).click()
+            page.get_by_text('Respuesta generada · verificar con el curso',exact=True).wait_for()
+            assert len(model.calls)==1
+            assert state(page)==before
+            model.connected = False
+            page.get_by_label('¿Qué quieres entender?').fill('Otro ejemplo')
+            page.get_by_role('button',name='Pedir explicación',exact=True).click()
+            page.get_by_text('Inicia tu modelo local. El tutor guiado sigue disponible sin IA.',exact=True).wait_for()
+            page.get_by_role('button',name='No entendí',exact=True).click()
+            page.get_by_text('Explicación preparada',exact=True).wait_for()
+            assert len(state(page)['events'])==1
+            browser.close()
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
+        sock.close()

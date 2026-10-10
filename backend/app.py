@@ -1455,6 +1455,12 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
         return response
 
+    mobile_directory=ROOT/'public'/'mobile'
+    if (mobile_directory/'catalogue.json').is_file():
+        from .mobile_tutor import install_mobile_tutor
+        install_mobile_tutor(app,db,engine,token,mobile_directory)
+        app.mount('/mobile',StaticFiles(directory=mobile_directory,html=True),name='mobile')
+
     app.mount('/static',StaticFiles(directory=ROOT/'frontend'),name='static')
     return app
 

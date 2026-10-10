@@ -1,3 +1,4 @@
+import {extraCourses} from './extra-courses.mjs';
 // Bundled editorial content. No model-generated questions or executable imports.
 // Source: data/library/math/fracciones.md; expanded worked examples checked by tests.
 export const course = {
@@ -57,6 +58,9 @@ export const course = {
     }
   ]
 };
-export const questions = course.topics.flatMap(t => t.questions.map(q => ({...q,topicId:t.id})));
+export const courses = [course,...extraCourses];
+export const allTopics = courses.flatMap(c=>c.topics.map(t=>({...t,courseId:c.id,source:c.source,subject:c.subject})));
+export const getCourse = id => courses.find(c=>c.id===id);
+export const questions = allTopics.flatMap(t => t.questions.map(q => ({...q,topicId:t.id,courseId:t.courseId})));
 export const questionById = id => questions.find(q => q.id === id);
-export const topicById = id => course.topics.find(t => t.id === id);
+export const topicById = id => allTopics.find(t => t.id === id);

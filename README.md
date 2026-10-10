@@ -9,8 +9,10 @@ ALLEN combina aprendizaje guiado, quizzes, tarjetas, planes de estudio, cursos c
 ## Primera experiencia móvil (experimental)
 
 La rama de evolución móvil incorpora una **PWA instalable** en `public/mobile/`:
-curso inicial de fracciones, diagnóstico, práctica guiada, tutor estructurado y
-progreso offline por perfil. No es un APK; no incluye IA generativa móvil ni cobros.
+cuatro cursos (fracciones, lectura, inglés y Python), diagnóstico, práctica guiada,
+repaso de errores, tutor estructurado y progreso offline por perfil. No es un APK.
+Desde el servidor ALLEN se puede conectar opcionalmente su IA local; la versión
+estática funciona con ayuda preparada. Los pagos están pospuestos.
 
 Ejecutar `python -m http.server 8081 --bind 127.0.0.1 --directory public` y abrir
 `http://localhost:8081/mobile/`. Esperar que el curso esté guardado antes de desconectar.

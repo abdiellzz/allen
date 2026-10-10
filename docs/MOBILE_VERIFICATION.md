@@ -1,3 +1,5 @@
+> Informe del primer incremento. Estado actualizado: [MOBILE_POLISH.md](MOBILE_POLISH.md).
+
 # Verificación de ALLEN móvil
 
 Fecha: 10 de octubre de 2026. Entorno: Linux, Python 3.12, Node.js 24.19,

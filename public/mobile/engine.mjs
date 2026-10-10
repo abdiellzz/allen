@@ -1,6 +1,6 @@
 // Browser projection of backend/learning_engine.py. Parity covered by Python tests.
 // Keep changes synchronized with that implementation; see docs/MOBILE.md.
-import {course, questions, questionById, topicById} from './course.mjs';
+import {course, courses, getCourse, questions, questionById, topicById} from './course.mjs';
 export const RULES_VERSION = 'learning-engine-1';
 // Python round uses ties-to-even; preserve it in the browser projection.
 const roundEven = v => {const n=Math.floor(v),f=v-n;return f===.5?(n%2===0?n:n+1):Math.round(v);};
@@ -34,27 +34,37 @@ export function evidence(state,topicId,now=new Date()) {
   const result=computeMastery({...row,next_review:last?.due??null},now);
   return {...row,...result,next_review:last?.due??null};
 }
+export const activeCourse = state => getCourse(state.activeCourse??course.id)??course;
+export const diagnosed = (state,id=activeCourse(state).id) => id===course.id?state.diagnosticComplete:(state.diagnosticCourses??[]).includes(id);
+export function chooseCourse(state,id){
+  if(!getCourse(id))throw Error('Curso no válido.');
+  if(state.session&&state.session.phase!=='complete')throw Error('Termina la actividad actual antes de cambiar de curso.');
+  state.activeCourse=id;
+}
 export function recommendation(state,now=new Date()) {
+  const course=activeCourse(state);
   const minutes=state.profile.minutes;
   if(state.session && state.session.phase!=='complete') return {kind:'continue',topicId:state.session.topicId,title:'Continúa tu sesión',reason:`Tu actividad está guardada. Dispones de ${minutes} minutos.`};
-  if(!state.diagnosticComplete) return {kind:'diagnostic',title:'Encuentra tu punto de partida',reason:'Seis preguntas breves para elegir el apoyo que necesitas. No es una calificación.'};
+  if(!diagnosed(state)) return {kind:'diagnostic',title:'Encuentra tu punto de partida',reason:`${course.topics.length*2} preguntas breves para elegir el apoyo que necesitas. No es una calificación.`};
   const due=course.topics.find(t=>{const e=evidence(state,t.id,now);return e.next_review&&e.next_review<=localDay(now);});
   if(due) return {kind:'review',topicId:due.id,title:`Repasa ${due.title.toLowerCase()}`,reason:`Tu repaso estaba previsto para ${evidence(state,due.id,now).next_review}. Vamos a comprobar qué recuerdas.`};
   const target=course.topics.find(t=>!state.completed.includes(t.id));
   if(target){const e=evidence(state,target.id,now);const rec=recommendForState({mastery_score:e.score,topic:target.title,status:e.status});
     return {kind:'learn',topicId:target.id,title:target.title,reason:`${rec.reason} ${minutes<=5?'Hoy puedes hacer una explicación y una práctica; el resto queda guardado.':'La sesión incluye un ejemplo, dos prácticas y una comprobación.'}`};}
-  return {kind:'review',topicId:course.topics.reduce((a,b)=>evidence(state,a.id,now).score<=evidence(state,b.id,now).score?a:b).id,title:'Consolida lo que aprendiste',reason:'Completaste las tres comprobaciones. Puedes repasar sin esperar la fecha programada.'};
+  return {kind:'review',topicId:course.topics.reduce((a,b)=>evidence(state,a.id,now).score<=evidence(state,b.id,now).score?a:b).id,title:'Consolida lo que aprendiste',reason:`Completaste las ${course.topics.length} comprobaciones del curso. Puedes repasar sin esperar la fecha programada.`};
 }
 export function newState(profile) {return {version:1,rulesVersion:RULES_VERSION,courseId:course.id,profile,diagnosticComplete:false,events:[],completed:[],session:null,cards:{}};}
 export function startSession(state,kind='learn',topicId=null) {
   if(state.session && state.session.phase!=='complete') throw Error('Continúa la sesión actual antes de iniciar otra.');
-  if(kind!=='diagnostic'&&!state.diagnosticComplete) throw Error('Completa primero el diagnóstico.');
+  if(kind!=='diagnostic'&&!diagnosed(state,topicById(topicId)?.courseId)) throw Error('Completa primero el diagnóstico.');
   if(!['diagnostic','learn','review'].includes(kind)) throw Error('Actividad no válida.');
   const topic=topicById(topicId);
+  const selected=kind==='diagnostic'?activeCourse(state):getCourse(topic?.courseId);
   if(kind!=='diagnostic'&&!topic) throw Error('Tema no válido.');
   if(kind!=='diagnostic'&&topic.prerequisite&&!state.completed.includes(topic.prerequisite)) throw Error(`Primero completa ${topicById(topic.prerequisite).title}.`);
-  const ids=kind==='diagnostic'?questions.filter(q=>q.kind==='diagnostic').map(q=>q.id):topic.questions.filter(q=>q.kind!=='diagnostic').map(q=>q.id);
-  state.session={id:crypto.randomUUID(),kind,topicId,index:0,phase:kind==='diagnostic'?'practice':'lesson',questionIds:ids,answers:[],hints:[]};
+  const ids=kind==='diagnostic'?questions.filter(q=>q.kind==='diagnostic'&&q.courseId===selected.id).map(q=>q.id):topic.questions.filter(q=>q.kind!=='diagnostic').map(q=>q.id);
+  state.activeCourse=selected.id;
+  state.session={id:crypto.randomUUID(),courseId:selected.id,kind,topicId,index:0,phase:kind==='diagnostic'?'practice':'lesson',questionIds:ids,answers:[],hints:[]};
 }
 function event(state,type,topicId,values={},now=new Date()) {if(state.events.length>=5000)throw Error('Exporta tu progreso y crea otro perfil: alcanzaste el límite local de evidencias.');state.events.push({id:crypto.randomUUID(),type,topicId,at:now.toISOString(),...values});}
 export function requestHelp(state,action,now=new Date()) {
@@ -63,13 +73,13 @@ export function requestHelp(state,action,now=new Date()) {
   if(action==='hint'){
     if(s.phase!=='practice'||s.answers.some(a=>a.questionId===q.id))throw Error('Las pistas se usan antes de responder.');
     const count=s.hints.filter(id=>id===q.id).length;
-    if(count>=q.hints.length)return {text:q.hints.at(-1),source:course.source};
-    s.hints.push(q.id);event(state,'hint',topic.id,{questionId:q.id,sessionId:s.id},now);return {text:q.hints[count],source:course.source};
+    if(count>=q.hints.length)return {text:q.hints.at(-1),source:topic.source};
+    s.hints.push(q.id);event(state,'hint',topic.id,{questionId:q.id,sessionId:s.id},now);return {text:q.hints[count],source:topic.source};
   }
   if(!['explain','alternative','simple'].includes(action))throw Error('Ayuda no válida.');
   const answered=q&&s.answers.find(a=>a.questionId===q.id);
   const text=action==='alternative'?topic.alternative:action==='simple'?topic.simple:answered&&!answered.correct?`Revisemos tu respuesta ${answered.answer}. ${q.feedback} ${topic.simple}`:topic.explanation;
-  event(state,'help',topic.id,{action},now);return {text,source:course.source};
+  event(state,'help',topic.id,{action},now);return {text,source:topic.source};
 }
 export function submitAnswer(state,answer,now=new Date()) {
   const s=state.session;if(!s||s.phase!=='practice')throw Error('No hay una pregunta activa.');
@@ -85,7 +95,7 @@ export function advance(state,now=new Date()) {
   if(s.phase!=='practice'||!s.answers.some(a=>a.questionId===s.questionIds[s.index]))throw Error('Responde antes de continuar.');
   if(s.index<s.questionIds.length-1){s.index++;return;}
   s.phase='complete';
-  if(s.kind==='diagnostic'){state.diagnosticComplete=true;return;}
+  if(s.kind==='diagnostic'){if((s.courseId??course.id)===course.id)state.diagnosticComplete=true;else state.diagnosticCourses=[...new Set([...(state.diagnosticCourses??[]),s.courseId])];return;}
   const correct=s.answers.filter(a=>a.correct).length, check=s.answers.at(-1).correct;
   event(state,'practice_complete',s.topicId,{},now);event(state,'check_complete',s.topicId,{},now);
   if(correct>=2&&check&&!state.completed.includes(s.topicId))state.completed.push(s.topicId);

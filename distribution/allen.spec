@@ -12,6 +12,7 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(ROOT / "frontend"), "frontend"),
+        (str(ROOT / "public" / "mobile"), "public/mobile"),
         (str(ROOT / "data" / "library"), "data/library"),
         (str(ROOT / "config"), "config"),
         (str(ROOT / "VERSION"), "."),
