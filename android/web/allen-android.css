@@ -333,6 +333,7 @@ html.allen-android .command-dialog {
   border-color: var(--p-line);
   color: var(--p-text);
 }
+html.allen-android .home-question { background: var(--p-raised); border-color: var(--p-line); }
 html.allen-android .message.user { background: var(--p-accent-soft); color: var(--p-text); }
 html.allen-android .v2-home-local {
   background: #55796f;
@@ -513,6 +514,17 @@ html.allen-android .allen-apk-update small { color: var(--p-text-2); font-size: 
   }
   html.allen-android #nav .nav-btn.active { color: var(--p-accent-ink); background: transparent; font-weight: 700; }
   html.allen-android #nav .nav-btn.active .nav-icon { background: var(--p-accent-soft); }
+  /* Hidden tabs light up their visible group tab: Aprender for its pages, and Quiz for
+     "Practicar" (app.js marks no tab at all on the Quiz and Tarjetas pages). */
+  html.allen-android #nav .nav-group:has(> .nav-btn.active) > .nav-btn:is([data-page="Aprender"], [data-page="Quiz"]),
+  html.allen-android body:has(#content :is(#quiz-config, #card-form)) #nav [data-page="Quiz"] {
+    color: var(--p-accent-ink);
+    font-weight: 700;
+  }
+  html.allen-android #nav .nav-group:has(> .nav-btn.active) > .nav-btn:is([data-page="Aprender"], [data-page="Quiz"]) .nav-icon,
+  html.allen-android body:has(#content :is(#quiz-config, #card-form)) #nav [data-page="Quiz"] .nav-icon {
+    background: var(--p-accent-soft);
+  }
   html.allen-android #nav .nav-btn:active .nav-icon { background: var(--p-surface); }
 
   /* Student/Teacher switch: out of the bar, shown as a slim strip under the topbar on
