@@ -100,7 +100,7 @@ public class MainActivity extends Activity {
         });
 
         if (savedInstanceState == null) {
-            webView.loadUrl("https://" + HOST + "/");
+            webView.loadUrl("https://" + HOST + "/mobile/index.html");
         } else {
             webView.restoreState(savedInstanceState);
         }
@@ -161,7 +161,11 @@ public class MainActivity extends Activity {
 
         @Override
         public WebResourceResponse handle(String path) {
-            String file = path.isEmpty() ? "index.html" : path.equals("fair") ? "fair.html" : path;
+            boolean studentEntry = path.isEmpty() || path.equals("index.html") ||
+                    path.equals("fair") || path.equals("fair.html") ||
+                    path.equals("static/index.html") || path.equals("static/fair.html") ||
+                    path.equals("mobile/");
+            String file = studentEntry ? "mobile/index.html" : path;
             WebResourceResponse response = assets.handle("www/" + file);
             if (response != null && file.endsWith(".wasm")) {
                 // WebAssembly.instantiateStreaming requires this exact MIME type.

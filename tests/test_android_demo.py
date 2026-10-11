@@ -34,3 +34,28 @@ def test_android_app_requests_no_permissions_and_ignores_generated_assets():
     assert 'android:allowBackup="false"' in manifest
     ignored = (ANDROID / ".gitignore").read_text(encoding="utf-8")
     assert "app/src/main/assets/www/" in ignored
+
+
+
+def test_both_interfaces_are_bundled_without_starting_python(tmp_path):
+    builder = load_builder()
+    builder.assemble_interfaces(tmp_path)
+    mobile = (tmp_path/'mobile/index.html').read_text()
+    assert 'content="bundled-android"' in mobile
+    assert 'allen-android.js' not in mobile
+    assert (tmp_path/'mobile/scenario-courses.mjs').is_file()
+    assert (tmp_path/'index.html').is_file()
+    assert (tmp_path/'fair.html').is_file()
+    # Existing app requests are still routed to Python when explicitly opened.
+    assert '/mobile/index.html' in (tmp_path/'index.html').read_text()
+    assert 'allen-android.js' not in (tmp_path/'index.html').read_text()
+
+
+def test_backend_archive_uses_the_shared_course_snapshot(tmp_path):
+    import zipfile
+    builder = load_builder()
+    archive = tmp_path/'source.zip'
+    builder.source_zip(archive)
+    with zipfile.ZipFile(archive) as source:
+        assert source.read('public/mobile/catalogue.json') == (ROOT/'public/mobile/catalogue.json').read_bytes()
+        assert 'backend/mobile_tutor.py' in source.namelist()

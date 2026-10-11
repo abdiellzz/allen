@@ -37,15 +37,18 @@ ready.then(
   error => postMessage({ type: "failed", message: String((error && error.message) || error) })
 );
 
-let syncing = Promise.resolve();
-onmessage = async ({ data }) => {
+// Serialize ASGI requests and acknowledge writes only after durable filesystem sync.
+let requests = Promise.resolve();
+onmessage = ({ data }) => {
   if (data.type !== "request") return;
-  try {
-    const { py, bridge } = await ready;
-    const raw = await bridge.handle(data.method, data.url, data.headers, data.body);
-    if (mutating.has(data.method)) syncing = syncing.then(() => syncfs(false, py)).catch(() => {});
-    postMessage({ type: "response", id: data.id, raw });
-  } catch (error) {
-    postMessage({ type: "response", id: data.id, error: String((error && error.message) || error) });
-  }
+  requests = requests.then(async () => {
+    try {
+      const { py, bridge } = await ready;
+      const raw = await bridge.handle(data.method, data.url, data.headers, data.body);
+      if (mutating.has(data.method)) await syncfs(false, py);
+      postMessage({ type: "response", id: data.id, raw });
+    } catch (error) {
+      postMessage({ type: "response", id: data.id, error: String((error && error.message) || error) });
+    }
+  });
 };

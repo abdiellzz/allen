@@ -6,6 +6,24 @@ Release estable: **1.2.4**
 
 ALLEN combina aprendizaje guiado, quizzes, tarjetas, planes de estudio, cursos creados por docentes, progreso local, backups, recuperación y una IA local opcional. La aplicación principal funciona en el dispositivo y no requiere una cuenta cloud.
 
+## Primera experiencia móvil (experimental)
+
+Inicio educativo único, menú desplegable compacto y logo original:
+[guía de la UI actual](docs/UI_SINGLE_HOME.md).
+
+La rama de evolución móvil incorpora una **PWA instalable** en `public/mobile/`:
+seis cursos (fracciones, lectura, inglés, Python, ciencias y seguridad digital), diagnóstico, práctica guiada,
+repaso de errores, tutor estructurado y progreso offline por perfil. No es un APK.
+Desde el servidor ALLEN se puede conectar opcionalmente su IA local; la versión
+estática funciona con ayuda preparada. Los pagos están pospuestos.
+
+Ejecutar `python -m http.server 8081 --bind 127.0.0.1 --directory public` y abrir
+`http://localhost:8081/mobile/`. Esperar que el curso esté guardado antes de desconectar.
+Para Android se requiere servir la PWA por HTTPS.
+
+Consulta [Arquitectura, uso y límites de la PWA](docs/MOBILE.md).
+La aplicación de escritorio y sus licencias continúan funcionando por separado.
+
 ## Qué contiene este repositorio
 
 | Ruta | Propósito |
@@ -203,3 +221,5 @@ El código fuente puede ejecutarse en Linux para desarrollo, pero la distribuci�
 ---
 
 ALLEN · aprendizaje local, privado y diseñado para seguir funcionando sin depender de una nube.
+
+La rama móvil integra esta interfaz en el código Android. El APK de `main` sigue siendo la demo anterior; las mejoras requieren recompilar. Ver [integración y pruebas](docs/MOBILE_ANDROID_INTEGRATION.md).

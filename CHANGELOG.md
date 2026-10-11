@@ -1,3 +1,13 @@
+## En desarrollo · PWA educativa móvil
+
+- Añade experiencia independiente en `public/mobile/` con cinco secciones.
+- Curso de fracciones: diagnóstico, tres lecciones, pistas, comprobaciones y repasos.
+- Perfiles locales con IndexedDB, continuidad, exportación y recuperación validada.
+- Service worker limitado a contenido móvil y tutor estructurado sin IA generativa.
+- Proyección del motor de dominio cubierta por pruebas de paridad y navegador offline.
+- Planes comerciales informativos; sin cobros, cambios a licencias o publicación.
+- Escritorio y bases SQLite conservados; versión comercial sin cambios.
+
 # Changelog
 
 Todos los cambios relevantes de ALLEN se documentan aquí.

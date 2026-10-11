@@ -45,3 +45,8 @@ Si dos documentos parecen contradecirse, usa este orden:
 3. documentación de la release actual;
 4. guías temáticas;
 5. documentos históricos de releases anteriores.
+
+## Evolución móvil experimental
+
+- [PWA móvil: arquitectura, ejecución y límites](MOBILE.md)
+- [Verificación de la experiencia móvil](MOBILE_VERIFICATION.md)

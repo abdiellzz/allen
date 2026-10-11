@@ -90,7 +90,24 @@ def source_zip(target: Path) -> None:
                 archive.write(path, path.relative_to(ROOT).as_posix())
         archive.write(ROOT / "config" / "license_public_key.pem", "config/license_public_key.pem")
         archive.write(ROOT / "VERSION", "VERSION")
+        archive.write(ROOT / "public" / "mobile" / "catalogue.json", "public/mobile/catalogue.json")
         archive.write(ANDROID / "web" / "allen_bridge.py", "allen_bridge.py")
+
+
+def assemble_interfaces(output: Path) -> None:
+    """Bundle both interfaces without downloads; keeps the desktop demo available."""
+    shutil.copytree(ROOT / "frontend", output / "static")
+    (output / "static" / "android").mkdir()
+    for name in ("allen-android.js", "allen-worker.js", "allen-android.css"):
+        shutil.copy2(ANDROID / "web" / name, output / "static" / "android" / name)
+    # Only the new educational home is bundled as a student entry point.
+    redirect = '<!doctype html><meta http-equiv="refresh" content="0;url=/mobile/index.html"><a href="/mobile/index.html">Abrir ALLEN</a>'
+    for page in ("index.html", "fair.html"):
+        (output / page).write_text(redirect, encoding="utf-8")
+    shutil.copytree(ROOT / "public" / "mobile", output / "mobile")
+    mobile = output / "mobile" / "index.html"
+    mobile.write_text(mobile.read_text(encoding="utf-8").replace(
+        "</head>", '<meta name="allen-runtime" content="bundled-android"></head>', 1), encoding="utf-8")
 
 
 def main() -> None:
@@ -99,13 +116,7 @@ def main() -> None:
     (OUT / "pyodide").mkdir(parents=True)
     (OUT / "wheels").mkdir()
 
-    shutil.copytree(ROOT / "frontend", OUT / "static")
-    (OUT / "static" / "android").mkdir()
-    for name in ("allen-android.js", "allen-worker.js", "allen-android.css"):
-        shutil.copy2(ANDROID / "web" / name, OUT / "static" / "android" / name)
-    for page in ("index.html", "fair.html"):
-        html = (ROOT / "frontend" / page).read_text(encoding="utf-8")
-        (OUT / page).write_text(inject(html), encoding="utf-8")
+    assemble_interfaces(OUT)
 
     for name in CORE_FILES:
         shutil.copy2(download(CDN + name, f"pyodide-{PYODIDE_VERSION}-{name}"), OUT / "pyodide" / name)

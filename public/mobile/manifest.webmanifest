@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "ALLEN · Aprende a tu ritmo",
+  "short_name": "ALLEN",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8f5ef",
+  "theme_color": "#f8f5ef",
+  "description": "Seis cursos, práctica guiada y progreso local.",
+  "icons": [
+    {
+      "src": "./assets/allen-user-logo.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

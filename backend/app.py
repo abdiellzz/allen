@@ -1437,11 +1437,16 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
         return {'ok':True}
 
     @app.get('/')
+    @app.get('/index.html')
     def index(mode:str=''):
-        if mode=='fair':
-            response=FileResponse(ROOT/'frontend/fair.html')
-            response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
-            return response
+        # All student launch URLs now lead to the same educational experience.
+        response=RedirectResponse('/mobile/',status_code=303)
+        response.set_cookie('allen_mode','app',httponly=True,samesite='strict',secure=False,path='/')
+        return response
+
+    @app.get('/teacher')
+    def teacher_index():
+        # Administrative compatibility interface; not an alternative student home.
         response=FileResponse(ROOT/'frontend/index.html')
         response.set_cookie('allen_mode','app',httponly=True,samesite='strict',secure=False,path='/')
         return response
@@ -1450,10 +1455,21 @@ def create_app(db_path=None, ai=None, require_license=None, require_local_access
     install_fair(app,db,engine)
 
     @app.get('/fair')
-    def fair_index():
-        response=FileResponse(ROOT/'frontend/fair.html')
-        response.set_cookie('allen_mode','fair',httponly=True,samesite='strict',secure=False,path='/')
+    def retired_fair_index():
+        response=RedirectResponse('/mobile/',status_code=303)
+        response.set_cookie('allen_mode','app',httponly=True,samesite='strict',secure=False,path='/')
         return response
+
+    @app.get('/static/index.html')
+    @app.get('/static/fair.html')
+    def retired_student_page():
+        return RedirectResponse('/mobile/',status_code=303)
+
+    mobile_directory=ROOT/'public'/'mobile'
+    if (mobile_directory/'catalogue.json').is_file():
+        from .mobile_tutor import install_mobile_tutor
+        install_mobile_tutor(app,db,engine,token,mobile_directory)
+        app.mount('/mobile',StaticFiles(directory=mobile_directory,html=True),name='mobile')
 
     app.mount('/static',StaticFiles(directory=ROOT/'frontend'),name='static')
     return app

@@ -1,0 +1,22 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+const tick=()=>new Promise(r=>setImmediate(r));
+const until=async predicate=>{for(let i=0;i<100&&!predicate();i++)await tick();assert.ok(predicate());};
+test('Android worker serializes requests and reports writes only after durable sync',async()=>{
+ const messages=[],calls=[],pending=[];let hold=false;
+ const bridge={handle:async(...args)=>{calls.push(args);return '{"status":200}';}};
+ const py={FS:{mkdirTree(){},mount(){},filesystems:{IDBFS:{}},syncfs(_populate,cb){if(hold)pending.push(cb);else cb();}},loadPackage:async()=>{},unpackArchive(){},runPython(){},pyimport:name=>name==='micropip'?{install:async()=>{}}:bridge};
+ const context=vm.createContext({importScripts(){},loadPyodide:async()=>py,postMessage:m=>messages.push(m),fetch:async()=>({json:async()=>({wheels:[]}),arrayBuffer:async()=>new ArrayBuffer(0)})});
+ vm.runInContext(await readFile(new URL('../android/web/allen-worker.js',import.meta.url),'utf8'),context);
+ await until(()=>messages.some(m=>m.type==='ready'));hold=true;
+ context.onmessage({data:{type:'request',id:1,method:'POST',url:'/api/test',headers:'{}',body:'{}'}});
+ context.onmessage({data:{type:'request',id:2,method:'GET',url:'/api/test',headers:'{}',body:''}});
+ await until(()=>pending.length===1);assert.equal(calls.length,1);assert.equal(messages.filter(m=>m.type==='response').length,0);
+ pending.shift()();await until(()=>messages.filter(m=>m.type==='response').length===2);
+ assert.deepEqual(messages.filter(m=>m.type==='response').map(m=>m.id),[1,2]);
+ context.onmessage({data:{type:'request',id:3,method:'POST',url:'/api/test',headers:'{}',body:'{}'}});
+ await until(()=>pending.length===1);pending.shift()(Error('Sin espacio para guardar'));
+ await until(()=>messages.some(m=>m.id===3));assert.match(messages.find(m=>m.id===3).error,/Sin espacio/);assert.equal(messages.find(m=>m.id===3).raw,undefined);
+});
