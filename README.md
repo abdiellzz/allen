@@ -2,7 +2,7 @@
 
 **Tutor educativo local, privado y offline.**
 
-Release estable: **1.2.1**
+Release estable: **1.2.4**
 
 ALLEN combina aprendizaje guiado, quizzes, tarjetas, planes de estudio, cursos creados por docentes, progreso local, backups, recuperación y una IA local opcional. La aplicación principal funciona en el dispositivo y no requiere una cuenta cloud.
 
@@ -24,11 +24,11 @@ ALLEN combina aprendizaje guiado, quizzes, tarjetas, planes de estudio, cursos c
 
 La forma recomendada para usuarios es el instalador Windows generado por GitHub Actions:
 
-`ALLEN-1.2.1-Setup-Windows-x64.exe`
+`ALLEN-1.2.4-Setup-Windows-x64.exe`
 
 También existe un Portable:
 
-`ALLEN-1.2.1-Portable-Windows-x64.zip`
+`ALLEN-1.2.4-Portable-Windows-x64.zip`
 
 **Ninguno requiere Python instalado.**
 
@@ -37,6 +37,16 @@ Consulta [Instalación y primera ejecución](docs/INSTALLATION.md).
 ## ALLEN en Android (demo)
 
 **[Descargar ALLEN-demo-android.apk](https://github.com/abdiellzz/allen/raw/main/android/release/ALLEN-demo-android.apk)** (21 MB · Android 8.0 o superior)
+
+Versión publicada: **1.2.4-android-demo** (2026-10-10).
+
+Novedades de esta versión:
+
+- Diseño para teléfono: fondo crema, acento terracota, barra de navegación inferior y modo oscuro.
+- Recorrido guiado al abrir la app por primera vez, adaptado al modo elegido (Estudiante,
+  Profesor y Modo Feria). Se puede saltar y repetir desde **Configuración → Recorrido por ALLEN**.
+- **Configuración → Actualizar ALLEN** muestra la versión instalada y abre la descarga del APK más
+  reciente. Instálalo encima de la versión anterior: los datos se conservan.
 
 El enlace funciona con una sesión de GitHub que tenga acceso a este repositorio.
 
@@ -52,7 +62,7 @@ Consulta [ALLEN para Android](android/README.md).
 
 ## Licencia offline
 
-ALLEN 1.2.1 requiere una licencia firmada para la instalación comercial.
+ALLEN 1.2.4 requiere una licencia firmada para la instalación comercial.
 
 ```text
 ALLEN muestra Machine ID
