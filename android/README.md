@@ -35,7 +35,7 @@ lo usa.
 ## Descargar e instalar
 
 **[Descargar ALLEN-demo-android.apk](https://github.com/abdiellzz/allen/raw/main/android/release/ALLEN-demo-android.apk)**
-(21 MB · Android 8.0 o superior). El repositorio es privado: el enlace funciona con una sesión de
+(26 MB · Android 8.0 o superior). El repositorio es privado: el enlace funciona con una sesión de
 GitHub que tenga acceso.
 
 1. Descarga el APK en el teléfono, o en el PC y pásalo al teléfono por cable, Drive o WhatsApp.

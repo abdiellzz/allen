@@ -54,7 +54,7 @@ Consulta [Instalación y primera ejecución](docs/INSTALLATION.md).
 
 ## ALLEN en Android (demo)
 
-**[Descargar ALLEN-demo-android.apk](https://github.com/abdiellzz/allen/raw/main/android/release/ALLEN-demo-android.apk)** (21 MB · Android 8.0 o superior)
+**[Descargar ALLEN-demo-android.apk](https://github.com/abdiellzz/allen/raw/main/android/release/ALLEN-demo-android.apk)** (26 MB · Android 8.0 o superior)
 
 Versión publicada: **1.2.4-android-demo** (2026-10-10, versión interna 2).
 
