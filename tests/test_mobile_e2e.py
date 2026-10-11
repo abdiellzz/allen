@@ -318,9 +318,9 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
         page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
         navigate(page, 'Aprender')
         page.screenshot(path=str(ROOT/'docs/images/mobile/catalogue.png'),full_page=True)
-        assert page.locator('.course-card').count() == 6
+        assert page.locator('.course-card').count() == 14
         context.set_offline(True)
-        for c in catalogue[1:]:
+        for c in catalogue[1:6]:
             navigate(page, 'Aprender')
             page.locator(f'[data-course="{c["id"]}"]').click()
             page.get_by_role('button',name='Hacer diagnóstico',exact=True).click()
@@ -415,7 +415,7 @@ def test_bundled_android_ui_search_and_manual_backup(mobile_url):
         assert page.evaluate('navigator.serviceWorker.getRegistrations().then(r=>r.length)')==0
         assert not any('/api/' in url or 'allen-worker.js' in url for url in requests)
         navigate(page, 'Aprender')
-        page.get_by_label('Buscar un objetivo').fill('cuentas')
+        page.get_by_label('Buscar un objetivo').fill('Protege tu vida digital')
         assert page.locator('.course-card').count()==1
         assert page.get_by_role('heading',name='Protege tu vida digital',exact=True).is_visible()
         page.get_by_label('Buscar un objetivo').fill('no existe esta ruta')
@@ -586,4 +586,50 @@ def test_interactive_math_context_and_resume_offline(mobile_url):
         answer(page,'1.75')
         answer(page,'3.55',last=True)
         assert 'math-decimal-add' in state(page)['completed']
+        browser.close()
+
+
+def test_school_subject_selection_switching_and_untimed_paths(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page()
+        page.goto(mobile_url)
+        assert page.locator('#profile-form select[name="course"] option').count()==14
+        assert page.locator('select[name="minutes"]').count()==0
+        page.locator('#profile-form select[name="course"]').select_option('history-school-v1')
+        create_profile(page,'Sofía')
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        assert state(page)['activeCourse']=='history-school-v1'
+        assert 'minutes' not in state(page)['profile']
+        page.get_by_role('button',name='Comenzar diagnóstico',exact=True).click()
+        answer(page,'Orden temporal de hechos')
+        answer(page,'Ocurrió antes',last=True)
+        page.get_by_role('button',name='Ver mi siguiente paso',exact=True).click()
+        page.get_by_role('button',name='Empezar lección',exact=True).click()
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        answer(page,'Orden temporal de hechos')
+        pending=state(page)['session']
+        context.set_offline(True)
+        page.get_by_role('button',name='Perfiles',exact=True).click()
+        page.locator('#learning-choice-form select[name="course"]').select_option('geography-school-v1')
+        page.get_by_role('button',name='Cambiar materia',exact=True).click()
+        assert state(page)['savedSessions']['history-school-v1']==pending
+        assert page.locator('.route-module').count()==4
+        page.get_by_role('button',name='Hacer diagnóstico',exact=True).click()
+        answer(page,'Arriba en un mapa orientado al norte')
+        page.get_by_role('button',name='Perfiles',exact=True).click()
+        page.locator('#learning-choice-form select[name="course"]').select_option('history-school-v1')
+        page.get_by_role('button',name='Cambiar materia',exact=True).click()
+        page.get_by_role('button',name='Continuar mi ruta',exact=True).click()
+        assert page.locator('#answer-form[data-activity="match"]').is_visible()
+        page.reload()
+        assert state(page)['session']==pending
+        assert state(page)['savedSessions']['geography-school-v1']['index']==1
+        recovered=page.evaluate("""async()=>{
+            const st=await import('./storage.mjs'),db=await st.openStorage();
+            const s=await st.loadProfile(db,await st.activeProfile(db));db.close();return st.prepareRecovery(st.exportBackup(s));
+        }""")
+        assert recovered['savedSessions']==state(page)['savedSessions']
+        assert recovered['profile']['id']!=state(page)['profile']['id']
         browser.close()

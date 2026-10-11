@@ -39,19 +39,21 @@ export const activeCourse = state => getCourse(state.activeCourse??course.id)??c
 export const diagnosed = (state,id=activeCourse(state).id) => id===course.id?state.diagnosticComplete:(state.diagnosticCourses??[]).includes(id);
 export function chooseCourse(state,id){
   if(!getCourse(id))throw Error('Curso no válido.');
-  if(state.session&&state.session.phase!=='complete')throw Error('Termina la actividad actual antes de cambiar de curso.');
-  state.activeCourse=id;
+  const current=activeCourse(state).id;if(id===current)return;
+  const saved={...(state.savedSessions??{})};
+  if(state.session&&state.session.phase!=='complete')saved[current]={...structuredClone(state.session),courseId:current};
+  state.session=saved[id]??null;delete saved[id];
+  state.savedSessions=saved;state.activeCourse=id;
 }
 export function recommendation(state,now=new Date()) {
   const course=activeCourse(state);
-  const minutes=state.profile.minutes;
-  if(state.session && state.session.phase!=='complete'){const s=state.session,q=questionById(s.questionIds[s.index]),t=topicById(q?.topicId??s.topicId);return {kind:'continue',topicId:t?.id,title:'Continúa tu sesión',reason:`Estábamos practicando ${t?.title??'tu diagnóstico'}. ${s.phase==='lesson'?'Quedó pendiente leer el ejemplo y practicar.':`Estás en la actividad ${s.index+1} de ${s.questionIds.length}.`} Tu progreso está guardado; dispones de ${minutes} minutos.`};}
+  if(state.session && state.session.phase!=='complete'){const s=state.session,q=questionById(s.questionIds[s.index]),t=topicById(q?.topicId??s.topicId);return {kind:'continue',topicId:t?.id,title:'Continúa tu sesión',reason:`Estábamos practicando ${t?.title??'tu diagnóstico'}. ${s.phase==='lesson'?'Quedó pendiente leer el ejemplo y practicar.':`Estás en la actividad ${s.index+1} de ${s.questionIds.length}.`} Tu progreso está guardado. Continúa a tu ritmo.`};}
   if(!diagnosed(state)) return {kind:'diagnostic',title:'Encuentra tu punto de partida',reason:`${questions.filter(q=>q.kind==='diagnostic'&&q.courseId===course.id).length} preguntas breves para elegir el apoyo que necesitas. No es una calificación.`};
   const due=course.topics.find(t=>{const e=evidence(state,t.id,now);return e.next_review&&e.next_review<=localDay(now);});
   if(due) return {kind:'review',topicId:due.id,title:`Repasa ${due.title.toLowerCase()}`,reason:`Tu repaso estaba previsto para ${evidence(state,due.id,now).next_review}. Vamos a comprobar qué recuerdas.`};
   const target=course.topics.find(t=>!state.completed.includes(t.id));
   if(target){const e=evidence(state,target.id,now);const rec=recommendForState({mastery_score:e.score,topic:target.title,status:e.status});
-    return {kind:'learn',topicId:target.id,title:target.title,reason:`${rec.reason} ${minutes<=5?'Hoy puedes hacer una explicación y una práctica; el resto queda guardado.':'La sesión incluye un ejemplo, dos prácticas y una comprobación.'}`};}
+    return {kind:'learn',topicId:target.id,title:target.title,reason:`${rec.reason} Estudia, practica y comprueba. Tu camino queda guardado.`};}
   return {kind:'review',topicId:course.topics.reduce((a,b)=>evidence(state,a.id,now).score<=evidence(state,b.id,now).score?a:b).id,title:'Consolida lo que aprendiste',reason:`Completaste las ${course.topics.length} comprobaciones del curso. Puedes repasar sin esperar la fecha programada.`};
 }
 export function newState(profile) {return {version:1,rulesVersion:RULES_VERSION,courseId:course.id,profile,diagnosticComplete:false,events:[],completed:[],session:null,cards:{}};}

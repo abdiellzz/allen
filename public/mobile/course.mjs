@@ -1,3 +1,4 @@
+import {schoolCourses} from './school-courses.mjs';
 import {addReinforcement} from './reinforcement.mjs';
 import {variantsFor} from './variants.mjs';
 import {extendCourses} from './course-extensions.mjs';
@@ -6,7 +7,7 @@ import {extraCourses} from './extra-courses.mjs';
 // Bundled editorial content. No model-generated questions or executable imports.
 // Source: data/library/math/fracciones.md; expanded worked examples checked by tests.
 export const course = {
-  id: 'fractions-v1', version: 1, title: 'Fracciones, paso a paso', subject: 'Matemáticas',
+  id: 'fractions-v1', version: 1, title: 'Matemáticas para el colegio', subject: 'Matemáticas',
   source: 'Biblioteca ALLEN · Fracciones · contenido inicial revisable',
   topics: [
     {
@@ -62,7 +63,7 @@ export const course = {
     }
   ]
 };
-export const courses = addReinforcement(extendCourses([course,...extraCourses,...scenarioCourses]));
+export const courses = [...addReinforcement(extendCourses([course,...extraCourses,...scenarioCourses])),...schoolCourses];
 export const allTopics = courses.flatMap(c=>c.topics.map(t=>({...t,courseId:c.id,source:c.source,subject:c.subject})));
 export const getCourse = id => courses.find(c=>c.id===id);
 export const questions = allTopics.flatMap(t => t.questions.map(q => ({...q,topicId:t.id,courseId:t.courseId})));
