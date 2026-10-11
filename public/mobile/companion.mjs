@@ -1,3 +1,4 @@
+import {errorCoach} from './learning-coach.mjs';
 import {activeCourse,recommendation,localDay,diagnosed} from './engine.mjs';
 import {topicById,questionById} from './course.mjs';
 export function recap(state,now=new Date()){
@@ -10,7 +11,7 @@ export function recap(state,now=new Date()){
 export function companionTip(state,view){
  const s=state.session,q=questionById(s?.questionIds[s?.index]),answer=s?.answers.find(a=>a.questionId===q?.id);
  if(view==='session'&&s?.phase==='complete')return {title:'Tu esfuerzo quedó guardado',text:recap(state).text,asset:'allen-celebrate.png'};
- if(view==='session'&&answer&&!answer.correct)return {title:'Vamos a revisar la idea',text:'Equivocarte nos da una pista. Lee el procedimiento, busca qué cambió y pide un ejemplo más sencillo.',asset:'allen-explaining-v1.png'};
+ if(view==='session'&&answer&&!answer.correct){const c=errorCoach(state,q.topicId);return {title:c.title,text:`${c.reason} Primer paso: ${c.firstStep}`,asset:'allen-explaining-v1.png',followUps:c.followUps};}
  if(view==='session'&&answer?.correct)return {title:'Bien razonado',text:'Antes de seguir, explica con tus palabras por qué esa respuesta funciona.',asset:'allen-celebrate.png'};
  if(view==='session'&&s?.hints.filter(id=>id===q?.id).length)return {title:'Estoy contigo',text:'Usa una pista cada vez. Identifica los datos y prueba tu idea antes de mirar otra ayuda.',asset:'allen-reading.png'};
  if(view==='session')return {title:'Un paso cada vez',text:s?.phase==='lesson'?'Lee el ejemplo y pregúntate qué regla se aplicó. Después lo intentamos juntos.':'No necesitas responder rápido. Piensa qué te preguntan; si te atascas, puedes pedir una pista.',asset:s?.phase==='lesson'?'allen-explaining-v1.png':'allen-thinking-v1.png'};
@@ -21,6 +22,7 @@ export function followUpQuestions(id,topicId){
  if(id==='context:status'||id==='context:recommend')return [{id:`topic:${topicId}:simple`,label:'No entendí'},{id:'context:recommend',label:'¿Qué hago después?'}];
  if(id?.endsWith(':simple')||id?.endsWith(':explain'))return [{id:'context:first-step',label:'Veamos el primer paso juntos'},{id:`topic:${topicId}:example`,label:'Dame un ejemplo'}];
  if(id?.endsWith(':example')||id?.endsWith(':alternative'))return [{id:`topic:${topicId}:simple`,label:'No entendí'},{id:'context:recommend',label:'¿Qué hago después?'}];
+ if(id==='context:error-next')return [{id:`topic:${topicId}:alternative`,label:'Dame otro ejemplo'},{id:'context:status',label:'¿Cómo voy?'}];
  if(id==='context:hint'||id==='context:feedback')return [{id:'context:status',label:'¿Cómo voy?'},{id:`topic:${topicId}:alternative`,label:'Dame otro ejemplo'}];
  return [{id:'context:recommend',label:'¿Qué hago después?'},{id:`topic:${topicId}:example`,label:'Dame un ejemplo'}];
 }

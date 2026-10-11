@@ -1,28 +1,17 @@
+import {topicModel} from './topic-models.mjs';
 // Prepared, bounded exploration models. None executes student code or grants mastery.
 import {allTopics,topicById} from './course.mjs';
 import {checkExplanation} from './learning-tools.mjs';
-export const labMethods={fraction:'Representar y comparar',number:'Manipular cantidades',reading:'Leer y señalar pistas',sentence:'Construir frases',trace:'Seguir un programa',decision:'Explorar consecuencias',experiment:'Cambiar una condición',process:'Conectar funciones',map:'Recorrer un mapa',timeline:'Ordenar acontecimientos',atoms:'Construir moléculas',plan:'Organizar un proyecto',budget:'Probar un presupuesto'};
+export const labMethods={fraction:'Representar y comparar',number:'Manipular cantidades',reading:'Leer y señalar pistas',sentence:'Construir frases',trace:'Seguir un programa',decision:'Explorar consecuencias',experiment:'Cambiar una condición',process:'Conectar funciones',map:'Recorrer un mapa',timeline:'Ordenar acontecimientos',atoms:'Construir moléculas',plan:'Organizar un proyecto',budget:'Probar un presupuesto',case:'Investigar un caso'};
 export function labFor(t){
+ t=t.courseId?t:topicById(t.id)??t;const prepared=topicModel(t);
  const kinds={'fractions-v1':t.id.startsWith('math-')?'number':'fraction','reading-v1':'reading','english-v1':'sentence','python-v1':'trace','digital-safety-v1':'decision','science-v1':'experiment','geography-school-v1':'map','history-school-v1':'timeline','biology-school-v1':'process','physics-school-v1':/energía|calor|circuit|onda/i.test(t.title)?'experiment':'number','chemistry-school-v1':/school-[3-6]$/.test(t.id)?'process':'atoms','citizenship-school-v1':'decision','study-school-v1':'plan','money-school-v1':'budget'};
- const kind=t.method??kinds[t.courseId]??'process';
+ const kind=prepared.kind??t.method??kinds[t.courseId]??'process';
  const steps=t.steps??t.guide?.lines?.map(([line,explain])=>`${line}: ${explain}`)??[t.simple,t.example,t.alternative];
  const pairs=t.questions.find(q=>q.pairs)?.pairs??steps.slice(0,3).map((step,i)=>[`Idea ${i+1}`,step]);
- const timeline=kind==='timeline'?/canal/i.test(t.title)?[[1914,'Apertura del Canal'],[1977,'Tratados Torrijos-Carter'],[1999,'Transferencia de administración']]:/independencia|comparar dos etapas/i.test(t.title)?[[1821,'Independencia de España'],[1903,'Separación de Colombia']]:[[1840,'Registro del ejemplo'],[1850,'Otro registro del ejemplo'],[2020,'Análisis posterior del ejemplo']]:null;
- return {kind,timeline,steps:steps.slice(0,6),pairs:pairs.slice(0,3),sentence:t.courseId==='english-v1'?englishSentence(t):null};
+ return {kind,steps:steps.slice(0,6),pairs:pairs.slice(0,3),...prepared};
 }
-function englishSentence(t){
- if(/\bcan\b|habilidad|ability/i.test(t.id+' '+t.title+' '+t.example))return ['I','can','swim.'];
- if(/there|salón|plurals/i.test(t.id+' '+t.title))return ['There','are','two','books.'];
- if(/where|wh-question/i.test(t.id))return ['Where','is','the','library?'];
- if(/have|tienes/i.test(t.id+' '+t.title))return ['I','have','a','book.'];
- if(/routine|rutina/i.test(t.id+' '+t.title))return ['She','studies','every','day.'];
- if(/connectors/i.test(t.id))return ['I','read','and','I','write.'];
- if(/english-reading|invitación/i.test(t.id+' '+t.title))return ['Meet','me','at','the','library.'];
- if(/question/i.test(t.id))return ['Do','you','read?'];
- if(/place|preposition/i.test(t.id+' '+t.title))return ['The','book','is','under','the','table.'];
- return ['I','am','a','student.'];
-}
-export function freshLab(t){const kind=t?labFor(t).kind:'fraction';const defaults={map:[0,0,0],budget:[20,8,0],atoms:[1,0,0],number:[6,3,0]};return {step:0,values:defaults[kind]??[3,8,0],built:[],note:'',at:new Date().toISOString()};}
+export function freshLab(t){const model=t?labFor(t):{kind:'fraction'};const defaults={map:[0,0,0],budget:[20,8,0],atoms:[1,0,0],number:[6,3,0]};return {step:0,values:model.values??defaults[model.kind]??[3,8,0],built:[],note:'',at:new Date().toISOString()};}
 export function saveLab(state,id,patch){
  if(!topicById(id))throw Error('Abre una lección válida.');
  const next={...(state.learningLabs?.[id]??freshLab(topicById(id))),...patch,at:new Date().toISOString()};

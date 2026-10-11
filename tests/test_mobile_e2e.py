@@ -564,7 +564,7 @@ def test_interactive_math_context_and_resume_offline(mobile_url):
         answer(page,'1/2 → 0.5 | 3/4 → 0.75 | 1/5 → 0.2')
         page.get_by_role('radio',name='0.07',exact=True).check()
         page.get_by_role('button',name='Comprobar respuesta',exact=True).click()
-        page.get_by_text('0.07 son siete centésimas',exact=False).wait_for()
+        page.locator('.feedback').get_by_text('0.07 son siete centésimas',exact=False).wait_for()
         assert 'math-decimal' not in state(page)['completed']
         page.set_viewport_size({'width':844,'height':390})
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
@@ -708,12 +708,96 @@ def test_subject_methods_map_sentence_and_molecules(mobile_url):
         assert page.locator('.lab-map > span').count()==25
         lesson('english-v1')
         page.get_by_role('button',name='Construye',exact=True).click()
-        for word in ['I','am','a','student.']:
+        for word in ['Hello!','My','name','is','Ana.']:
             page.get_by_role('button',name=word,exact=True).click()
-        expect(page.locator('.lab-built')).to_contain_text('I → am → a → student.')
+        expect(page.locator('.lab-built')).to_contain_text('Hello! → My → name → is → Ana.')
         lesson('chemistry-school-v1')
         page.get_by_role('button',name='Explora',exact=True).click()
         page.get_by_label('Moléculas').select_option('3')
         expect(page.locator('.lab-output')).to_contain_text('6 átomos de H y 3 de O')
+        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+        browser.close()
+
+
+def test_allen_trail_offline_keyboard_profiles_and_glass(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page();page.goto(mobile_url);create_profile(page,'Exploradora')
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        context.set_offline(True)
+        navigate(page,'Practicar')
+        page.get_by_role('button',name='Jugar con Allen',exact=True).click()
+        expect(page.locator('.trail-board')).to_be_visible()
+        page.locator('#content[aria-busy="true"]').wait_for(state='detached')
+        for key in ['ArrowRight']*2+['ArrowUp']*4+['ArrowRight']*3+['ArrowDown']:
+            page.locator('.trail-board').press(key)
+            page.locator('#content[aria-busy="true"]').wait_for(state='detached')
+        expect(page.locator('.trail-finished')).to_contain_text('Páginas recuperadas')
+        assert state(page)['allenTrail']['collected']==[0,1,2]
+        assert state(page)['events']==[] and state(page)['completed']==[]
+        page.get_by_role('button',name='Siguiente sendero',exact=True).click()
+        page.locator('#content[aria-busy="true"]').wait_for(state='detached')
+        expect(page.get_by_role('heading',name='Las páginas equivalentes',exact=True)).to_be_visible()
+        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+        page.screenshot(path='/tmp/allen-trail-light.png',full_page=True)
+        page.reload();navigate(page,'Practicar');page.get_by_role('button',name='Jugar con Allen',exact=True).click()
+        expect(page.get_by_role('heading',name='Las páginas equivalentes',exact=True)).to_be_visible()
+        assert page.evaluate("[...document.querySelectorAll('.trail-panel img')].every(i=>i.complete&&i.naturalWidth>0)")
+        page.get_by_role('button',name='Abrir ajustes',exact=True).click()
+        page.get_by_label('Superficies').select_option('solid')
+        page.get_by_label('Apariencia').select_option('dark')
+        page.get_by_role('button',name='Guardar accesibilidad',exact=True).click()
+        expect(page.locator('html')).to_have_attribute('data-surface','solid')
+        navigate(page,'Practicar');page.get_by_role('button',name='Jugar con Allen',exact=True).click()
+        page.screenshot(path='/tmp/allen-trail-dark.png',full_page=True)
+        original=state(page)['profile']['id']
+        page.get_by_role('button',name='Perfiles',exact=True).click();create_profile(page,'Otro')
+        navigate(page,'Practicar');page.get_by_role('button',name='Jugar con Allen',exact=True).click()
+        expect(page.get_by_role('heading',name='La brújula del bosque',exact=True)).to_be_visible()
+        assert state(page).get('allenTrail') is None
+        page.get_by_role('button',name='Perfiles',exact=True).click()
+        page.locator(f'[data-action="select-profile"][data-id="{original}"]').click()
+        navigate(page,'Practicar');page.get_by_role('button',name='Jugar con Allen',exact=True).click()
+        expect(page.get_by_role('heading',name='Las páginas equivalentes',exact=True)).to_be_visible()
+        assert page.evaluate("window.allenNavigateBack()") is True
+        expect(page.get_by_role('button',name='Jugar con Allen',exact=True)).to_be_visible()
+        browser.close()
+
+
+def test_topic_specific_models_filters_and_contextual_error_coach(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch();context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page();page.goto(mobile_url);create_profile(page)
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        context.set_offline(True)
+        def lesson(topic):
+            page.evaluate("""async(id)=>{const e=await import('./engine.mjs'),c=await import('./course.mjs'),st=await import('./storage.mjs'),db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db)),t=c.topicById(id);function finish(){if(s.session.phase==='lesson')e.advance(s);while(s.session.phase==='practice'){e.submitAnswer(s,c.questionById(s.session.questionIds[s.session.index]).answer);e.advance(s);}}e.chooseCourse(s,t.courseId);e.startSession(s,'diagnostic');finish();for(const candidate of c.getCourse(t.courseId).topics){e.startSession(s,'learn',candidate.id);if(candidate.id===id)break;finish();}await st.saveProfile(db,s);db.close();}""",topic)
+            page.reload();page.get_by_role('button',name='Continuar aprendiendo',exact=True).click()
+            page.get_by_role('button',name='Explora',exact=True).click()
+        lesson('geography-school-6')
+        expect(page.locator('.lab-output')).to_contain_text('20 habitantes/km²')
+        page.get_by_label('Superficie en km²',exact=True).fill('20')
+        page.get_by_label('Superficie en km²',exact=True).press('Tab')
+        expect(page.locator('.lab-output')).to_contain_text('10 habitantes/km²')
+        lesson('chemistry-school-2')
+        page.get_by_label('Moléculas').select_option('3')
+        expect(page.locator('.lab-output')).to_contain_text('3 átomos de C y 6 de O')
+        lesson('money-school-6')
+        expect(page.locator('.lab-output')).to_contain_text('Precio final: 40')
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        wrong=page.evaluate("""async()=>{const c=await import('./course.mjs'),st=await import('./storage.mjs'),db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db)),q=c.questionById(s.session.questionIds[s.session.index]);db.close();return q.options.find(o=>o!==q.answer);} """)
+        page.get_by_role('radio',name=wrong,exact=True).check()
+        page.get_by_role('button',name='Comprobar respuesta',exact=True).click()
+        expect(page.locator('.companion-card')).to_contain_text('Primer paso:')
+        page.locator('.companion-card').get_by_role('button',name='Veamos el primer paso juntos',exact=True).click()
+        expect(page.locator('.chat-message').last).to_contain_text('Comprender descuentos')
+        navigate(page,'Aprender')
+        page.get_by_label('Mi objetivo ahora').select_option('reinforce')
+        expect(page.locator('.course-card')).to_have_count(1)
+        page.get_by_label('Tipo de actividad').select_option('project')
+        page.get_by_text('Ver las 16 lecciones',exact=True).click()
+        assert all(title.startswith('Proyecto:') for title in page.locator('.module-lessons h3').all_text_contents())
+        assert state(page)['session']['phase']=='practice'
         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
         browser.close()
