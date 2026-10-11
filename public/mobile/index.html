@@ -5,9 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f8f5ef">
   <meta name="description" content="ALLEN: entiende, practica y avanza a tu ritmo. Materias escolares y caminos de práctica disponibles sin conexión.">
+  <meta name="title" content="ALLEN · Aprende a tu ritmo">
+  <meta property="og:title" content="ALLEN · Aprende a tu ritmo">
+  <meta property="og:description" content="Entiende, practica y avanza a tu ritmo con Allen.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" type="image/png" href="./assets/allen-user-logo.png">
   <link rel="stylesheet" href="./mobile.css"><link rel="stylesheet" href="./glass-and-trail.css">
+  <link rel="stylesheet" href="./legal-errors.css">
   <title>ALLEN · Aprende a tu ritmo</title>
 </head>
 <body>
@@ -26,8 +30,10 @@
   </header>
   <div class="connection"><span id="offline-status" role="status">Preparando curso para uso sin conexión…</span><button id="install-button" type="button" hidden>Instalar</button></div>
   <main id="content" tabindex="-1"><p>Cargando tu espacio de aprendizaje…</p></main>
+  <section id="action-error" class="action-error" role="alert" tabindex="-1" hidden><h2>No pudimos completar esta acción</h2><p data-error-message></p><div class="actions"><button id="dismiss-error" type="button">Entendido</button><a href="./contacto.html">Pedir ayuda</a></div></section>
+  <footer class="app-footer"><nav aria-label="Información y contacto"><a href="./privacidad.html">Política de privacidad</a><a href="./terminos.html">Términos y condiciones</a><a href="./contacto.html">Contacto</a></nav></footer>
   <p id="notice" class="notice" role="status" hidden></p>
-
-  <script type="module" src="./app.mjs"></script>
+  <noscript><p>ALLEN necesita JavaScript para abrir los cursos y guardar el progreso. Las páginas de privacidad, términos y contacto siguen disponibles.</p></noscript>
+  <script type="module" src="./bootstrap.mjs"></script>
 </body>
 </html>

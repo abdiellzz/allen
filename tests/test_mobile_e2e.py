@@ -457,7 +457,7 @@ def test_compact_navigation_identity_and_companion(mobile_url):
         assert state(page)==before
         page.locator('#notice').evaluate('(el)=>el.hidden=true')
         page.get_by_role('button',name='Minimizar',exact=True).click()
-        assert page.locator('.companion-small').count()==1
+        expect(page.locator('.companion-small')).to_have_count(1)
         assert page.locator('#content').bounding_box()['height'] < 820
         page.screenshot(path=str(ROOT/'docs/images/mobile/home-compact.png'),full_page=True)
         page.get_by_role('button',name='Abrir secciones',exact=True).click()
@@ -489,7 +489,7 @@ def test_companion_followup_and_close_use_real_evidence(mobile_url):
         create_profile(page,'Ana')
         page.get_by_role('button',name='Minimizar',exact=True).click()
         page.reload()
-        assert page.locator('.companion-small').count()==1
+        expect(page.locator('.companion-small')).to_have_count(1)
         page.get_by_role('button',name='Ver consejo',exact=True).click()
         page.get_by_role('button',name='Comenzar diagnóstico',exact=True).click()
         page.get_by_role('radio',name='4/1',exact=True).check()
@@ -595,7 +595,7 @@ def test_school_subject_selection_switching_and_untimed_paths(mobile_url):
         context=browser.new_context(viewport={'width':390,'height':844})
         page=context.new_page()
         page.goto(mobile_url)
-        assert page.locator('#profile-form select[name="course"] option').count()==14
+        expect(page.locator('#profile-form select[name="course"] option')).to_have_count(14)
         assert page.locator('select[name="minutes"]').count()==0
         page.locator('#profile-form select[name="course"]').select_option('history-school-v1')
         create_profile(page,'Sofía')
