@@ -10,8 +10,19 @@ android {
         applicationId "com.allen.tutor.demo"
         minSdk 26
         targetSdk 35
-        versionCode 8
+        versionCode 9
         versionName file("../../VERSION").text.trim() + "-android-guided"
+    }
+
+    // Optional private, persistent key for repeatable demo updates. Never put
+    // the keystore in Git; the standard Android debug alias/password apply.
+    def allenDebugKeystore = providers.environmentVariable("ALLEN_ANDROID_DEBUG_KEYSTORE").orNull
+    if (allenDebugKeystore) {
+        signingConfigs {
+            debug {
+                storeFile file(allenDebugKeystore)
+            }
+        }
     }
 
     buildTypes {

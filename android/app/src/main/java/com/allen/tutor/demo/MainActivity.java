@@ -71,7 +71,14 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                return assetLoader.shouldInterceptRequest(request.getUrl());
+                WebResourceResponse response = assetLoader.shouldInterceptRequest(request.getUrl());
+                Uri url = request.getUrl();
+                if (request.isForMainFrame() && "https".equals(url.getScheme()) &&
+                        HOST.equals(url.getHost()) && (response == null ||
+                        response.getData() == null || response.getStatusCode() == 404)) {
+                    return localNotFound(assetLoader, response);
+                }
+                return response;
             }
 
             @Override
@@ -119,7 +126,33 @@ public class MainActivity extends Activity {
 
     private boolean trustedPage() {
         String url = webView.getUrl();
-        return url != null && url.startsWith("https://" + HOST + "/mobile/");
+        if (url == null) return false;
+        Uri page = Uri.parse(url);
+        // Native learning actions are only available on the app entry point.
+        // Legal/help pages use normal WebView history when pressing Back.
+        return "https".equals(page.getScheme()) && HOST.equals(page.getHost()) &&
+                ("/mobile/index.html".equals(page.getPath()) || "/mobile/".equals(page.getPath()));
+    }
+
+    private static WebResourceResponse localNotFound(WebViewAssetLoader loader, WebResourceResponse fallback) {
+        WebResourceResponse page = loader.shouldInterceptRequest(Uri.parse("https://" + HOST + "/mobile/404.html"));
+        if (page == null || page.getData() == null) return fallback;
+        try (java.io.InputStream input = page.getData();
+                java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream()) {
+            byte[] buffer = new byte[4096];
+            int count;
+            while ((count = input.read(buffer)) != -1) bytes.write(buffer, 0, count);
+            // Keep the failed URL in history, but resolve the page's local links
+            // from /mobile/, including for missing nested routes.
+            String html = new String(bytes.toByteArray(), java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("<head>", "<head><base href=\"https://" + HOST + "/mobile/\">");
+            java.util.Map<String, String> headers = new java.util.HashMap<>();
+            headers.put("Content-Security-Policy", "default-src 'self'; img-src 'self'; style-src 'self'; script-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'");
+            return new WebResourceResponse("text/html", "UTF-8", 404, "Not Found", headers,
+                    new java.io.ByteArrayInputStream(html.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.io.IOException ignored) {
+            return fallback;
+        }
     }
     private void reportFile(String message) {
         if (trustedPage()) webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('allen-file-status',{detail:"
