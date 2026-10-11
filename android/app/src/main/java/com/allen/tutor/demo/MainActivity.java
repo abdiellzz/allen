@@ -1,6 +1,10 @@
 package com.allen.tutor.demo;
 
 import android.app.Activity;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.webkit.JavascriptInterface;
+import org.json.JSONObject;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
@@ -27,8 +31,11 @@ import androidx.webkit.WebViewAssetLoader;
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
     private static final int FILE_REQUEST = 1;
+    static volatile boolean foreground;
 
     private WebView webView;
+    private boolean closingShown;
+    private int reminderHour = 18, reminderMinute = 0;
     private ValueCallback<Uri[]> fileCallback;
 
     @Override
@@ -50,6 +57,8 @@ public class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
+        webView.addJavascriptInterface(new ReminderBridge(), "AllenReminders");
+        LearningReminder.createChannel(this);
 
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
                 .setDomain(HOST)
@@ -65,7 +74,7 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri url = request.getUrl();
-                if (HOST.equals(url.getHost())) {
+                if ("https".equals(url.getScheme()) && HOST.equals(url.getHost())) {
                     return false;
                 }
                 try {
@@ -106,6 +115,84 @@ public class MainActivity extends Activity {
         }
     }
 
+    private boolean trustedPage() {
+        String url = webView.getUrl();
+        return url != null && url.startsWith("https://" + HOST + "/mobile/");
+    }
+    private void reportReminder(String message) {
+        if (trustedPage()) webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('allen-reminder-status',{detail:"
+                + JSONObject.quote(message) + "}))", null);
+    }
+    private void enableReminder() {
+        if (!LearningReminder.allowed(this)) {
+            LearningReminder.preferences(this).edit().putBoolean("enabled", false).apply();
+            LearningReminder.cancel(this);
+            reportReminder("Android no permite las notificaciones de ALLEN. Puedes habilitarlas en los ajustes del teléfono.");
+            return;
+        }
+        LearningReminder.preferences(this).edit().putBoolean("enabled", true)
+                .putInt("hour", reminderHour).putInt("minute", reminderMinute).apply();
+        LearningReminder.schedule(this);
+        reportReminder(String.format(java.util.Locale.ROOT, "Recordatorio diario activado, alrededor de las %02d:%02d.", reminderHour, reminderMinute));
+    }
+    public final class ReminderBridge {
+        @JavascriptInterface public void enable(int hour, int minute) {
+            runOnUiThread(() -> {
+                if (!trustedPage() || hour < 0 || hour > 23 || minute < 0 || minute > 59) return;
+                reminderHour = hour; reminderMinute = minute;
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 33);
+                } else enableReminder();
+            });
+        }
+        @JavascriptInterface public void disable() {
+            runOnUiThread(() -> {
+                if (!trustedPage()) return;
+                LearningReminder.preferences(MainActivity.this).edit().putBoolean("enabled", false).remove("summary").apply();
+                LearningReminder.cancel(MainActivity.this);
+                reportReminder("Recordatorios desactivados.");
+            });
+        }
+        @JavascriptInterface public void saveSummary(String summary) {
+            runOnUiThread(() -> {
+                if (!trustedPage() || !LearningReminder.preferences(MainActivity.this).getBoolean("enabled", false)) return;
+                String bounded = summary == null ? "" : summary.replaceAll("[\\p{Cntrl}]", " ");
+                if (bounded.length() > 450) bounded = bounded.substring(0, 450);
+                LearningReminder.preferences(MainActivity.this).edit().putString("summary", bounded).apply();
+            });
+        }
+        @JavascriptInterface public void clearSummary() {
+            runOnUiThread(() -> { if (trustedPage()) LearningReminder.preferences(MainActivity.this).edit().remove("summary").apply(); });
+        }
+        @JavascriptInterface public String status() {
+            boolean enabled = LearningReminder.preferences(MainActivity.this).getBoolean("enabled", false);
+            return enabled && LearningReminder.allowed(MainActivity.this) ? "Recordatorios diarios activados." : "Recordatorios desactivados o bloqueados por Android.";
+        }
+    }
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == 33) {
+            if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) enableReminder();
+            else {
+                LearningReminder.preferences(this).edit().putBoolean("enabled", false).apply();
+                LearningReminder.cancel(this);
+                reportReminder("Permiso rechazado. Puedes seguir aprendiendo y activar los recordatorios más adelante.");
+            }
+        }
+    }
+    @Override protected void onStart() {
+        super.onStart();
+        foreground = true;
+        LearningReminder.schedule(this);
+        closingShown = false;
+    }
+    @Override protected void onStop() {
+        if (trustedPage()) webView.evaluateJavascript("window.dispatchEvent(new Event('allen-background'))", null);
+        foreground = false;
+        super.onStop();
+    }
+
     private void applySystemBarPadding(FrameLayout root) {
         // Android 15 draws apps edge-to-edge; keep ALLEN clear of the status bar and keyboard.
         root.setOnApplyWindowInsetsListener((view, insets) -> {
@@ -138,7 +225,10 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (webView.canGoBack()) {
+        if (trustedPage() && !closingShown) {
+            closingShown = true;
+            webView.evaluateJavascript("window.dispatchEvent(new Event('allen-close-request'))", null);
+        } else if (webView.canGoBack()) {
             webView.goBack();
         } else {
             super.onBackPressed();

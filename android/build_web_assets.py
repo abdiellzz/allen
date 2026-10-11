@@ -5,6 +5,7 @@ android/.cache and verified against the SHA-256 published in pyodide-lock.json /
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import shutil
@@ -111,12 +112,22 @@ def assemble_interfaces(output: Path) -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--legacy-runtime", action="store_true", help="Incluye Python/Pyodide para la demo anterior")
+    options = parser.parse_args()
     if OUT.exists():
         shutil.rmtree(OUT)
     (OUT / "pyodide").mkdir(parents=True)
     (OUT / "wheels").mkdir()
 
     assemble_interfaces(OUT)
+
+    if not options.legacy_runtime:
+        version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        (OUT / "allen-manifest.json").write_text(json.dumps({"allen": version + "-guided", "runtime": "prepared-mobile"}), encoding="utf-8")
+        size = sum(p.stat().st_size for p in OUT.rglob("*") if p.is_file())
+        print(f"assets listos en {OUT.relative_to(ROOT)} ({size / 1_000_000:.1f} MB; tutor preparado, sin Python)")
+        return
 
     for name in CORE_FILES:
         shutil.copy2(download(CDN + name, f"pyodide-{PYODIDE_VERSION}-{name}"), OUT / "pyodide" / name)

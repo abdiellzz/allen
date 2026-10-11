@@ -28,9 +28,13 @@ def test_bridge_is_injected_before_the_app_module():
         assert html.index("/static/android/allen-android.js") < html.index('type="module"')
 
 
-def test_android_app_requests_no_permissions_and_ignores_generated_assets():
+def test_android_app_only_requests_opt_in_notifications_and_boot_permissions():
     manifest = (ANDROID / "app" / "src" / "main" / "AndroidManifest.xml").read_text(encoding="utf-8")
-    assert "uses-permission" not in manifest
+    permissions = re.findall(r'uses-permission android:name="([^"]+)"', manifest)
+    assert set(permissions) == {"android.permission.POST_NOTIFICATIONS", "android.permission.RECEIVE_BOOT_COMPLETED"}
+    assert "android.permission.INTERNET" not in manifest
+    assert "SCHEDULE_EXACT_ALARM" not in manifest
+    assert 'android:exported="false"' in manifest
     assert 'android:allowBackup="false"' in manifest
     ignored = (ANDROID / ".gitignore").read_text(encoding="utf-8")
     assert "app/src/main/assets/www/" in ignored

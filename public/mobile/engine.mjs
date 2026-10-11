@@ -97,7 +97,7 @@ export function advance(state,now=new Date()) {
   s.phase='complete';
   if(s.kind==='diagnostic'){if((s.courseId??course.id)===course.id)state.diagnosticComplete=true;else state.diagnosticCourses=[...new Set([...(state.diagnosticCourses??[]),s.courseId])];return;}
   const correct=s.answers.filter(a=>a.correct).length, check=s.answers.at(-1).correct;
-  event(state,'practice_complete',s.topicId,{},now);event(state,'check_complete',s.topicId,{},now);
+  event(state,'practice_complete',s.topicId,{},now);event(state,'check_complete',s.topicId,{sessionId:s.id},now);
   if(correct>=2&&check&&!state.completed.includes(s.topicId))state.completed.push(s.topicId);
   const due=nextReviewDate(evidence(state,s.topicId,now).score,now);event(state,'review_scheduled',s.topicId,{due},now);
 }

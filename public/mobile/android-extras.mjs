@@ -161,7 +161,7 @@ function addProfilePanels(main, profile) {
   update.id = 'allen-apk-update';
   update.className = 'panel allen-extra-panel';
   update.innerHTML = '<span class="eyebrow">App de Android</span><h2>Actualizar ALLEN</h2>' +
-    '<p>Versión instalada: <strong class="allen-apk-version">demo</strong>. Descarga el APK más reciente e instálalo encima de esta versión: tus perfiles y tu progreso se conservan.</p>' +
+    '<p>Versión instalada: <strong class="allen-apk-version">demo</strong>. Guarda una copia privada de tu progreso antes de instalar. La actualización conserva datos cuando coincide la firma de la APK. Si Android rechaza la actualización, conserva la app anterior hasta tener tu copia.</p>' +
     `<a class="allen-extra-button" href="${APK_URL}">Descargar actualización</a>` +
     '<p class="small muted">Se abre en el navegador del teléfono y necesita una cuenta de GitHub con acceso a ALLEN. La app no se conecta a Internet, así que no puede comprobar sola si hay una versión nueva.</p>';
   installedVersion.then(version => { if (version) update.querySelector('.allen-apk-version').textContent = version; });

@@ -235,7 +235,7 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
         navigate(page, 'Allen')
         before = state(page)['events']
         page.get_by_label('Tema que quieres entender').select_option('science-data')
-        page.get_by_role('button',name='¿Puedes mostrar un ejemplo resuelto?',exact=True).click()
+        page.locator('.question-chips').get_by_role('button',name='Dame un ejemplo',exact=True).click()
         page.locator('.chat-message').filter(has_text='Una planta mide 5, 7 y 9 cm').wait_for()
         assert state(page)['events']==before
         page.screenshot(path=str(ROOT/'artifacts/mobile/tutor-guided.png'),full_page=True)
@@ -318,7 +318,7 @@ def test_bundled_android_ui_search_and_manual_backup(mobile_url):
         navigate(page, 'Practicar')
         page.get_by_text('Misiones de aplicación',exact=True).click()
         page.get_by_role('heading',name='Misiones para la vida real').wait_for()
-        assert page.get_by_role('button',name='Preparar esta misión',exact=True).count()==6
+        assert page.get_by_role('button',name='Preparar esta misión',exact=True).count()==3
         page.evaluate("document.querySelector('#notice').hidden=true")
         page.locator('.mission-list').screenshot(path=str(ROOT/'docs/images/mobile/missions.png'))
         navigate(page, 'Allen')
@@ -348,7 +348,9 @@ def test_compact_navigation_identity_and_companion(mobile_url):
         page.get_by_text('Vamos paso a paso.',exact=False).wait_for()
         assert state(page)==before
         page.locator('#notice').evaluate('(el)=>el.hidden=true')
-        assert page.locator('#content').bounding_box()['height'] < 750
+        page.get_by_role('button',name='Minimizar',exact=True).click()
+        assert page.locator('.companion-small').count()==1
+        assert page.locator('#content').bounding_box()['height'] < 820
         page.screenshot(path=str(ROOT/'docs/images/mobile/home-compact.png'),full_page=True)
         page.get_by_role('button',name='Abrir secciones',exact=True).click()
         box=page.locator('#navigation').bounding_box()
@@ -368,4 +370,62 @@ def test_compact_navigation_identity_and_companion(mobile_url):
         page.set_viewport_size({'width':1440,'height':900})
         assert page.locator('#content').bounding_box()['width']>=1100
         page.screenshot(path=str(ROOT/'docs/images/mobile/catalogue-desktop.png'),full_page=True)
+        browser.close()
+
+
+def test_companion_followup_and_close_use_real_evidence(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        page=browser.new_page(viewport={'width':375,'height':812})
+        page.goto(mobile_url)
+        create_profile(page,'Ana')
+        page.get_by_role('button',name='Minimizar',exact=True).click()
+        page.reload()
+        assert page.locator('.companion-small').count()==1
+        page.get_by_role('button',name='Ver consejo',exact=True).click()
+        page.get_by_role('button',name='Comenzar diagnóstico',exact=True).click()
+        page.get_by_role('radio',name='4/1',exact=True).check()
+        page.get_by_role('button',name='Comprobar respuesta',exact=True).click()
+        page.locator('.companion-card').get_by_text('Vamos a revisar la idea',exact=True).wait_for()
+        navigate(page,'Allen')
+        page.locator('.question-chips').get_by_role('button',name='No entendí',exact=True).click()
+        page.locator('.chat-message').first.wait_for()
+        assert page.locator('.chat-message').count()==1
+        page.locator('.chat-message').get_by_role('button',name='Dame un ejemplo',exact=True).click()
+        page.locator('.chat-message').nth(1).wait_for()
+        assert page.locator('.chat-message').count()==2
+        assert page.locator('.chat-message').last.get_by_role('button',name='¿Qué hago después?',exact=True).count()==1
+        navigate(page,'Hoy')
+        page.get_by_role('button',name='Terminar por hoy',exact=True).click()
+        page.get_by_role('heading',name='Tu aprendizaje queda contigo',exact=True).wait_for()
+        page.get_by_text('Hoy respondiste 1 actividades, con 0 aciertos.',exact=False).wait_for()
+        assert 'Partes de un entero' in page.locator('#content').inner_text()
+        before=state(page)
+        page.get_by_role('button',name='Configurar recordatorios',exact=True).click()
+        assert page.get_by_role('button',name='Activar recordatorios',exact=True).count()==0
+        assert state(page)==before
+        path=ROOT/'artifacts/mobile';path.mkdir(parents=True,exist_ok=True)
+        page.screenshot(path=str(path/'settings-guided.png'),full_page=True)
+        browser.close()
+
+
+def test_android_notification_controls_require_explicit_opt_in(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        page=browser.new_page(viewport={'width':375,'height':812})
+        page.add_init_script("""window.reminderCalls=[];window.AllenReminders={
+            status:()=> 'Recordatorios desactivados.',clearSummary:()=>{},saveSummary:()=>{},
+            enable:(h,m)=>{reminderCalls.push(['enable',h,m]);dispatchEvent(new CustomEvent('allen-reminder-status',{detail:'Permiso rechazado. Puedes seguir aprendiendo.'}));},
+            disable:()=>{reminderCalls.push(['disable']);dispatchEvent(new CustomEvent('allen-reminder-status',{detail:'Recordatorios desactivados.'}));}
+        };""")
+        page.goto(mobile_url);create_profile(page,'Ana')
+        assert page.evaluate('reminderCalls')==[]
+        page.get_by_role('button',name='Abrir ajustes',exact=True).click()
+        page.get_by_label('Hora del recordatorio').fill('17:30')
+        page.get_by_role('button',name='Activar recordatorios',exact=True).click()
+        page.get_by_text('Permiso rechazado. Puedes seguir aprendiendo.',exact=True).wait_for()
+        assert page.evaluate('reminderCalls')==[['enable',17,30]]
+        page.get_by_role('button',name='Desactivar recordatorios',exact=True).click()
+        page.locator('#reminder-status').get_by_text('Recordatorios desactivados.',exact=True).wait_for()
+        assert page.evaluate('reminderCalls')==[['enable',17,30],['disable']]
         browser.close()

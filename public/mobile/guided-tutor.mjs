@@ -26,24 +26,25 @@ const kinds=[['explain','¿Cómo funciona'],['simple','¿Me lo explicas más sen
 export function topicQuestions(topic){return kinds.map(([kind,label])=>({id:`topic:${topic.id}:${kind}`,label:kind==='explain'?`${label} ${topic.title.toLowerCase()}?`:label,topicId:topic.id}));}
 export const knowledgeQuestions = [...faq,...allTopics.flatMap(topicQuestions)];
 export function contextualQuestions(state,topicId){const t=topicById(topicId)??topicById(state.session?.topicId??questionById(state.session?.questionIds[state.session?.index])?.topicId)??activeCourse(state).topics.find(t=>!state.completed.includes(t.id))??activeCourse(state).topics[0];return [...topicQuestions(t),{id:'context:hint',label:'¿Puedes darme una pista de mi ejercicio?'},{id:'context:feedback',label:'¿Por qué mi respuesta estuvo mal?'},{id:'context:recommend',label:'¿Qué me recomiendas ahora?'},{id:'context:status',label:'¿Cómo voy en este tema?'}];}
-export function answerPrepared(state,id){
+export function answerPrepared(state,id,selectedTopicId=null){
  const item=faq.find(q=>q.id===id);if(item)return {...item};
- const s=state.session,q=questionById(s?.questionIds[s?.index]),t=topicById(s?.topicId??q?.topicId)??activeCourse(state).topics[0];
+ const s=state.session,q=questionById(s?.questionIds[s?.index]),currentTopic=topicById(s?.topicId??q?.topicId),t=topicById(selectedTopicId)??currentTopic??activeCourse(state).topics[0];
  if(id==='context:recommend'){const r=recommendation(state);return {text:`${r.title}. ${r.reason}`,source:'Motor educativo ALLEN'};}
- if(id==='context:status'){const e=evidence(state,t.id);return {text:`En ${t.title} tienes ${e.correct} aciertos en ${e.attempts} intentos y ${e.hints} pistas utilizadas. ${state.completed.includes(t.id)?'La comprobación está superada.':'El objetivo todavía necesita comprobación.'}`,source:'Evidencia de este perfil'};}
+ if(id==='context:status'){const e=evidence(state,t.id);return {text:`En ${t.title} tienes ${e.correct} aciertos en ${e.attempts} intentos y ${e.hints} pistas utilizadas. ${state.completed.includes(t.id)?'La comprobación está superada.':'El objetivo todavía necesita comprobación.'}`,source:'Evidencia de este perfil',topicId:t.id};}
  if(id==='context:hint')return {action:'hint',text:'Abre una práctica y pide una pista antes de responder.',source:'Ayuda guiada'};
- if(id==='context:feedback'){const a=s?.answers.find(a=>a.questionId===q?.id);return {text:a?`Tu respuesta fue ${a.answer}. ${q.feedback}`:'Primero intenta responder en tu actividad. Después revisamos el procedimiento y la retroalimentación, sin adelantar la solución.',source:t.source??activeCourse(state).source};}
- if(id.startsWith('topic:')){const [,topicId,kind]=id.split(':');const topic=topicById(topicId);if(topic){const next=courses.find(c=>c.id===topic.courseId).topics.find(x=>x.prerequisite===topicId);const text={explain:topic.explanation,simple:topic.simple,example:topic.example,alternative:topic.alternative,card:topic.card.back,purpose:topic.objective,next:next?`Después sigue ${next.title}. Primero comprueba ${topic.title}; puedes revisar el mapa en Mi progreso.`:'Has llegado al cierre de esta ruta. Repasa y aplica sus ideas en situaciones nuevas.'}[kind];if(text)return {text,source:topic.source,topicId,action:['explain','simple','alternative'].includes(kind)&&t.id===topicId&&s?.phase!=='complete'?kind:undefined};}}
+ if(id==='context:feedback'){const a=s?.answers.find(a=>a.questionId===q?.id);return {text:a?`Tu respuesta fue ${a.answer}. ${q.feedback}`:'Primero intenta responder en tu actividad. Después revisamos el procedimiento y la retroalimentación, sin adelantar la solución.',source:currentTopic?.source??activeCourse(state).source};}
+ if(id.startsWith('topic:')){const [,topicId,kind]=id.split(':');const topic=topicById(topicId);if(topic){const next=courses.find(c=>c.id===topic.courseId).topics.find(x=>x.prerequisite===topicId);const text={explain:topic.explanation,simple:topic.simple,example:topic.example,alternative:topic.alternative,card:topic.card.back,purpose:topic.objective,next:next?`Después sigue ${next.title}. Primero comprueba ${topic.title}; puedes revisar el mapa en Mi progreso.`:'Has llegado al cierre de esta ruta. Repasa y aplica sus ideas en situaciones nuevas.'}[kind];if(text)return {text,source:topic.source,topicId,action:['explain','simple','alternative'].includes(kind)&&currentTopic?.id===topicId&&s?.phase!=='complete'?kind:undefined};}}
  return {text:'No tengo una respuesta preparada para esa duda. Elige un tema del curso o una pregunta de la guía y lo revisamos juntos.',source:'Tutor guiado'};
 }
 export function findQuestion(message,state,topicId){
  const n=normalize(message);if(!n)return null;
  if(/(respuesta correcta|solucion|respuesta del ejercicio|resolver ejercicio|pista)/.test(n))return 'context:hint';
+ if(/(como voy|mi avance)/.test(n))return 'context:status';
  if(/(por que.*(mal|incorrect)|me equivoque)/.test(n))return 'context:feedback';
  const contextual=contextualQuestions(state,topicId);if(/(mas sencillo|no entendi|no entiendo)/.test(n))return contextual.find(q=>q.id.endsWith(':simple'))?.id;
  if(/otro ejemplo/.test(n))return contextual.find(q=>q.id.endsWith(':alternative'))?.id;
  if(/ejemplo/.test(n))return contextual.find(q=>q.id.endsWith(':example'))?.id;
- if(/(recomienda|siguiente actividad|que hago ahora)/.test(n))return 'context:recommend';
+ if(/(recomienda|siguiente actividad|que hago ahora|que hago despues)/.test(n))return 'context:recommend';
  const words=n.split(' ').filter(w=>w.length>3&&!['como','puedo','para','quiero','allen','sobre','explica','tengo'].includes(w));
  const pool=[...contextual,...knowledgeQuestions];let best=null,score=0;
  for(const candidate of pool){const label=normalize(candidate.label);if(label===n)return candidate.id;const hits=words.filter(w=>label.split(' ').includes(w)).length;const value=hits/Math.max(1,words.length);if(hits&&value>score){score=value;best=candidate.id;}}
