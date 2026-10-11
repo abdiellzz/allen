@@ -45,7 +45,7 @@ export function recommendation(state,now=new Date()) {
   const course=activeCourse(state);
   const minutes=state.profile.minutes;
   if(state.session && state.session.phase!=='complete') return {kind:'continue',topicId:state.session.topicId,title:'Continúa tu sesión',reason:`Tu actividad está guardada. Dispones de ${minutes} minutos.`};
-  if(!diagnosed(state)) return {kind:'diagnostic',title:'Encuentra tu punto de partida',reason:`${course.topics.length*2} preguntas breves para elegir el apoyo que necesitas. No es una calificación.`};
+  if(!diagnosed(state)) return {kind:'diagnostic',title:'Encuentra tu punto de partida',reason:`${questions.filter(q=>q.kind==='diagnostic'&&q.courseId===course.id).length} preguntas breves para elegir el apoyo que necesitas. No es una calificación.`};
   const due=course.topics.find(t=>{const e=evidence(state,t.id,now);return e.next_review&&e.next_review<=localDay(now);});
   if(due) return {kind:'review',topicId:due.id,title:`Repasa ${due.title.toLowerCase()}`,reason:`Tu repaso estaba previsto para ${evidence(state,due.id,now).next_review}. Vamos a comprobar qué recuerdas.`};
   const target=course.topics.find(t=>!state.completed.includes(t.id));

@@ -1,3 +1,5 @@
+> Actualización: el tutor móvil ahora usa preguntas y respuestas preparadas, sin modelo externo ni dependencia del escritorio. Véase [GUIDED_TUTOR.md](GUIDED_TUTOR.md). Las referencias a conexión opcional de IA de este documento describen la versión anterior.
+
 > Documento de la primera entrega. Para el inicio único, identidad actual y Android integrado ver [UI_SINGLE_HOME.md](UI_SINGLE_HOME.md) y [MOBILE_ANDROID_INTEGRATION.md](MOBILE_ANDROID_INTEGRATION.md).
 
 # ALLEN móvil: primera entrega PWA

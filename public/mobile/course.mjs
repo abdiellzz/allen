@@ -1,3 +1,4 @@
+import {extendCourses} from './course-extensions.mjs';
 import {scenarioCourses} from './scenario-courses.mjs';
 import {extraCourses} from './extra-courses.mjs';
 // Bundled editorial content. No model-generated questions or executable imports.
@@ -59,7 +60,7 @@ export const course = {
     }
   ]
 };
-export const courses = [course,...extraCourses,...scenarioCourses];
+export const courses = extendCourses([course,...extraCourses,...scenarioCourses]);
 export const allTopics = courses.flatMap(c=>c.topics.map(t=>({...t,courseId:c.id,source:c.source,subject:c.subject})));
 export const getCourse = id => courses.find(c=>c.id===id);
 export const questions = allTopics.flatMap(t => t.questions.map(q => ({...q,topicId:t.id,courseId:t.courseId})));

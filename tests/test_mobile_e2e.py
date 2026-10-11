@@ -44,7 +44,7 @@ def create_profile(page, name='Estudiante', goal='school'):
     page.get_by_label('¿Cómo quieres que te llame?').fill(name)
     page.get_by_label('¿Qué quieres hacer?').select_option(goal)
     page.get_by_role('button', name='Crear mi perfil', exact=True).click()
-    page.get_by_role('heading', name=f'Hola, {name}', exact=True).wait_for()
+    page.get_by_role('heading', name=f'Hola, {name}', exact=True, level=1).wait_for()
 
 
 def answer(page, value, last=False):
@@ -99,14 +99,14 @@ def test_learning_survives_offline_reload_and_all_lessons_complete(mobile_url):
         page.get_by_role('heading', name='Comprobación superada').wait_for()
         assert state(page)['completed']==['parts']
         page.get_by_role('button', name='Ver mi siguiente paso').click()
-        for answers in (['3', '6/8', '4/10'], ['3/6', '5/7', '6/9']):
+        for answers in (['3', '6/8', '4/10'], ['3/6', '5/7', '6/9'], ['5/7', '3/4 es mayor', 'El de 2/3'], ['4/6', '3/4', '5/6 de litro'], ['6', '12', '16']):
             page.get_by_role('button', name='Empezar lección', exact=True).click()
             page.get_by_role('button', name='Entendido, vamos a practicar').click()
             for i, value in enumerate(answers):
                 answer(page, value, last=i==2)
             page.get_by_role('heading', name='Comprobación superada').wait_for()
             page.get_by_role('button', name='Ver mi siguiente paso').click()
-        assert state(page)['completed']==['parts','equivalent','sum']
+        assert state(page)['completed']==['parts','equivalent','sum','fraction-compare','fraction-unlike','fraction-amount']
         navigate(page, 'Mi progreso')
         page.get_by_role('heading', name='Tu progreso tiene una historia').wait_for()
         for width in [320,360,390,768,1366]:
@@ -147,7 +147,7 @@ def test_backup_recovery_profile_isolation_and_safe_import(mobile_url, tmp_path)
         assert state(page)['events']==[]
         assert state(page)['profile']['goal']=='explore'
         navigate(page, 'Allen')
-        page.get_by_text('La IA generativa está desconectada por defecto.', exact=False).wait_for()
+        page.get_by_role('heading',name='¿Qué vamos a entender hoy?',exact=True).wait_for()
         assert 'Uno' not in page.locator('#content').inner_text()
         navigate(page, 'Mi progreso')
         with page.expect_file_chooser() as chooser:
@@ -228,28 +228,17 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
                 for i,q in enumerate(practice):
                     answer(page,q['answer'],last=i==len(practice)-1)
                 page.get_by_role('button',name='Ver mi siguiente paso',exact=True).click()
-        assert len(state(page)['completed']) == 10
+        assert len(state(page)['completed']) == 25
         page.reload()
         page.get_by_role('heading',name='Hola, Luna',exact=True).wait_for()
-        assert len(state(page)['completed']) == 10
-        context.set_offline(False)
-        # UI contract only: the backend adapter is verified separately with TestClient.
-        page.route('**/api/mobile/bootstrap',lambda route:route.fulfill(json={'connected':True,'token':'test-token'}))
-        sent = []
-        def tutor(route):
-            sent.append(route.request.post_data_json)
-            route.fulfill(json={'answer':'Una explicación de prueba','source':'Contenido revisable','generated':True})
-        page.route('**/api/mobile/tutor',tutor)
+        assert len(state(page)['completed']) == 25
         navigate(page, 'Allen')
         before = state(page)['events']
-        page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).click()
-        page.get_by_label('¿Qué quieres entender?').fill('Dame otra explicación')
-        page.get_by_role('button',name='Pedir explicación',exact=True).click()
-        page.get_by_text('Respuesta generada · verificar con el curso',exact=True).wait_for()
-        assert sent[0]['topic_id']=='science-fair-test'
-        assert set(sent[0])=={'message','topic_id','question_id','last_answer','level'}
+        page.get_by_label('Tema que quieres entender').select_option('science-data')
+        page.get_by_role('button',name='¿Puedes mostrar un ejemplo resuelto?',exact=True).click()
+        page.locator('.chat-message').filter(has_text='Una planta mide 5, 7 y 9 cm').wait_for()
         assert state(page)['events']==before
-        page.screenshot(path=str(ROOT/'docs/images/mobile/tutor-local.png'),full_page=True)
+        page.screenshot(path=str(ROOT/'artifacts/mobile/tutor-guided.png'),full_page=True)
         navigate(page, 'Mi progreso')
         page.get_by_label('Tamaño del texto').select_option('large')
         page.get_by_role('button',name='Guardar preferencias',exact=True).click()
@@ -260,58 +249,43 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
         page.get_by_role('button',name='Perfiles',exact=True).click()
         create_profile(page,'Sol')
         navigate(page, 'Allen')
-        assert page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).is_visible()
+        assert page.locator('.chat-message').count()==0
         assert page.get_by_text('Una explicación de prueba',exact=True).count()==0
         assert state(page)['events']==[]
         browser.close()
 
 
-def test_browser_uses_desktop_bridge_and_handles_model_loss(tmp_path):
-    import socket
-    import time
-    import uvicorn
-    from backend.app import create_app
-    from tests.test_mobile_tutor import ModelStub
-
-    model = ModelStub()
-    app = create_app(tmp_path/'bridge.sqlite3',ai=model,require_license=False,
-                     require_local_access=False,require_teacher_auth=False)
-    sock = socket.socket()
-    sock.bind(('127.0.0.1',0))
-    server = uvicorn.Server(uvicorn.Config(app,log_level='error'))
-    thread = threading.Thread(target=server.run,kwargs={'sockets':[sock]},daemon=True)
-    thread.start()
-    try:
-        deadline = time.monotonic()+10
-        while not server.started and time.monotonic()<deadline:
-            time.sleep(.02)
-        assert server.started
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            page = browser.new_page(viewport={'width':390,'height':844})
-            page.goto(f'http://127.0.0.1:{sock.getsockname()[1]}/mobile/')
-            create_profile(page)
-            page.get_by_role('button',name='Comenzar diagnóstico').click()
-            navigate(page, 'Allen')
-            page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).click()
-            page.get_by_label('¿Qué quieres entender?').fill('Ayúdame a razonar')
-            before = state(page)
-            page.get_by_role('button',name='Pedir explicación',exact=True).click()
-            page.get_by_text('Respuesta generada · verificar con el curso',exact=True).wait_for()
-            assert len(model.calls)==1
-            assert state(page)==before
-            model.connected = False
-            page.get_by_label('¿Qué quieres entender?').fill('Otro ejemplo')
-            page.get_by_role('button',name='Pedir explicación',exact=True).click()
-            page.get_by_text('Inicia tu modelo local. El tutor guiado sigue disponible sin IA.',exact=True).wait_for()
-            page.get_by_role('button',name='No entendí',exact=True).click()
-            page.get_by_text('Explicación preparada',exact=True).wait_for()
-            assert len(state(page)['events'])==1
-            browser.close()
-    finally:
-        server.should_exit = True
-        thread.join(timeout=10)
-        sock.close()
+def test_prepared_chat_offline_questions_safety_and_profile_reset(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':375,'height':812})
+        page=context.new_page()
+        requests=[]
+        page.on('request',lambda req:requests.append(req.url))
+        page.goto(mobile_url)
+        create_profile(page,'Ana')
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        context.set_offline(True)
+        navigate(page,'Allen')
+        page.get_by_label('Tema que quieres entender').select_option('python-loop')
+        page.get_by_label('También puedes escribir una duda breve').fill('¿Me muestras un ejemplo?')
+        page.get_by_role('button',name='Preguntar a Allen',exact=True).click()
+        page.locator('.chat-message').filter(has_text='0, 1 y 2').wait_for()
+        page.get_by_label('También puedes escribir una duda breve').fill('<svg onload=alert(1)> desconocido')
+        page.get_by_role('button',name='Preguntar a Allen',exact=True).click()
+        page.get_by_text('No tengo una respuesta preparada',exact=False).wait_for()
+        assert page.locator('svg[onload]').count()==0
+        assert state(page)['events']==[]
+        for width in [320,375,768,1440]:
+            page.set_viewport_size({'width':width,'height':812})
+            assert page.evaluate('document.documentElement.scrollWidth-innerWidth')<=2
+        assert not any('/api/' in url for url in requests)
+        page.get_by_role('button',name='Perfiles',exact=True).click()
+        create_profile(page,'Luis')
+        navigate(page,'Allen')
+        assert page.locator('.chat-message').count()==0
+        assert state(page)['events']==[]
+        browser.close()
 
 
 def test_bundled_android_ui_search_and_manual_backup(mobile_url):
@@ -328,6 +302,7 @@ def test_bundled_android_ui_search_and_manual_backup(mobile_url):
         page.route('**/mobile/index.html',bundled_html)
         page.goto(mobile_url+'index.html')
         create_profile(page)
+        page.get_by_role('button',name='Saltar recorrido',exact=True).click()
         page.get_by_text('Contenido incluido · sin Internet',exact=True).wait_for()
         assert page.evaluate('navigator.serviceWorker.getRegistrations().then(r=>r.length)')==0
         assert not any('/api/' in url or 'allen-worker.js' in url for url in requests)
@@ -347,7 +322,7 @@ def test_bundled_android_ui_search_and_manual_backup(mobile_url):
         page.evaluate("document.querySelector('#notice').hidden=true")
         page.locator('.mission-list').screenshot(path=str(ROOT/'docs/images/mobile/missions.png'))
         navigate(page, 'Allen')
-        page.get_by_role('heading',name='Tu tutor está listo sin conexión').wait_for()
+        page.get_by_role('heading',name='¿Qué vamos a entender hoy?',exact=True).wait_for()
         assert page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).count()==0
         navigate(page, 'Mi progreso')
         page.get_by_role('heading',name='Tu mapa de aprendizaje').wait_for()

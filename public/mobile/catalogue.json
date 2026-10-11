@@ -305,6 +305,198 @@
             "feedback": "Recorriste 6/9 de la ruta, equivalente a 2/3. Sumar 9 + 9 no corresponde."
           }
         ]
+      },
+      {
+        "id": "fraction-compare",
+        "title": "Comparar fracciones",
+        "objective": "Comprender y aplicar: comparar fracciones.",
+        "prerequisite": "sum",
+        "explanation": "Con el mismo denominador, la fracción con mayor numerador es mayor. Con distinto denominador, expresa ambas con partes del mismo tamaño.",
+        "simple": "Con el mismo denominador, la fracción con mayor numerador es mayor.",
+        "example": "3/8 es mayor que 1/8: son octavos y tomas más partes. Para comparar 1/2 y 2/3, usa 3/6 y 4/6.",
+        "alternative": "2/5 < 4/5 porque dos quintos son menos que cuatro quintos.",
+        "card": {
+          "front": "¿Cómo puedes aplicar comparar fracciones?",
+          "back": "3/8 es mayor que 1/8: son octavos y tomas más partes. Para comparar 1/2 y 2/3, usa 3/6 y 4/6."
+        },
+        "questions": [
+          {
+            "id": "fraction-compare-0",
+            "kind": "practice",
+            "prompt": "¿Cuál es mayor: 2/7 o 5/7?",
+            "options": [
+              "2/7",
+              "5/7",
+              "Son iguales"
+            ],
+            "answer": "5/7",
+            "hints": [
+              "Recuerda la regla: Con el mismo denominador, la fracción con mayor numerador es mayor.",
+              "3/8 es mayor que 1/8: son octavos y tomas más partes. Para comparar 1/2 y 2/3, usa 3/6 y 4/6."
+            ],
+            "feedback": "Ambas cuentan séptimos; cinco partes son más que dos."
+          },
+          {
+            "id": "fraction-compare-1",
+            "kind": "practice",
+            "prompt": "Compara 1/2 y 3/4.",
+            "options": [
+              "1/2 es mayor",
+              "Son iguales",
+              "3/4 es mayor"
+            ],
+            "answer": "3/4 es mayor",
+            "hints": [
+              "Recuerda la regla: Con el mismo denominador, la fracción con mayor numerador es mayor.",
+              "3/8 es mayor que 1/8: son octavos y tomas más partes. Para comparar 1/2 y 2/3, usa 3/6 y 4/6."
+            ],
+            "feedback": "1/2 equivale a 2/4; tres cuartos son más que dos."
+          },
+          {
+            "id": "fraction-compare-2",
+            "kind": "check",
+            "prompt": "Dos vasos iguales contienen 2/3 y 3/6 de agua. ¿Cuál tiene más?",
+            "options": [
+              "El de 2/3",
+              "El de 3/6",
+              "Son iguales"
+            ],
+            "answer": "El de 2/3",
+            "hints": [
+              "Recuerda la regla: Con el mismo denominador, la fracción con mayor numerador es mayor.",
+              "2/5 < 4/5 porque dos quintos son menos que cuatro quintos."
+            ],
+            "feedback": "2/3 = 4/6. Cuatro sextos superan tres sextos."
+          }
+        ]
+      },
+      {
+        "id": "fraction-unlike",
+        "title": "Sumar con distinto denominador",
+        "objective": "Comprender y aplicar: sumar con distinto denominador.",
+        "prerequisite": "fraction-compare",
+        "explanation": "Antes de sumar, convierte a fracciones equivalentes con un denominador común. Después suma los numeradores y conserva ese denominador.",
+        "simple": "Antes de sumar, convierte a fracciones equivalentes con un denominador común.",
+        "example": "1/2 + 1/4 = 2/4 + 1/4 = 3/4. Primero contamos la misma clase de partes.",
+        "alternative": "1/3 + 1/6 = 2/6 + 1/6 = 3/6 = 1/2.",
+        "card": {
+          "front": "¿Cómo puedes aplicar sumar con distinto denominador?",
+          "back": "1/2 + 1/4 = 2/4 + 1/4 = 3/4. Primero contamos la misma clase de partes."
+        },
+        "questions": [
+          {
+            "id": "fraction-unlike-0",
+            "kind": "practice",
+            "prompt": "¿Cuánto es 1/2 + 1/6?",
+            "options": [
+              "2/8",
+              "4/6",
+              "2/6"
+            ],
+            "answer": "4/6",
+            "hints": [
+              "Recuerda la regla: Antes de sumar, convierte a fracciones equivalentes con un denominador común.",
+              "1/2 + 1/4 = 2/4 + 1/4 = 3/4. Primero contamos la misma clase de partes."
+            ],
+            "feedback": "1/2 = 3/6, por tanto 3/6 + 1/6 = 4/6."
+          },
+          {
+            "id": "fraction-unlike-1",
+            "kind": "practice",
+            "prompt": "¿Cuánto es 1/4 + 1/2?",
+            "options": [
+              "2/6",
+              "1/4",
+              "3/4"
+            ],
+            "answer": "3/4",
+            "hints": [
+              "Recuerda la regla: Antes de sumar, convierte a fracciones equivalentes con un denominador común.",
+              "1/2 + 1/4 = 2/4 + 1/4 = 3/4. Primero contamos la misma clase de partes."
+            ],
+            "feedback": "1/2 = 2/4. Un cuarto más dos cuartos son tres cuartos."
+          },
+          {
+            "id": "fraction-unlike-2",
+            "kind": "check",
+            "prompt": "Usas 1/3 de litro y luego 1/2 de litro. ¿Cuánto usas en total?",
+            "options": [
+              "5/6 de litro",
+              "2/5 de litro",
+              "1 litro"
+            ],
+            "answer": "5/6 de litro",
+            "hints": [
+              "Recuerda la regla: Antes de sumar, convierte a fracciones equivalentes con un denominador común.",
+              "1/3 + 1/6 = 2/6 + 1/6 = 3/6 = 1/2."
+            ],
+            "feedback": "1/3 = 2/6 y 1/2 = 3/6. La suma es 5/6."
+          }
+        ]
+      },
+      {
+        "id": "fraction-amount",
+        "title": "Fracciones de una cantidad",
+        "objective": "Comprender y aplicar: fracciones de una cantidad.",
+        "prerequisite": "fraction-unlike",
+        "explanation": "Para hallar una fracción de una cantidad, divide por el denominador y multiplica por el numerador.",
+        "simple": "Para hallar una fracción de una cantidad, divide por el denominador y multiplica por el numerador..",
+        "example": "3/4 de 20: 20 ÷ 4 = 5 por cada cuarto; 5 × 3 = 15.",
+        "alternative": "2/3 de 12: 12 ÷ 3 = 4; 4 × 2 = 8.",
+        "card": {
+          "front": "¿Cómo puedes aplicar fracciones de una cantidad?",
+          "back": "3/4 de 20: 20 ÷ 4 = 5 por cada cuarto; 5 × 3 = 15."
+        },
+        "questions": [
+          {
+            "id": "fraction-amount-0",
+            "kind": "practice",
+            "prompt": "¿Cuánto es 1/3 de 18?",
+            "options": [
+              "3",
+              "6",
+              "15"
+            ],
+            "answer": "6",
+            "hints": [
+              "Recuerda la regla: Para hallar una fracción de una cantidad, divide por el denominador y multiplica por el numerador..",
+              "3/4 de 20: 20 ÷ 4 = 5 por cada cuarto; 5 × 3 = 15."
+            ],
+            "feedback": "Divide 18 entre 3: cada tercio contiene 6."
+          },
+          {
+            "id": "fraction-amount-1",
+            "kind": "practice",
+            "prompt": "¿Cuánto es 3/5 de 20?",
+            "options": [
+              "12",
+              "15",
+              "4"
+            ],
+            "answer": "12",
+            "hints": [
+              "Recuerda la regla: Para hallar una fracción de una cantidad, divide por el denominador y multiplica por el numerador..",
+              "3/4 de 20: 20 ÷ 4 = 5 por cada cuarto; 5 × 3 = 15."
+            ],
+            "feedback": "Cada quinto contiene 4; tres quintos contienen 4 × 3 = 12."
+          },
+          {
+            "id": "fraction-amount-2",
+            "kind": "check",
+            "prompt": "Hay 24 libros y 2/3 son cuentos. ¿Cuántos cuentos hay?",
+            "options": [
+              "8",
+              "12",
+              "16"
+            ],
+            "answer": "16",
+            "hints": [
+              "Recuerda la regla: Para hallar una fracción de una cantidad, divide por el denominador y multiplica por el numerador..",
+              "2/3 de 12: 12 ÷ 3 = 4; 4 × 2 = 8."
+            ],
+            "feedback": "24 ÷ 3 = 8 por tercio; dos tercios son 16 libros."
+          }
+        ]
       }
     ]
   },
@@ -506,6 +698,198 @@
           }
         ],
         "prerequisite": "reading-main"
+      },
+      {
+        "id": "reading-sequence",
+        "title": "Ordenar y resumir",
+        "objective": "Comprender y aplicar: ordenar y resumir.",
+        "prerequisite": "reading-evidence",
+        "explanation": "Un resumen conserva las ideas centrales y el orden necesario para comprenderlas. Evita detalles secundarios y opiniones que el texto no sostiene.",
+        "simple": "Un resumen conserva las ideas centrales y el orden necesario para comprenderlas.",
+        "example": "Texto: primero lavamos las semillas, después las sembramos y finalmente las regamos. Resumen: preparamos, sembramos y regamos las semillas.",
+        "alternative": "Antes de cocinar, Mara compra ingredientes. Después cocina. Al final sirve la comida: conserva ese orden.",
+        "card": {
+          "front": "¿Cómo puedes aplicar ordenar y resumir?",
+          "back": "Texto: primero lavamos las semillas, después las sembramos y finalmente las regamos. Resumen: preparamos, sembramos y regamos las semillas."
+        },
+        "questions": [
+          {
+            "id": "reading-sequence-0",
+            "kind": "practice",
+            "prompt": "¿Qué palabra señala el último paso?",
+            "options": [
+              "Primero",
+              "Finalmente",
+              "Antes"
+            ],
+            "answer": "Finalmente",
+            "hints": [
+              "Recuerda la regla: Un resumen conserva las ideas centrales y el orden necesario para comprenderlas.",
+              "Texto: primero lavamos las semillas, después las sembramos y finalmente las regamos. Resumen: preparamos, sembramos y regamos las semillas."
+            ],
+            "feedback": "Finalmente indica el cierre de una secuencia."
+          },
+          {
+            "id": "reading-sequence-1",
+            "kind": "practice",
+            "prompt": "Primero mezclar, luego hornear. ¿Qué resumen respeta el orden?",
+            "options": [
+              "Hornear y mezclar",
+              "Solo hornear",
+              "Mezclar y después hornear"
+            ],
+            "answer": "Mezclar y después hornear",
+            "hints": [
+              "Recuerda la regla: Un resumen conserva las ideas centrales y el orden necesario para comprenderlas.",
+              "Texto: primero lavamos las semillas, después las sembramos y finalmente las regamos. Resumen: preparamos, sembramos y regamos las semillas."
+            ],
+            "feedback": "El resumen conserva la secuencia del texto."
+          },
+          {
+            "id": "reading-sequence-2",
+            "kind": "check",
+            "prompt": "Un texto dice: «El equipo limpió y luego pintó el muro». ¿Qué resumen es fiel?",
+            "options": [
+              "Limpiaron y después pintaron",
+              "Pintaron antes de limpiar",
+              "No limpiaron"
+            ],
+            "answer": "Limpiaron y después pintaron",
+            "hints": [
+              "Recuerda la regla: Un resumen conserva las ideas centrales y el orden necesario para comprenderlas.",
+              "Antes de cocinar, Mara compra ingredientes. Después cocina. Al final sirve la comida: conserva ese orden."
+            ],
+            "feedback": "Mantiene las dos acciones y su orden sin inventar información."
+          }
+        ]
+      },
+      {
+        "id": "reading-purpose",
+        "title": "Reconocer la intención",
+        "objective": "Comprender y aplicar: reconocer la intención.",
+        "prerequisite": "reading-sequence",
+        "explanation": "Un texto puede informar, dar instrucciones, narrar o persuadir. Busca lo que intenta hacer con su lector y apóyate en sus palabras.",
+        "simple": "Un texto puede informar, dar instrucciones, narrar o persuadir.",
+        "example": "«Lava tus manos, abre el libro y lee la página» da instrucciones. «Ven al taller: aprenderás algo útil» intenta persuadir.",
+        "alternative": "Un relato cuenta lo que les ocurre a personajes; una noticia comunica hechos.",
+        "card": {
+          "front": "¿Cómo puedes aplicar reconocer la intención?",
+          "back": "«Lava tus manos, abre el libro y lee la página» da instrucciones. «Ven al taller: aprenderás algo útil» intenta persuadir."
+        },
+        "questions": [
+          {
+            "id": "reading-purpose-0",
+            "kind": "practice",
+            "prompt": "«Paso 1: enciende el equipo». ¿Cuál es su intención?",
+            "options": [
+              "Narrar una aventura",
+              "Dar instrucciones",
+              "Contar un chiste"
+            ],
+            "answer": "Dar instrucciones",
+            "hints": [
+              "Recuerda la regla: Un texto puede informar, dar instrucciones, narrar o persuadir.",
+              "«Lava tus manos, abre el libro y lee la página» da instrucciones. «Ven al taller: aprenderás algo útil» intenta persuadir."
+            ],
+            "feedback": "Paso 1 y el verbo de acción guían un procedimiento."
+          },
+          {
+            "id": "reading-purpose-1",
+            "kind": "practice",
+            "prompt": "«Visita nuestra biblioteca: encontrarás historias increíbles». ¿Qué intenta?",
+            "options": [
+              "Persuadir para visitar",
+              "Medir temperatura",
+              "Dar una receta"
+            ],
+            "answer": "Persuadir para visitar",
+            "hints": [
+              "Recuerda la regla: Un texto puede informar, dar instrucciones, narrar o persuadir.",
+              "«Lava tus manos, abre el libro y lee la página» da instrucciones. «Ven al taller: aprenderás algo útil» intenta persuadir."
+            ],
+            "feedback": "La invitación y el beneficio buscan convencer al lector."
+          },
+          {
+            "id": "reading-purpose-2",
+            "kind": "check",
+            "prompt": "«Ayer el grupo visitó el museo y observó fósiles». ¿Qué hace el texto?",
+            "options": [
+              "Da órdenes",
+              "Ofrece un descuento",
+              "Cuenta un hecho ocurrido"
+            ],
+            "answer": "Cuenta un hecho ocurrido",
+            "hints": [
+              "Recuerda la regla: Un texto puede informar, dar instrucciones, narrar o persuadir.",
+              "Un relato cuenta lo que les ocurre a personajes; una noticia comunica hechos."
+            ],
+            "feedback": "Relata acciones del grupo en un momento pasado."
+          }
+        ]
+      },
+      {
+        "id": "reading-argument",
+        "title": "Opiniones con razones",
+        "objective": "Comprender y aplicar: opiniones con razones.",
+        "prerequisite": "reading-purpose",
+        "explanation": "Un argumento une una postura con razones y evidencia pertinente. Una opinión no se convierte en hecho solo porque muchas personas la repitan.",
+        "simple": "Un argumento une una postura con razones y evidencia pertinente.",
+        "example": "Postura: conviene cuidar el huerto. Razón: ofrece alimento y permite observar plantas. Evidencia: el registro de cosecha muestra lo producido.",
+        "alternative": "«Me gusta este libro» es una opinión. «Tiene diez capítulos» es un dato verificable.",
+        "card": {
+          "front": "¿Cómo puedes aplicar opiniones con razones?",
+          "back": "Postura: conviene cuidar el huerto. Razón: ofrece alimento y permite observar plantas. Evidencia: el registro de cosecha muestra lo producido."
+        },
+        "questions": [
+          {
+            "id": "reading-argument-0",
+            "kind": "practice",
+            "prompt": "¿Cuál es una opinión?",
+            "options": [
+              "El libro tiene diez capítulos",
+              "Este es el mejor libro",
+              "La biblioteca abre a las ocho"
+            ],
+            "answer": "Este es el mejor libro",
+            "hints": [
+              "Recuerda la regla: Un argumento une una postura con razones y evidencia pertinente.",
+              "Postura: conviene cuidar el huerto. Razón: ofrece alimento y permite observar plantas. Evidencia: el registro de cosecha muestra lo producido."
+            ],
+            "feedback": "Mejor expresa una valoración; necesita criterios y puede variar entre personas."
+          },
+          {
+            "id": "reading-argument-1",
+            "kind": "practice",
+            "prompt": "¿Qué apoya mejor un argumento sobre ahorrar agua?",
+            "options": [
+              "Un insulto",
+              "Una medición del consumo antes y después",
+              "Una frase sin relación"
+            ],
+            "answer": "Una medición del consumo antes y después",
+            "hints": [
+              "Recuerda la regla: Un argumento une una postura con razones y evidencia pertinente.",
+              "Postura: conviene cuidar el huerto. Razón: ofrece alimento y permite observar plantas. Evidencia: el registro de cosecha muestra lo producido."
+            ],
+            "feedback": "Los datos de consumo permiten comprobar el ahorro."
+          },
+          {
+            "id": "reading-argument-2",
+            "kind": "check",
+            "prompt": "«Debemos leer cada día porque practicar ayuda a comprender». ¿Cuál es la razón?",
+            "options": [
+              "Debemos leer",
+              "Cada día",
+              "Practicar ayuda a comprender"
+            ],
+            "answer": "Practicar ayuda a comprender",
+            "hints": [
+              "Recuerda la regla: Un argumento une una postura con razones y evidencia pertinente.",
+              "«Me gusta este libro» es una opinión. «Tiene diez capítulos» es un dato verificable."
+            ],
+            "feedback": "Porque introduce la razón que apoya la propuesta."
+          }
+        ]
       }
     ]
   },
@@ -707,6 +1091,198 @@
           }
         ],
         "prerequisite": "english-greetings"
+      },
+      {
+        "id": "english-has",
+        "title": "Hablar de lo que tienes",
+        "objective": "Comprender y aplicar: hablar de lo que tienes.",
+        "prerequisite": "english-am",
+        "explanation": "Usa I have y You have. Para he, she o it, usa has. Have puede expresar posesión en estas oraciones.",
+        "simple": "Usa I have y You have.",
+        "example": "I have a book: Tengo un libro. She has a pen: Ella tiene un bolígrafo.",
+        "alternative": "They have notebooks: Ellos tienen cuadernos. He has a bag: Él tiene una mochila.",
+        "card": {
+          "front": "¿Cómo puedes aplicar hablar de lo que tienes?",
+          "back": "I have a book: Tengo un libro. She has a pen: Ella tiene un bolígrafo."
+        },
+        "questions": [
+          {
+            "id": "english-has-0",
+            "kind": "practice",
+            "prompt": "Completa: I ___ a pencil.",
+            "options": [
+              "has",
+              "have",
+              "is"
+            ],
+            "answer": "have",
+            "hints": [
+              "Recuerda la regla: Usa I have y You have.",
+              "I have a book: Tengo un libro. She has a pen: Ella tiene un bolígrafo."
+            ],
+            "feedback": "I se combina con have para expresar posesión."
+          },
+          {
+            "id": "english-has-1",
+            "kind": "practice",
+            "prompt": "Completa: She ___ a book.",
+            "options": [
+              "have",
+              "are",
+              "has"
+            ],
+            "answer": "has",
+            "hints": [
+              "Recuerda la regla: Usa I have y You have.",
+              "I have a book: Tengo un libro. She has a pen: Ella tiene un bolígrafo."
+            ],
+            "feedback": "Con she usamos has."
+          },
+          {
+            "id": "english-has-2",
+            "kind": "check",
+            "prompt": "¿Qué significa They have water?",
+            "options": [
+              "Ellos tienen agua",
+              "Ella es agua",
+              "Yo tengo agua"
+            ],
+            "answer": "Ellos tienen agua",
+            "hints": [
+              "Recuerda la regla: Usa I have y You have.",
+              "They have notebooks: Ellos tienen cuadernos. He has a bag: Él tiene una mochila."
+            ],
+            "feedback": "They es ellos o ellas; have expresa tienen."
+          }
+        ]
+      },
+      {
+        "id": "english-routine",
+        "title": "Contar tu rutina",
+        "objective": "Comprender y aplicar: contar tu rutina.",
+        "prerequisite": "english-has",
+        "explanation": "En presente simple usa el verbo base con I, you, we y they. En afirmaciones con he o she suele añadirse -s; algunas formas llevan -es.",
+        "simple": "En presente simple usa el verbo base con I, you, we y they.",
+        "example": "I read every day. She reads every day. Leo cada día. Ella lee cada día.",
+        "alternative": "We play after school. He plays after school: jugamos y él juega después de clase.",
+        "card": {
+          "front": "¿Cómo puedes aplicar contar tu rutina?",
+          "back": "I read every day. She reads every day. Leo cada día. Ella lee cada día."
+        },
+        "questions": [
+          {
+            "id": "english-routine-0",
+            "kind": "practice",
+            "prompt": "Completa: I ___ English.",
+            "options": [
+              "studies",
+              "study",
+              "studying"
+            ],
+            "answer": "study",
+            "hints": [
+              "Recuerda la regla: En presente simple usa el verbo base con I, you, we y they.",
+              "I read every day. She reads every day. Leo cada día. Ella lee cada día."
+            ],
+            "feedback": "Con I usamos study en presente simple afirmativo."
+          },
+          {
+            "id": "english-routine-1",
+            "kind": "practice",
+            "prompt": "Completa: He ___ books.",
+            "options": [
+              "read",
+              "reads",
+              "reading"
+            ],
+            "answer": "reads",
+            "hints": [
+              "Recuerda la regla: En presente simple usa el verbo base con I, you, we y they.",
+              "I read every day. She reads every day. Leo cada día. Ella lee cada día."
+            ],
+            "feedback": "Con he añadimos -s a read."
+          },
+          {
+            "id": "english-routine-2",
+            "kind": "check",
+            "prompt": "¿Qué oración significa Leemos cada día?",
+            "options": [
+              "We read every day",
+              "She reads every day",
+              "We sleep every day"
+            ],
+            "answer": "We read every day",
+            "hints": [
+              "Recuerda la regla: En presente simple usa el verbo base con I, you, we y they.",
+              "We play after school. He plays after school: jugamos y él juega después de clase."
+            ],
+            "feedback": "We significa nosotros; read es leer y every day es cada día."
+          }
+        ]
+      },
+      {
+        "id": "english-questions",
+        "title": "Preguntar con do y does",
+        "objective": "Comprender y aplicar: preguntar con do y does.",
+        "prerequisite": "english-routine",
+        "explanation": "En presente simple usa Do con I, you, we y they. Usa Does con he, she e it. Después de does, el verbo principal va en forma base.",
+        "simple": "En presente simple usa Do con I, you, we y they.",
+        "example": "Do you read? ¿Lees? Does she read? ¿Ella lee? No escribimos does she reads.",
+        "alternative": "Do they play? Does he study? El auxiliar cambia; el verbo principal conserva su forma base.",
+        "card": {
+          "front": "¿Cómo puedes aplicar preguntar con do y does?",
+          "back": "Do you read? ¿Lees? Does she read? ¿Ella lee? No escribimos does she reads."
+        },
+        "questions": [
+          {
+            "id": "english-questions-0",
+            "kind": "practice",
+            "prompt": "Completa: ___ you study?",
+            "options": [
+              "Does",
+              "Do",
+              "Is"
+            ],
+            "answer": "Do",
+            "hints": [
+              "Recuerda la regla: En presente simple usa Do con I, you, we y they.",
+              "Do you read? ¿Lees? Does she read? ¿Ella lee? No escribimos does she reads."
+            ],
+            "feedback": "You se combina con do en esta pregunta."
+          },
+          {
+            "id": "english-questions-1",
+            "kind": "practice",
+            "prompt": "¿Cuál pregunta está bien formada?",
+            "options": [
+              "Does she reads?",
+              "Do she read?",
+              "Does she read?"
+            ],
+            "answer": "Does she read?",
+            "hints": [
+              "Recuerda la regla: En presente simple usa Do con I, you, we y they.",
+              "Do you read? ¿Lees? Does she read? ¿Ella lee? No escribimos does she reads."
+            ],
+            "feedback": "Con she usamos does y el verbo base read."
+          },
+          {
+            "id": "english-questions-2",
+            "kind": "check",
+            "prompt": "Quieres preguntar si él juega. ¿Qué dices?",
+            "options": [
+              "Does he play?",
+              "Do he plays?",
+              "Does he plays?"
+            ],
+            "answer": "Does he play?",
+            "hints": [
+              "Recuerda la regla: En presente simple usa Do con I, you, we y they.",
+              "Do they play? Does he study? El auxiliar cambia; el verbo principal conserva su forma base."
+            ],
+            "feedback": "Does corresponde a he y play mantiene la forma base."
+          }
+        ]
       }
     ]
   },
@@ -908,6 +1484,198 @@
           }
         ],
         "prerequisite": "python-values"
+      },
+      {
+        "id": "python-condition",
+        "title": "Decidir con condiciones",
+        "objective": "Comprender y aplicar: decidir con condiciones.",
+        "prerequisite": "python-output",
+        "explanation": "if ejecuta un bloque si una condición es verdadera. else ofrece una alternativa. La indentación identifica qué instrucciones pertenecen al bloque.",
+        "simple": "if ejecuta un bloque si una condición es verdadera.",
+        "example": "Si puntos >= 10, muestra «Meta lograda»; de lo contrario, «Sigue practicando». >= incluye el valor diez.",
+        "alternative": "if edad >= 12: selecciona un bloque según la condición; no ejecutamos código en estas actividades.",
+        "card": {
+          "front": "¿Cómo puedes aplicar decidir con condiciones?",
+          "back": "Si puntos >= 10, muestra «Meta lograda»; de lo contrario, «Sigue practicando». >= incluye el valor diez."
+        },
+        "questions": [
+          {
+            "id": "python-condition-0",
+            "kind": "practice",
+            "prompt": "¿Qué significa >=?",
+            "options": [
+              "Mayor o igual",
+              "Solo menor",
+              "Siempre distinto"
+            ],
+            "answer": "Mayor o igual",
+            "hints": [
+              "Recuerda la regla: if ejecuta un bloque si una condición es verdadera.",
+              "Si puntos >= 10, muestra «Meta lograda»; de lo contrario, «Sigue practicando». >= incluye el valor diez."
+            ],
+            "feedback": "Incluye valores mayores y el valor que se compara."
+          },
+          {
+            "id": "python-condition-1",
+            "kind": "practice",
+            "prompt": "puntos = 8. ¿Es verdadera puntos >= 10?",
+            "options": [
+              "Sí",
+              "No",
+              "No se puede comparar"
+            ],
+            "answer": "No",
+            "hints": [
+              "Recuerda la regla: if ejecuta un bloque si una condición es verdadera.",
+              "Si puntos >= 10, muestra «Meta lograda»; de lo contrario, «Sigue practicando». >= incluye el valor diez."
+            ],
+            "feedback": "8 es menor que 10; la condición no se cumple."
+          },
+          {
+            "id": "python-condition-2",
+            "kind": "check",
+            "prompt": "puntos = 10. Si puntos >= 10 muestra Meta. ¿Qué aparece?",
+            "options": [
+              "Sigue",
+              "Error obligatorio",
+              "Meta"
+            ],
+            "answer": "Meta",
+            "hints": [
+              "Recuerda la regla: if ejecuta un bloque si una condición es verdadera.",
+              "if edad >= 12: selecciona un bloque según la condición; no ejecutamos código en estas actividades."
+            ],
+            "feedback": "La igualdad está incluida en >=, así que entra en el bloque de la meta."
+          }
+        ]
+      },
+      {
+        "id": "python-loop",
+        "title": "Repetir con bucles",
+        "objective": "Comprender y aplicar: repetir con bucles.",
+        "prerequisite": "python-condition",
+        "explanation": "for recorre una secuencia. range(3) produce 0, 1 y 2: empieza en cero y excluye el límite final.",
+        "simple": "for recorre una secuencia.",
+        "example": "for i in range(3): print(i) muestra 0, 1 y 2, en tres iteraciones.",
+        "alternative": "range(1, 4) produce 1, 2 y 3; el límite final 4 no se incluye.",
+        "card": {
+          "front": "¿Cómo puedes aplicar repetir con bucles?",
+          "back": "for i in range(3): print(i) muestra 0, 1 y 2, en tres iteraciones."
+        },
+        "questions": [
+          {
+            "id": "python-loop-0",
+            "kind": "practice",
+            "prompt": "¿Cuántas iteraciones tiene range(4)?",
+            "options": [
+              "3",
+              "4",
+              "5"
+            ],
+            "answer": "4",
+            "hints": [
+              "Recuerda la regla: for recorre una secuencia.",
+              "for i in range(3): print(i) muestra 0, 1 y 2, en tres iteraciones."
+            ],
+            "feedback": "Produce 0, 1, 2 y 3: cuatro valores."
+          },
+          {
+            "id": "python-loop-1",
+            "kind": "practice",
+            "prompt": "¿Qué valores produce range(1, 3)?",
+            "options": [
+              "1 y 2",
+              "1, 2 y 3",
+              "0 y 1"
+            ],
+            "answer": "1 y 2",
+            "hints": [
+              "Recuerda la regla: for recorre una secuencia.",
+              "for i in range(3): print(i) muestra 0, 1 y 2, en tres iteraciones."
+            ],
+            "feedback": "Empieza en 1 y se detiene antes de 3."
+          },
+          {
+            "id": "python-loop-2",
+            "kind": "check",
+            "prompt": "¿Cuántas veces imprime un mensaje for i in range(2)?",
+            "options": [
+              "Una",
+              "Tres",
+              "Dos"
+            ],
+            "answer": "Dos",
+            "hints": [
+              "Recuerda la regla: for recorre una secuencia.",
+              "range(1, 4) produce 1, 2 y 3; el límite final 4 no se incluye."
+            ],
+            "feedback": "range(2) contiene 0 y 1; cada valor corresponde a una iteración."
+          }
+        ]
+      },
+      {
+        "id": "python-debug",
+        "title": "Depurar paso a paso",
+        "objective": "Comprender y aplicar: depurar paso a paso.",
+        "prerequisite": "python-loop",
+        "explanation": "Depurar consiste en comparar el resultado esperado con el observado, localizar una causa, cambiar una cosa y volver a comprobar. Un error es información.",
+        "simple": "Depurar consiste en comparar el resultado esperado con el observado, localizar una causa, cambiar una cosa y volver a comprobar.",
+        "example": "Esperabas 6 pero 2 + 3 da 5. Antes de cambiar el programa, verifica si los valores o la operación representan tu objetivo.",
+        "alternative": "Si una condición usa > 10 pero debe incluir diez, la corrección es >= 10. Prueba 9, 10 y 11.",
+        "card": {
+          "front": "¿Cómo puedes aplicar depurar paso a paso?",
+          "back": "Esperabas 6 pero 2 + 3 da 5. Antes de cambiar el programa, verifica si los valores o la operación representan tu objetivo."
+        },
+        "questions": [
+          {
+            "id": "python-debug-0",
+            "kind": "practice",
+            "prompt": "¿Qué haces primero ante un resultado inesperado?",
+            "options": [
+              "Borrar todo",
+              "Comparar resultado esperado y observado",
+              "Ocultar el resultado"
+            ],
+            "answer": "Comparar resultado esperado y observado",
+            "hints": [
+              "Recuerda la regla: Depurar consiste en comparar el resultado esperado con el observado, localizar una causa, cambiar una cosa y volver a comprobar.",
+              "Esperabas 6 pero 2 + 3 da 5. Antes de cambiar el programa, verifica si los valores o la operación representan tu objetivo."
+            ],
+            "feedback": "Conocer la diferencia ayuda a localizar la causa."
+          },
+          {
+            "id": "python-debug-1",
+            "kind": "practice",
+            "prompt": "Quieres incluir 10 y números mayores. ¿Qué comparación eliges?",
+            "options": [
+              "> 10",
+              "< 10",
+              ">= 10"
+            ],
+            "answer": ">= 10",
+            "hints": [
+              "Recuerda la regla: Depurar consiste en comparar el resultado esperado con el observado, localizar una causa, cambiar una cosa y volver a comprobar.",
+              "Esperabas 6 pero 2 + 3 da 5. Antes de cambiar el programa, verifica si los valores o la operación representan tu objetivo."
+            ],
+            "feedback": ">= incluye el límite diez."
+          },
+          {
+            "id": "python-debug-2",
+            "kind": "check",
+            "prompt": "Cambias una condición. ¿Qué prueba es más útil?",
+            "options": [
+              "Probar debajo, en el límite y encima",
+              "Probar solo cien veces el mismo valor",
+              "No volver a ejecutar"
+            ],
+            "answer": "Probar debajo, en el límite y encima",
+            "hints": [
+              "Recuerda la regla: Depurar consiste en comparar el resultado esperado con el observado, localizar una causa, cambiar una cosa y volver a comprobar.",
+              "Si una condición usa > 10 pero debe incluir diez, la corrección es >= 10. Prueba 9, 10 y 11."
+            ],
+            "feedback": "Los casos 9, 10 y 11 verifican el comportamiento en torno al límite."
+          }
+        ]
       }
     ]
   },
@@ -1109,6 +1877,198 @@
             "feedback": "No compartas códigos. La urgencia y la presión no sustituyen una verificación independiente."
           }
         ]
+      },
+      {
+        "id": "digital-privacy",
+        "title": "Compartir con cuidado",
+        "objective": "Comprender y aplicar: compartir con cuidado.",
+        "prerequisite": "spot-phishing",
+        "explanation": "Comparte solo los datos necesarios. Antes de publicar una foto, revisa si muestra ubicación, escuela, documentos u otras personas. Pide permiso cuando corresponda.",
+        "simple": "Comparte solo los datos necesarios.",
+        "example": "Una foto puede mostrar una dirección en el fondo. Recorta o evita publicarla; cambiar solo el título no elimina ese dato.",
+        "alternative": "Un formulario de un juego no necesita conocer tu dirección para explicarte sus reglas.",
+        "card": {
+          "front": "¿Cómo puedes aplicar compartir con cuidado?",
+          "back": "Una foto puede mostrar una dirección en el fondo. Recorta o evita publicarla; cambiar solo el título no elimina ese dato."
+        },
+        "questions": [
+          {
+            "id": "digital-privacy-0",
+            "kind": "practice",
+            "prompt": "¿Qué dato conviene evitar en un perfil público?",
+            "options": [
+              "Un apodo",
+              "Tu dirección de casa",
+              "Tu color favorito"
+            ],
+            "answer": "Tu dirección de casa",
+            "hints": [
+              "Recuerda la regla: Comparte solo los datos necesarios.",
+              "Una foto puede mostrar una dirección en el fondo. Recorta o evita publicarla; cambiar solo el título no elimina ese dato."
+            ],
+            "feedback": "La dirección puede revelar dónde encontrarte; no es necesaria para un perfil público."
+          },
+          {
+            "id": "digital-privacy-1",
+            "kind": "practice",
+            "prompt": "Una foto muestra un documento personal. ¿Qué haces?",
+            "options": [
+              "Publicarla sin revisar",
+              "Añadir un emoji",
+              "Evitar exponer el documento"
+            ],
+            "answer": "Evitar exponer el documento",
+            "hints": [
+              "Recuerda la regla: Comparte solo los datos necesarios.",
+              "Una foto puede mostrar una dirección en el fondo. Recorta o evita publicarla; cambiar solo el título no elimina ese dato."
+            ],
+            "feedback": "Los datos visibles siguen expuestos aunque añadas adornos."
+          },
+          {
+            "id": "digital-privacy-2",
+            "kind": "check",
+            "prompt": "Un juego pide tu ubicación exacta sin explicar para qué. ¿Qué haces?",
+            "options": [
+              "Revisar la necesidad y rechazar el permiso si no hace falta",
+              "Aceptar todos los permisos",
+              "Compartir también los datos de amigos"
+            ],
+            "answer": "Revisar la necesidad y rechazar el permiso si no hace falta",
+            "hints": [
+              "Recuerda la regla: Comparte solo los datos necesarios.",
+              "Un formulario de un juego no necesita conocer tu dirección para explicarte sus reglas."
+            ],
+            "feedback": "Decide según la función y los datos mínimos; pide ayuda a una persona de confianza si tienes dudas."
+          }
+        ]
+      },
+      {
+        "id": "digital-sources",
+        "title": "Verificar antes de compartir",
+        "objective": "Comprender y aplicar: verificar antes de compartir.",
+        "prerequisite": "digital-privacy",
+        "explanation": "Revisa autor, fecha, evidencia y coincidencia con fuentes independientes fiables. La popularidad de una publicación no demuestra que sea verdadera.",
+        "simple": "Revisa autor, fecha, evidencia y coincidencia con fuentes independientes fiables.",
+        "example": "Un mensaje dice que mañana no hay clases. Confirma con el canal oficial de tu escuela antes de compartirlo.",
+        "alternative": "Una captura puede estar recortada o ser antigua; busca el mensaje original y su contexto.",
+        "card": {
+          "front": "¿Cómo puedes aplicar verificar antes de compartir?",
+          "back": "Un mensaje dice que mañana no hay clases. Confirma con el canal oficial de tu escuela antes de compartirlo."
+        },
+        "questions": [
+          {
+            "id": "digital-sources-0",
+            "kind": "practice",
+            "prompt": "¿Qué confirma mejor un cambio de horario escolar?",
+            "options": [
+              "Muchos reenvíos",
+              "El canal oficial actualizado",
+              "Una captura sin fecha"
+            ],
+            "answer": "El canal oficial actualizado",
+            "hints": [
+              "Recuerda la regla: Revisa autor, fecha, evidencia y coincidencia con fuentes independientes fiables.",
+              "Un mensaje dice que mañana no hay clases. Confirma con el canal oficial de tu escuela antes de compartirlo."
+            ],
+            "feedback": "La fuente responsable y la fecha permiten verificar el anuncio."
+          },
+          {
+            "id": "digital-sources-1",
+            "kind": "practice",
+            "prompt": "Una publicación tiene miles de likes. ¿Eso prueba que es cierta?",
+            "options": [
+              "Sí",
+              "No",
+              "Siempre que tenga foto"
+            ],
+            "answer": "No",
+            "hints": [
+              "Recuerda la regla: Revisa autor, fecha, evidencia y coincidencia con fuentes independientes fiables.",
+              "Un mensaje dice que mañana no hay clases. Confirma con el canal oficial de tu escuela antes de compartirlo."
+            ],
+            "feedback": "Los likes miden interacción, no la calidad de la evidencia."
+          },
+          {
+            "id": "digital-sources-2",
+            "kind": "check",
+            "prompt": "Una noticia antigua circula como si fuera de hoy. ¿Qué revisión ayuda?",
+            "options": [
+              "Solo el título",
+              "Solo los comentarios",
+              "La fecha y el contexto original"
+            ],
+            "answer": "La fecha y el contexto original",
+            "hints": [
+              "Recuerda la regla: Revisa autor, fecha, evidencia y coincidencia con fuentes independientes fiables.",
+              "Una captura puede estar recortada o ser antigua; busca el mensaje original y su contexto."
+            ],
+            "feedback": "La fecha evita confundir un hecho antiguo con un suceso actual."
+          }
+        ]
+      },
+      {
+        "id": "digital-backup",
+        "title": "Cuidar tus copias",
+        "objective": "Comprender y aplicar: cuidar tus copias.",
+        "prerequisite": "digital-sources",
+        "explanation": "Una copia permite recuperar información cuando se pierde el original. Guárdala en un lugar privado diferente del original y comprueba que puedes recuperarla.",
+        "simple": "Una copia permite recuperar información cuando se pierde el original.",
+        "example": "En ALLEN exporta el perfil y conserva la copia privada. Recuperar crea otro perfil; no elimina los que ya existen.",
+        "alternative": "Una copia guardada únicamente dentro del mismo almacenamiento puede perderse junto con el original.",
+        "card": {
+          "front": "¿Cómo puedes aplicar cuidar tus copias?",
+          "back": "En ALLEN exporta el perfil y conserva la copia privada. Recuperar crea otro perfil; no elimina los que ya existen."
+        },
+        "questions": [
+          {
+            "id": "digital-backup-0",
+            "kind": "practice",
+            "prompt": "¿Para qué sirve una copia de seguridad?",
+            "options": [
+              "Recuperar información",
+              "Hacer pública tu contraseña",
+              "Garantizar Internet"
+            ],
+            "answer": "Recuperar información",
+            "hints": [
+              "Recuerda la regla: Una copia permite recuperar información cuando se pierde el original.",
+              "En ALLEN exporta el perfil y conserva la copia privada. Recuperar crea otro perfil; no elimina los que ya existen."
+            ],
+            "feedback": "Una copia conserva datos para recuperarlos si el original se pierde."
+          },
+          {
+            "id": "digital-backup-1",
+            "kind": "practice",
+            "prompt": "¿Dónde conviene guardar una copia personal?",
+            "options": [
+              "En una publicación pública",
+              "En un lugar privado diferente del original",
+              "Solo en el mismo archivo original"
+            ],
+            "answer": "En un lugar privado diferente del original",
+            "hints": [
+              "Recuerda la regla: Una copia permite recuperar información cuando se pierde el original.",
+              "En ALLEN exporta el perfil y conserva la copia privada. Recuperar crea otro perfil; no elimina los que ya existen."
+            ],
+            "feedback": "La separación reduce el riesgo de perder original y copia juntos."
+          },
+          {
+            "id": "digital-backup-2",
+            "kind": "check",
+            "prompt": "¿Qué debes comprobar después de exportar?",
+            "options": [
+              "Que el archivo se puede recuperar",
+              "Que todos lo pueden descargar",
+              "Que tenga muchos emojis"
+            ],
+            "answer": "Que el archivo se puede recuperar",
+            "hints": [
+              "Recuerda la regla: Una copia permite recuperar información cuando se pierde el original.",
+              "Una copia guardada únicamente dentro del mismo almacenamiento puede perderse junto con el original."
+            ],
+            "feedback": "Una copia útil necesita ser legible y recuperable; protégela porque contiene progreso personal."
+          }
+        ]
       }
     ]
   },
@@ -1308,6 +2268,198 @@
               "Tamaño y agua también influyen."
             ],
             "feedback": "La comparación cambia tamaño y agua; no permite atribuir la diferencia únicamente al tipo de papel."
+          }
+        ]
+      },
+      {
+        "id": "science-measure",
+        "title": "Medir y usar unidades",
+        "objective": "Comprender y aplicar: medir y usar unidades.",
+        "prerequisite": "science-fair-test",
+        "explanation": "Una medida necesita un valor y una unidad. Para comparar, usa la misma magnitud y unidades compatibles. Registra también cómo hiciste la medición.",
+        "simple": "Una medida necesita un valor y una unidad.",
+        "example": "Una mesa mide 120 cm, equivalentes a 1,2 m. Para comparar con 1 m, convierte: 1 m = 100 cm.",
+        "alternative": "Dos recipientes de 500 mL suman 1000 mL, equivalentes a 1 L.",
+        "card": {
+          "front": "¿Cómo puedes aplicar medir y usar unidades?",
+          "back": "Una mesa mide 120 cm, equivalentes a 1,2 m. Para comparar con 1 m, convierte: 1 m = 100 cm."
+        },
+        "questions": [
+          {
+            "id": "science-measure-0",
+            "kind": "practice",
+            "prompt": "¿Cuál es una medida completa?",
+            "options": [
+              "20",
+              "20 cm",
+              "Largo"
+            ],
+            "answer": "20 cm",
+            "hints": [
+              "Recuerda la regla: Una medida necesita un valor y una unidad.",
+              "Una mesa mide 120 cm, equivalentes a 1,2 m. Para comparar con 1 m, convierte: 1 m = 100 cm."
+            ],
+            "feedback": "Incluye un valor y una unidad de longitud."
+          },
+          {
+            "id": "science-measure-1",
+            "kind": "practice",
+            "prompt": "¿A cuántos centímetros equivale 1 m?",
+            "options": [
+              "10",
+              "100",
+              "1000"
+            ],
+            "answer": "100",
+            "hints": [
+              "Recuerda la regla: Una medida necesita un valor y una unidad.",
+              "Una mesa mide 120 cm, equivalentes a 1,2 m. Para comparar con 1 m, convierte: 1 m = 100 cm."
+            ],
+            "feedback": "El prefijo centi corresponde a una centésima de metro."
+          },
+          {
+            "id": "science-measure-2",
+            "kind": "check",
+            "prompt": "Tienes 500 mL y añades 500 mL. ¿Cuánto hay?",
+            "options": [
+              "1 L",
+              "10 L",
+              "100 L"
+            ],
+            "answer": "1 L",
+            "hints": [
+              "Recuerda la regla: Una medida necesita un valor y una unidad.",
+              "Dos recipientes de 500 mL suman 1000 mL, equivalentes a 1 L."
+            ],
+            "feedback": "500 + 500 = 1000 mL, y 1000 mL equivalen a 1 L."
+          }
+        ]
+      },
+      {
+        "id": "science-data",
+        "title": "Interpretar datos",
+        "objective": "Comprender y aplicar: interpretar datos.",
+        "prerequisite": "science-measure",
+        "explanation": "Una tabla reúne registros. Un patrón describe cómo varían los datos; no demuestra por sí solo una causa. Comprueba unidades y condiciones antes de concluir.",
+        "simple": "Una tabla reúne registros.",
+        "example": "Una planta mide 5, 7 y 9 cm en tres días. Crece 2 cm entre cada medición; ese registro no demuestra qué causó el crecimiento.",
+        "alternative": "Temperaturas: 18, 20 y 19 °C. La mayor es 20 °C y la diferencia entre mayor y menor es 2 °C.",
+        "card": {
+          "front": "¿Cómo puedes aplicar interpretar datos?",
+          "back": "Una planta mide 5, 7 y 9 cm en tres días. Crece 2 cm entre cada medición; ese registro no demuestra qué causó el crecimiento."
+        },
+        "questions": [
+          {
+            "id": "science-data-0",
+            "kind": "practice",
+            "prompt": "Datos: 4, 6 y 8 cm. ¿Qué cambio hay entre mediciones?",
+            "options": [
+              "2 cm",
+              "4 cm",
+              "8 cm"
+            ],
+            "answer": "2 cm",
+            "hints": [
+              "Recuerda la regla: Una tabla reúne registros.",
+              "Una planta mide 5, 7 y 9 cm en tres días. Crece 2 cm entre cada medición; ese registro no demuestra qué causó el crecimiento."
+            ],
+            "feedback": "6 − 4 = 2 y 8 − 6 = 2."
+          },
+          {
+            "id": "science-data-1",
+            "kind": "practice",
+            "prompt": "Temperaturas: 17, 21 y 19 °C. ¿Cuál es la mayor?",
+            "options": [
+              "17 °C",
+              "19 °C",
+              "21 °C"
+            ],
+            "answer": "21 °C",
+            "hints": [
+              "Recuerda la regla: Una tabla reúne registros.",
+              "Una planta mide 5, 7 y 9 cm en tres días. Crece 2 cm entre cada medición; ese registro no demuestra qué causó el crecimiento."
+            ],
+            "feedback": "21 es mayor que 19 y 17."
+          },
+          {
+            "id": "science-data-2",
+            "kind": "check",
+            "prompt": "Dos fenómenos cambian a la vez. ¿Eso demuestra una causa?",
+            "options": [
+              "Siempre",
+              "No, hace falta investigar otras explicaciones",
+              "Sí, con solo tres registros"
+            ],
+            "answer": "No, hace falta investigar otras explicaciones",
+            "hints": [
+              "Recuerda la regla: Una tabla reúne registros.",
+              "Temperaturas: 18, 20 y 19 °C. La mayor es 20 °C y la diferencia entre mayor y menor es 2 °C."
+            ],
+            "feedback": "Una asociación observada no basta para demostrar causalidad."
+          }
+        ]
+      },
+      {
+        "id": "science-conclusion",
+        "title": "Explicar con evidencia",
+        "objective": "Comprender y aplicar: explicar con evidencia.",
+        "prerequisite": "science-data",
+        "explanation": "Una conclusión relaciona la pregunta con los resultados y reconoce límites. Si la evidencia no apoya la hipótesis, revisa la explicación en vez de esconder los datos.",
+        "simple": "Una conclusión relaciona la pregunta con los resultados y reconoce límites.",
+        "example": "Hipótesis: más luz mejora el crecimiento en estas condiciones. Si las plantas comparadas crecen igual, esos resultados no apoyan una diferencia en esa prueba.",
+        "alternative": "Si solo mediste una planta por condición, reconoce que la muestra es pequeña y propón repetir con más plantas.",
+        "card": {
+          "front": "¿Cómo puedes aplicar explicar con evidencia?",
+          "back": "Hipótesis: más luz mejora el crecimiento en estas condiciones. Si las plantas comparadas crecen igual, esos resultados no apoyan una diferencia en esa prueba."
+        },
+        "questions": [
+          {
+            "id": "science-conclusion-0",
+            "kind": "practice",
+            "prompt": "¿Qué debe incluir una conclusión?",
+            "options": [
+              "Resultados y límites",
+              "Solo lo que querías demostrar",
+              "Una certeza sin pruebas"
+            ],
+            "answer": "Resultados y límites",
+            "hints": [
+              "Recuerda la regla: Una conclusión relaciona la pregunta con los resultados y reconoce límites.",
+              "Hipótesis: más luz mejora el crecimiento en estas condiciones. Si las plantas comparadas crecen igual, esos resultados no apoyan una diferencia en esa prueba."
+            ],
+            "feedback": "Una conclusión explica qué apoyan los datos y qué no permiten afirmar."
+          },
+          {
+            "id": "science-conclusion-1",
+            "kind": "practice",
+            "prompt": "Los datos contradicen tu hipótesis. ¿Qué haces?",
+            "options": [
+              "Borrarlos",
+              "Revisar la hipótesis",
+              "Inventar otros datos"
+            ],
+            "answer": "Revisar la hipótesis",
+            "hints": [
+              "Recuerda la regla: Una conclusión relaciona la pregunta con los resultados y reconoce límites.",
+              "Hipótesis: más luz mejora el crecimiento en estas condiciones. Si las plantas comparadas crecen igual, esos resultados no apoyan una diferencia en esa prueba."
+            ],
+            "feedback": "La investigación cambia sus explicaciones según la evidencia."
+          },
+          {
+            "id": "science-conclusion-2",
+            "kind": "check",
+            "prompt": "Probaste una planta por condición. ¿Qué siguiente paso mejora la evidencia?",
+            "options": [
+              "Probar más plantas semejantes y repetir",
+              "Declarar que vale para todas las plantas",
+              "Cambiar todos los factores a la vez"
+            ],
+            "answer": "Probar más plantas semejantes y repetir",
+            "hints": [
+              "Recuerda la regla: Una conclusión relaciona la pregunta con los resultados y reconoce límites.",
+              "Si solo mediste una planta por condición, reconoce que la muestra es pequeña y propón repetir con más plantas."
+            ],
+            "feedback": "Más observaciones comparables ayudan a estudiar variación y límites."
           }
         ]
       }
