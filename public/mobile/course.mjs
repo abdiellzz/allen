@@ -1,3 +1,4 @@
+import {variantsFor} from './variants.mjs';
 import {extendCourses} from './course-extensions.mjs';
 import {scenarioCourses} from './scenario-courses.mjs';
 import {extraCourses} from './extra-courses.mjs';
@@ -64,5 +65,7 @@ export const courses = extendCourses([course,...extraCourses,...scenarioCourses]
 export const allTopics = courses.flatMap(c=>c.topics.map(t=>({...t,courseId:c.id,source:c.source,subject:c.subject})));
 export const getCourse = id => courses.find(c=>c.id===id);
 export const questions = allTopics.flatMap(t => t.questions.map(q => ({...q,topicId:t.id,courseId:t.courseId})));
-export const questionById = id => questions.find(q => q.id === id);
+const variantQuestions=questions.flatMap(variantsFor);
+export const questionById = id => questions.find(q => q.id === id)??variantQuestions.find(q=>q.id===id);
+export const sessionQuestions = (topic,round=0) => topic.questions.filter(q=>q.kind!=='diagnostic').map(q=>round?`${q.id}~v${round}`:q.id);
 export const topicById = id => allTopics.find(t => t.id === id);

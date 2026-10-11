@@ -69,6 +69,101 @@ def diagnose(page):
     page.get_by_role('button', name='Ver mi siguiente paso').click()
 
 
+def test_rescue_notebook_accessibility_and_native_export_contract(mobile_url):
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(viewport={'width':375, 'height':812})
+        page.add_init_script("window.AllenFiles={exportProgress:data=>{window.exportedProgress=data}}")
+        page.goto(mobile_url)
+        create_profile(page)
+        diagnose(page)
+        page.get_by_role('button',name='Empezar lección',exact=True).click()
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        answer(page,'8/3')
+        page.get_by_role('radio',name='6/2',exact=True).check()
+        page.get_by_role('button',name='Comprobar respuesta',exact=True).click()
+        page.get_by_text('Hagamos una pausa juntos',exact=True).wait_for()
+        page.get_by_role('button',name='Más sencillo y otro ejemplo',exact=True).click()
+        assert 'Otro ejemplo:' in page.locator('#help-panel').inner_text()
+        page.get_by_role('button',name='Guardar lo que comprendí',exact=True).click()
+        page.get_by_label('Mi descubrimiento').fill('<script>alert(1)</script> El denominador cuenta el total.')
+        page.get_by_role('button',name='Guardar descubrimiento',exact=True).click()
+        assert state(page)['notebook']['parts']['understood'] is True
+        page.reload()
+        navigate(page,'Mi progreso')
+        page.get_by_role('button',name='Abrir mi cuaderno',exact=True).click()
+        assert '<script>alert(1)</script>' in page.get_by_label('Mi descubrimiento').input_value()
+        assert page.locator('#content script').count()==0
+        page.locator('#settings-button').click()
+        page.get_by_label('Apariencia').select_option('dark')
+        page.locator('#accessibility-form select[name=textSize]').select_option('large')
+        page.get_by_label('Reducir movimiento').check()
+        page.get_by_role('button',name='Guardar accesibilidad',exact=True).click()
+        page.locator('html[data-theme=dark]').wait_for()
+        assert page.locator('html').get_attribute('data-reduce-motion')=='true'
+        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+        navigate(page,'Mi progreso')
+        page.get_by_role('button',name='Exportar mi progreso',exact=True).click()
+        page.wait_for_function('window.exportedProgress')
+        exported=json.loads(page.evaluate('window.exportedProgress'))
+        assert exported['state']['notebook']['parts']['understood'] is True
+        assert exported['state']['preferences']['theme']=='dark'
+        assert exported['state']['session']['answers'][-1]['correct'] is False
+        page.evaluate("window.dispatchEvent(new CustomEvent('allen-file-status',{detail:'Copia guardada.'}))")
+        assert page.locator('#notice').inner_text()=='Copia guardada.'
+        browser.close()
+
+
+def test_mixed_review_explain_back_and_scroll_restore_offline(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page()
+        page.goto(mobile_url)
+        create_profile(page)
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        page.evaluate("""async()=>{
+            const e=await import('./engine.mjs'),c=await import('./course.mjs'),d=await import('./storage.mjs');
+            const db=await d.openStorage(),s=await d.loadProfile(db,await d.activeProfile(db));
+            function finish(){if(s.session.phase==='lesson')e.advance(s);while(s.session.phase==='practice'){const q=c.questionById(s.session.questionIds[s.session.index]);e.submitAnswer(s,q.answer);e.advance(s);}}
+            e.startSession(s,'diagnostic');finish();for(const id of ['parts','equivalent']){e.startSession(s,'learn',id);finish();}
+            await d.saveProfile(db,s);db.close();
+        }""")
+        context.set_offline(True)
+        page.reload()
+        # New numeric variants remain available without network access.
+        navigate(page,'Practicar')
+        page.get_by_role('button',name='Mezclar mis temas',exact=True).click()
+        for index in range(2):
+            value=page.evaluate("""async()=>{const c=await import('./course.mjs'),d=await import('./storage.mjs');const db=await d.openStorage(),s=await d.loadProfile(db,await d.activeProfile(db));db.close();return c.questionById(s.session.questionIds[s.session.index]).answer;}""")
+            answer(page,value,last=index==1)
+        assert state(page)['completed']==['parts','equivalent']
+        page.get_by_role('heading',name='Elige la estrategia, no solo la respuesta',exact=True).wait_for()
+        navigate(page,'Aprender')
+        page.get_by_text('Ver las 6 lecciones',exact=True).click()
+        page.locator('.route-list article').first.get_by_role('button',name='Repasar tema',exact=True).click()
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        for index in range(3):
+            value=page.evaluate("""async()=>{const c=await import('./course.mjs'),d=await import('./storage.mjs');const db=await d.openStorage(),s=await d.loadProfile(db,await d.activeProfile(db));db.close();return c.questionById(s.session.questionIds[s.session.index]).answer;}""")
+            answer(page,value,last=index==2)
+        page.get_by_text('Explícamelo tú',exact=True).click()
+        page.locator('input[name=rule][value=parts]').check()
+        page.locator('input[name=example][value=parts]').check()
+        before_events=len(state(page)['events'])
+        page.get_by_role('button',name='Comprobar mi explicación',exact=True).click()
+        assert 'Relacionaste la regla' in page.locator('#explanation-form').locator('..').inner_text()
+        assert len(state(page)['events'])==before_events
+        navigate(page,'Mi progreso')
+        page.evaluate('window.scrollTo(0,350)')
+        before=page.evaluate('scrollY')
+        page.locator('#settings-button').click()
+        navigate(page,'Mi progreso')
+        assert abs(page.evaluate('scrollY')-before)<5
+        assert page.evaluate('window.allenNavigateBack()') is True
+        page.get_by_role('heading',name='Hola, Estudiante',exact=True).wait_for()
+        browser.close()
+
+
 def test_learning_survives_offline_reload_and_all_lessons_complete(mobile_url):
     with sync_playwright() as p:
         browser = p.chromium.launch()

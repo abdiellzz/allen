@@ -10,10 +10,10 @@ export function recap(state,now=new Date()){
 export function companionTip(state,view){
  const s=state.session,q=questionById(s?.questionIds[s?.index]),answer=s?.answers.find(a=>a.questionId===q?.id);
  if(view==='session'&&s?.phase==='complete')return {title:'Tu esfuerzo quedó guardado',text:recap(state).text,asset:'allen-celebrate.png'};
- if(view==='session'&&answer&&!answer.correct)return {title:'Vamos a revisar la idea',text:'Equivocarte nos da una pista. Lee el procedimiento, busca qué cambió y pide un ejemplo más sencillo.',asset:'allen-reading.png'};
+ if(view==='session'&&answer&&!answer.correct)return {title:'Vamos a revisar la idea',text:'Equivocarte nos da una pista. Lee el procedimiento, busca qué cambió y pide un ejemplo más sencillo.',asset:'allen-explaining-v1.png'};
  if(view==='session'&&answer?.correct)return {title:'Bien razonado',text:'Antes de seguir, explica con tus palabras por qué esa respuesta funciona.',asset:'allen-celebrate.png'};
  if(view==='session'&&s?.hints.filter(id=>id===q?.id).length)return {title:'Estoy contigo',text:'Usa una pista cada vez. Identifica los datos y prueba tu idea antes de mirar otra ayuda.',asset:'allen-reading.png'};
- if(view==='session')return {title:'Un paso cada vez',text:s?.phase==='lesson'?'Lee el ejemplo y pregúntate qué regla se aplicó. Después lo intentamos juntos.':'No necesitas responder rápido. Piensa qué te preguntan; si te atascas, puedes pedir una pista.',asset:'allen-reading.png'};
+ if(view==='session')return {title:'Un paso cada vez',text:s?.phase==='lesson'?'Lee el ejemplo y pregúntate qué regla se aplicó. Después lo intentamos juntos.':'No necesitas responder rápido. Piensa qué te preguntan; si te atascas, puedes pedir una pista.',asset:s?.phase==='lesson'?'allen-explaining-v1.png':'allen-thinking-v1.png'};
  if(view==='allen')return {title:'Sigamos conversando',text:'Puedes decirme “No entendí”, ver otro ejemplo o preguntarme qué hacer después. Mis respuestas están preparadas para estas rutas.',asset:'allen-reading.png'};
  return {title:'Tu siguiente paso',text:recommendation(state).reason,asset:'allen-reading.png'};
 }

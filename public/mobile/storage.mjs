@@ -1,5 +1,5 @@
 import {newState, RULES_VERSION} from './engine.mjs';
-import {course, courses, allTopics, getCourse, topicById, questionById} from './course.mjs';
+import {course, courses, allTopics, getCourse, topicById, questionById, sessionQuestions} from './course.mjs';
 const NAME='allen-mobile-v1';
 const requestResult = request => new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
 const done = tx => new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error??Error('No se pudo guardar.'));});
@@ -43,7 +43,8 @@ export function validateState(s){
   if(!s||s.version!==1||s.rulesVersion!==RULES_VERSION||s.courseId!==course.id||!Number.isSafeInteger(s.revision)||s.revision<0)fail();
   if(s.activeCourse!==undefined&&!getCourse(s.activeCourse))fail();
   if(s.diagnosticCourses!==undefined&&(!Array.isArray(s.diagnosticCourses)||s.diagnosticCourses.length>courses.length||s.diagnosticCourses.some(id=>!getCourse(id))||new Set(s.diagnosticCourses).size!==s.diagnosticCourses.length))fail();
-  if(s.preferences!==undefined&&(!s.preferences||!['normal','large'].includes(s.preferences.textSize)))fail();
+  if(s.preferences!==undefined&&(!s.preferences||!['normal','large'].includes(s.preferences.textSize)||(s.preferences.theme!==undefined&&!['light','dark','system'].includes(s.preferences.theme))||(s.preferences.reduceMotion!==undefined&&typeof s.preferences.reduceMotion!=='boolean')))fail();
+  if(s.notebook!==undefined){if(!s.notebook||Array.isArray(s.notebook)||typeof s.notebook!=='object'||Object.keys(s.notebook).length>allTopics.length)fail();for(const [id,n] of Object.entries(s.notebook)){if(!topicById(id)||!n||typeof n.text!=='string'||n.text.length>800||!timestamp(n.at)||typeof n.understood!=='boolean')fail();}}
   const p=s.profile;if(!p||!uuid(p.id)||typeof p.name!=='string'||p.name.trim().length<1||p.name.length>40||!['school','explore'].includes(p.goal)||!['bases','practice','challenge'].includes(p.level)||![5,10,15].includes(p.minutes))fail();
   if(typeof s.diagnosticComplete!=='boolean'||!Array.isArray(s.completed)||s.completed.length>allTopics.length||new Set(s.completed).size!==s.completed.length||s.completed.some(id=>!topicById(id)))fail();
   for(const id of s.completed){const pre=topicById(id).prerequisite;if(pre&&!s.completed.includes(pre))fail();}
@@ -59,12 +60,14 @@ export function validateState(s){
   if(!s.cards||typeof s.cards!=='object'||Array.isArray(s.cards))fail();
   for(const [id,c] of Object.entries(s.cards)){if(!topicById(id)||!c||typeof c.remembered!=='boolean'||!day(c.due)||!timestamp(c.at))fail();}
   if(s.session!==null){
-    const a=s.session;if(!a||!uuid(a.id)||!['diagnostic','learn','review'].includes(a.kind)||!['lesson','practice','complete'].includes(a.phase))fail();
+    const a=s.session;if(!a||!uuid(a.id)||!['diagnostic','learn','review','mixed'].includes(a.kind)||!['lesson','practice','complete'].includes(a.phase))fail();
     if(a.kind!=='diagnostic'&&!topicById(a.topicId))fail();
     if(a.kind==='diagnostic'&&(a.topicId!==null||a.phase==='lesson'))fail();
     const selected=getCourse(a.courseId??course.id);if(!selected)fail();
     if(a.kind!=='diagnostic'&&topicById(a.topicId).courseId!==selected.id)fail();
-    const expected=a.kind==='diagnostic'?selected.topics.flatMap(t=>t.questions.filter(q=>q.kind==='diagnostic').map(q=>q.id)):topicById(a.topicId).questions.filter(q=>q.kind!=='diagnostic').map(q=>q.id);
+    const round=a.round??0;if(!Number.isInteger(round)||round<0||round>3||(a.kind==='diagnostic'&&round!==0))fail();
+    if(a.kind==='mixed'&&(!Array.isArray(a.topicIds)||a.topicIds.length<2||a.topicIds.length>3||new Set(a.topicIds).size!==a.topicIds.length||a.topicId!==a.topicIds[0]||a.phase==='lesson'||a.topicIds.some(id=>!s.completed.includes(id)||topicById(id)?.courseId!==selected.id)))fail();
+    const expected=a.kind==='mixed'?a.topicIds.map(id=>sessionQuestions(topicById(id),round).at(-1)):a.kind==='diagnostic'?selected.topics.flatMap(t=>t.questions.filter(q=>q.kind==='diagnostic').map(q=>q.id)):sessionQuestions(topicById(a.topicId),round);
     if(JSON.stringify(a.questionIds)!==JSON.stringify(expected)||!Number.isInteger(a.index)||a.index<0||a.index>=expected.length||!Array.isArray(a.answers)||a.answers.length>expected.length||!Array.isArray(a.hints)||a.hints.length>expected.length*2)fail();
     const seen=new Set();for(const [index,r] of a.answers.entries()){const q=questionById(r.questionId);if(!q||r.questionId!==expected[index]||index>a.index||seen.has(r.questionId)||!q.options.includes(r.answer)||r.correct!==(r.answer===q.answer))fail();seen.add(r.questionId);}
     for(const id of a.hints){if(!expected.includes(id)||a.hints.filter(x=>x===id).length>questionById(id).hints.length)fail();}
@@ -82,7 +85,7 @@ export function parseBackup(text){
   validateState(value.state);
   // Only copy known properties. Never accept executable courses, privileges or AI settings.
   const s=value.state;
-  return structuredClone({version:s.version,rulesVersion:s.rulesVersion,courseId:s.courseId,...(s.preferences?{preferences:{textSize:s.preferences.textSize}}:{}),...(s.activeCourse?{activeCourse:s.activeCourse}:{}),...(s.diagnosticCourses?{diagnosticCourses:s.diagnosticCourses}:{}),profile:{id:s.profile.id,name:s.profile.name,goal:s.profile.goal,level:s.profile.level,minutes:s.profile.minutes},diagnosticComplete:s.diagnosticComplete,events:s.events.map(e=>Object.fromEntries(Object.entries(e).filter(([k])=>['id','type','topicId','at','questionId','answer','correct','sessionId','action','due','remembered'].includes(k)))),completed:s.completed,session:s.session?{id:s.session.id,...(s.session.courseId?{courseId:s.session.courseId}:{}),kind:s.session.kind,topicId:s.session.topicId,index:s.session.index,phase:s.session.phase,questionIds:s.session.questionIds,answers:s.session.answers.map(a=>({questionId:a.questionId,answer:a.answer,correct:a.correct})),hints:s.session.hints}:null,cards:Object.fromEntries(Object.entries(s.cards).map(([k,c])=>[k,{due:c.due,remembered:c.remembered,at:c.at}])),revision:s.revision});
+  return structuredClone({version:s.version,rulesVersion:s.rulesVersion,courseId:s.courseId,...(s.preferences?{preferences:{textSize:s.preferences.textSize,...(s.preferences.theme?{theme:s.preferences.theme}:{}),...(s.preferences.reduceMotion!==undefined?{reduceMotion:s.preferences.reduceMotion}:{})}}:{}),...(s.notebook?{notebook:Object.fromEntries(Object.entries(s.notebook).map(([id,n])=>[id,{text:n.text,understood:n.understood,at:n.at}]))}:{}),...(s.activeCourse?{activeCourse:s.activeCourse}:{}),...(s.diagnosticCourses?{diagnosticCourses:s.diagnosticCourses}:{}),profile:{id:s.profile.id,name:s.profile.name,goal:s.profile.goal,level:s.profile.level,minutes:s.profile.minutes},diagnosticComplete:s.diagnosticComplete,events:s.events.map(e=>Object.fromEntries(Object.entries(e).filter(([k])=>['id','type','topicId','at','questionId','answer','correct','sessionId','action','due','remembered'].includes(k)))),completed:s.completed,session:s.session?{id:s.session.id,...(s.session.courseId?{courseId:s.session.courseId}:{}),kind:s.session.kind,topicId:s.session.topicId,...(s.session.round!==undefined?{round:s.session.round}:{}),...(s.session.kind==='mixed'?{topicIds:s.session.topicIds}:{}),index:s.session.index,phase:s.session.phase,questionIds:s.session.questionIds,answers:s.session.answers.map(a=>({questionId:a.questionId,answer:a.answer,correct:a.correct})),hints:s.session.hints}:null,cards:Object.fromEntries(Object.entries(s.cards).map(([k,c])=>[k,{due:c.due,remembered:c.remembered,at:c.at}])),revision:s.revision});
 }
 export function prepareRecovery(text){const s=parseBackup(text);const suffix=' · recuperado';s.profile.id=crypto.randomUUID();s.profile.name=s.profile.name.slice(0,40-suffix.length)+suffix;s.revision=0;validateState(s);return s;}
 export async function restoreBackup(db,text){return saveProfile(db,prepareRecovery(text),{creating:true});}

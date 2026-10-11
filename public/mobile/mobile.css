@@ -26,3 +26,20 @@ form label.field{display:grid;gap:5px;font-weight:650;margin:12px 0}input[type=t
 
 @media(max-width:480px){.brand>span:last-child{display:none}.section-menu>summary{font-size:13px;padding:7px 25px 7px 10px}.topbar{flex-wrap:nowrap}.brand{flex:none}#settings-button,#profiles-button{font-size:12px;padding:8px 9px;flex:none}}
 @media(max-width:350px){.topbar{flex-wrap:wrap}}
+
+/* Accessibility choices are local to the active profile. */
+html[data-theme=dark]{color-scheme:dark;background:#201c18;color:#f5eee4;--card:#2b2621;--line:#756c60;--muted:#ccc3b7;--green:#9acbbb;--orange:#efac7b;--tint:#303e37}
+html[data-theme=dark] body{background:#201c18;color:#f5eee4}
+html[data-theme=dark] :is(button,input,select,textarea,.options label,.example,.course-card,.section-menu>summary,.skip){background:var(--card);color:inherit;border-color:var(--line)}
+html[data-theme=dark] #navigation{background:var(--card);color:inherit;border-color:var(--line)}
+html[data-theme=dark] button.allen-companion{background:transparent;border:0}
+html[data-theme=dark] button.primary{background:var(--green);color:#18251e;border-color:var(--green)}
+html[data-theme=dark] :is(.feedback,.badge,.card-answer){background:#303e37;color:#e3f4ec}
+html[data-theme=dark] .feedback.error{background:#492a25;color:#ffe1d5}
+html[data-theme=dark] .course-card.selected{border-color:var(--green)}
+html[data-theme=dark] :focus-visible{outline-color:#efac7b}
+html[data-reduce-motion=true] *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+html[data-reduce-motion=true] .allen-companion:hover{transform:none}
+.motion-option{display:flex;align-items:center;gap:12px;min-height:48px;margin:12px 0}.motion-option input{width:22px;height:22px;flex:none}
+.topbar{position:sticky;top:0;background:var(--card);z-index:9}
+#accessibility-form{display:grid;gap:10px}.discovery{border-top:1px solid var(--line);padding:12px 0}.discovery p{white-space:pre-wrap;overflow-wrap:anywhere}.rescue-panel{border-color:var(--orange)}.rescue-panel>img{display:block;margin:8px auto;object-fit:contain}

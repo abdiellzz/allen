@@ -25,12 +25,14 @@ import android.widget.FrameLayout;
 import androidx.webkit.WebViewAssetLoader;
 
 /**
- * ALLEN Android demo: a WebView that serves the bundled frontend and the Pyodide runtime
- * from APK assets. The Python backend runs inside the page, so no network access is needed.
+ * ALLEN Android: a WebView serving bundled lessons and a prepared tutor from APK assets.
+ * Learning, profiles and progress work locally without a Python runtime or Internet.
  */
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
     private static final int FILE_REQUEST = 1;
+    private static final int EXPORT_REQUEST = 2;
+    private String pendingBackup;
     static volatile boolean foreground;
 
     private WebView webView;
@@ -58,6 +60,7 @@ public class MainActivity extends Activity {
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
         webView.addJavascriptInterface(new ReminderBridge(), "AllenReminders");
+        webView.addJavascriptInterface(new BackupBridge(), "AllenFiles");
         LearningReminder.createChannel(this);
 
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
@@ -93,11 +96,10 @@ public class MainActivity extends Activity {
                     fileCallback.onReceiveValue(null);
                 }
                 fileCallback = callback;
-                // The page filters by extension (.pdf, .license, .allenpack…), which Android
-                // cannot express as MIME types, so let the user pick any document.
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                // Use Android's document picker; no broad storage permission is required.
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.setType("*/*");
+                intent.setType(java.util.Arrays.asList(params.getAcceptTypes()).contains("application/json") ? "application/json" : "*/*");
                 try {
                     startActivityForResult(Intent.createChooser(intent, "Selecciona un archivo"), FILE_REQUEST);
                 } catch (ActivityNotFoundException e) {
@@ -118,6 +120,32 @@ public class MainActivity extends Activity {
     private boolean trustedPage() {
         String url = webView.getUrl();
         return url != null && url.startsWith("https://" + HOST + "/mobile/");
+    }
+    private void reportFile(String message) {
+        if (trustedPage()) webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('allen-file-status',{detail:"
+                + JSONObject.quote(message) + "}))", null);
+    }
+    public final class BackupBridge {
+        @JavascriptInterface public void exportProgress(String data) {
+            runOnUiThread(() -> {
+                if (!trustedPage() || data == null || data.length() > 2000000 || data.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 2000000 || pendingBackup != null) return;
+                try {
+                    JSONObject value = new JSONObject(data);
+                    if (!"allen-mobile-backup".equals(value.optString("format")) || value.optInt("version") != 1) {
+                        reportFile("La copia no es compatible."); return;
+                    }
+                    pendingBackup = data;
+                    Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType("application/json");
+                    intent.putExtra(Intent.EXTRA_TITLE, "allen-progreso.json");
+                    startActivityForResult(intent, EXPORT_REQUEST);
+                } catch (Exception error) {
+                    pendingBackup = null;
+                    reportFile("No se pudo abrir el selector de archivos. Tu progreso sigue guardado.");
+                }
+            });
+        }
     }
     private void reportReminder(String message) {
         if (trustedPage()) webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('allen-reminder-status',{detail:"
@@ -209,6 +237,28 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == EXPORT_REQUEST) {
+            String backup = pendingBackup;
+            pendingBackup = null;
+            Uri target = data == null ? null : data.getData();
+            if (resultCode != RESULT_OK || target == null || backup == null) {
+                reportFile("Guardado cancelado. Tu progreso sigue en ALLEN.");
+            } else {
+                new Thread(() -> {
+                    String message;
+                    try (java.io.OutputStream out = getContentResolver().openOutputStream(target, "wt")) {
+                        if (out == null) throw new java.io.IOException("No output stream");
+                        out.write(backup.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        message = "Copia guardada. Consérvala en un lugar privado; no está cifrada.";
+                    } catch (Exception error) {
+                        message = "No se pudo guardar el archivo. Tu progreso sigue en ALLEN; inténtalo otra vez.";
+                    }
+                    String result = message;
+                    runOnUiThread(() -> {if (!isFinishing() && !isDestroyed()) reportFile(result);});
+                }, "allen-backup-export").start();
+            }
+            return;
+        }
         if (requestCode == FILE_REQUEST && fileCallback != null) {
             fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
             fileCallback = null;
@@ -225,14 +275,16 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (trustedPage() && !closingShown) {
-            closingShown = true;
-            webView.evaluateJavascript("window.dispatchEvent(new Event('allen-close-request'))", null);
-        } else if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
+        if (trustedPage()) {
+            webView.evaluateJavascript("Boolean(window.allenNavigateBack && window.allenNavigateBack())", handled -> {
+                if ("true".equals(handled)) { closingShown = false; return; }
+                if (!closingShown) {
+                    closingShown = true;
+                    webView.evaluateJavascript("window.dispatchEvent(new Event('allen-close-request'))", null);
+                } else finish();
+            });
+        } else if (webView.canGoBack()) webView.goBack();
+        else super.onBackPressed();
     }
 
     @Override
