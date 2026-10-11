@@ -46,12 +46,13 @@ function profileForm(){return `<section class="panel"><h2>Un espacio para aprend
 async function profiles(){menu.hidden=true;menu.open=false;const list=await listProfiles(db);main.innerHTML=hero('Perfiles locales','Tu espacio, en este dispositivo','Los perfiles separan el progreso. Cualquier persona con acceso a este navegador puede abrirlos.')+`<section class="panel"><h2>Elegir perfil</h2>${list.length?list.map(s=>`<div class="profile-item"><span><strong>${escape(s.profile.name)}</strong><small class="muted"> · ${s.completed.length}/${allTopics.length} temas</small></span><div class="row">${btn('Abrir','select-profile',`data-id="${s.profile.id}"`)}${btn('Eliminar','confirm-delete',`data-id="${s.profile.id}"`,'danger')}</div></div>`).join(''):'<p>Aún no hay perfiles.</p>'}</section>`+profileForm()+`<section class="panel"><h2>Recuperar progreso</h2>${btn('Importar una copia local','import')}<p class="small muted">No subimos el archivo a Internet. No importamos cursos ni instrucciones de IA.</p></section>`;nav.hidden=true;main.focus();}
 async function render({focus=true}={}){
  nav.hidden=!state;menu.hidden=!state;menu.open=false;
- if(!state||view==='profiles'){await profiles();return;}
+ if(!state||view==='profiles'){await profiles();androidExtras?.rendered({view:'profiles',profile:state?.profile,main});return;}
  document.documentElement.dataset.textSize=state.preferences?.textSize??'normal';
  document.querySelector('#current-section').textContent=({today:'Hoy',learn:'Aprender',practice:'Practicar',allen:'Allen',progress:'Mi progreso',session:'Actividad',backup:'Copia'})[view]??'Hoy';
  const screens={today,learn,practice,allen,progress,session,backup};main.innerHTML=(screens[view]??today)();
  for(const button of nav.querySelectorAll('button')){if(button.dataset.view===view)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');}
  if(focus)main.focus();
+ androidExtras?.rendered({view,profile:state.profile,main});
 }
 async function mutate(fn){const next=structuredClone(state);fn(next);state=await saveProfile(db,next);}
 async function guarded(fn){if(busy)return;busy=true;main.setAttribute('aria-busy','true');document.querySelectorAll('button').forEach(b=>b.disabled=true);try{await fn();}catch(error){inform(error.message??'No se pudo completar la acción. Tu progreso anterior sigue guardado.',true);}finally{busy=false;main.removeAttribute('aria-busy');document.querySelectorAll('button').forEach(b=>b.disabled=false);}}
@@ -108,4 +109,6 @@ async function offline(){
   registration.addEventListener('updatefound',()=>{const worker=registration.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)inform('Hay una actualización disponible. Cierra todas las pestañas de ALLEN y vuelve a abrir.');});});
  }catch{document.querySelector('#offline-status').textContent='No se pudo descargar el curso offline. Recarga con conexión.';}
 }
+// APK only: guided tour and update panel (android-extras.mjs). The web PWA never loads it.
+const androidExtras=bundledAndroid?await import('./android-extras.mjs').catch(()=>null):null;
 try{db=await openStorage();const id=await activeProfile(db);state=id?await loadProfile(db,id):null;await render();offline();}catch{main.innerHTML='<section class="panel"><h1>No pudimos abrir el almacenamiento</h1><p>ALLEN necesita almacenamiento local para guardar tu progreso. Comprueba los permisos del navegador y recarga. No hemos borrado tus datos.</p></section>';nav.hidden=true;}
