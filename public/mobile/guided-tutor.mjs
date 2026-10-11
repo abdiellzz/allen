@@ -16,10 +16,12 @@ const FAQ=[
  ['mastery','¿Mi porcentaje es una nota escolar?','No. Es una estimación a partir de evidencia, dificultad, recencia y ayudas. Repetir preguntas conocidas no garantiza aplicar lo aprendido en situaciones nuevas.'],
  ['chat','¿Cómo responde Allen?','Uso explicaciones, ejemplos y respuestas preparadas de los cursos. Puedes elegir preguntas o escribir una duda breve. Si no encuentro una respuesta cubierta, te lo digo y propongo opciones. No necesito un modelo externo.'],
  ['privacy','¿Dónde quedan mis datos?','El progreso permanece en el almacenamiento local de este dispositivo. Este tutor no envía preguntas ni materiales a un servidor y no guarda conversaciones. Evita escribir datos personales.'],
- ['switch','¿Cómo cambio de curso?','En Aprender elige una ruta. Si tienes una actividad sin terminar, continúa y termínala antes de cambiar. Elegir tu ruta actual te muestra sus lecciones.'],
+ ['switch','¿Cómo cambio de curso?','En Aprender elige una ruta. Cada materia conserva su actividad pendiente: puedes cambiar y retomarla después. Elegir tu ruta actual te muestra sus lecciones.'],
  ['practice','¿Cómo compruebo que entendí?','Explica la idea con tus palabras y aplícala a un caso distinto. Las comprobaciones cierran la lección: necesitas acertar la comprobación y al menos dos de las tres actividades.'],
  ['motivation','¿Y si hoy me cuesta aprender?','Puedes dividir la tarea: una explicación, un ejemplo y un intento. Pide apoyo y vuelve a probar. Tu progreso cuenta por lo que comprendes, sin castigos por perder una racha.'],
- ['courses','¿Qué puedo aprender aquí?','Hay rutas de fracciones, comprensión lectora, inglés, Python, seguridad digital y ciencias. Cada ruta combina bases con aplicaciones y repasos; explora Aprender para ver sus lecciones.']
+ ['methods','¿Puedo aprender sin hacer solo quizzes?','Sí. Cada lección permite entender, explorar, construir, aplicar, explicar y recordar. Los modelos cambian según la materia. La práctica y la comprobación final aportan evidencia; explorar o escribir una nota no desbloquea un tema automáticamente.'],
+ ['ranks','¿Cómo funcionan los rangos de Allen?','Los rangos reconocen temas comprobados y explicaciones que relacionan correctamente regla y ejemplo. No hay rachas ni castigos por descansar. Los cinco rangos y sus requisitos aparecen en Mi progreso; no equivalen a una certificación.'],
+ ['courses','¿Qué puedo aprender aquí?','Hay catorce rutas de matemáticas, lectura, inglés, tecnología, ciencias, geografía, historia, biología, física, química, ciudadanía, estudio y finanzas cotidianas. Cada ruta combina bases con aplicaciones y repasos; explora Aprender para ver sus lecciones.']
 ];
 export const normalize = text => String(text??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 export const faq = FAQ.map(([id,label,text])=>({id:`faq:${id}`,label,text,source:'Guía de ALLEN'}));

@@ -8,7 +8,7 @@ import {newDraft,draftAnswer,visualExplanation} from '../public/mobile/activity-
 const fresh=()=>({...newState({id:crypto.randomUUID(),name:'Ana',goal:'school',level:'bases',minutes:5}),revision:1});
 function finish(s){if(s.session.phase==='lesson')advance(s);while(s.session.phase==='practice'){const q=questionById(s.session.questionIds[s.session.index]);submitAnswer(s,q.answer);advance(s);}}
 test('all 56 modules have complete content and earlier prerequisites within their course',()=>{
- assert.equal(allTopics.length,143);assert.equal(new Set(allTopics.map(t=>t.id)).size,143);
+ assert.equal(allTopics.length,255);assert.equal(new Set(allTopics.map(t=>t.id)).size,255);
  for(const c of courses){assert.equal(new Set(c.topics.map(t=>t.module)).size,4);for(const [i,t]of c.topics.entries()){assert.ok(t.explanation&&t.example&&t.alternative);if(t.prerequisite)assert.ok(c.topics.slice(0,i).some(p=>p.id===t.prerequisite));assert.equal(t.questions.filter(q=>q.kind==='check').length,1);}}
 });
 test('interactive answers obey deterministic rules, preserve wrong attempts and reject forged grades',()=>{

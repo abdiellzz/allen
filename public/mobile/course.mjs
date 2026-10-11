@@ -1,3 +1,4 @@
+import {addWorkshops} from './workshops.mjs';
 import {schoolCourses} from './school-courses.mjs';
 import {addReinforcement} from './reinforcement.mjs';
 import {variantsFor} from './variants.mjs';
@@ -63,11 +64,13 @@ export const course = {
     }
   ]
 };
-export const courses = [...addReinforcement(extendCourses([course,...extraCourses,...scenarioCourses])),...schoolCourses];
+const baseCourses = [...addReinforcement(extendCourses([course,...extraCourses,...scenarioCourses])),...schoolCourses];
+const previousOffsets=new Map(baseCourses.flatMap(c=>c.topics.flatMap(t=>t.questions)).map((q,i)=>[q.id,i]));
+export const courses = addWorkshops(baseCourses);
 export const allTopics = courses.flatMap(c=>c.topics.map(t=>({...t,courseId:c.id,source:c.source,subject:c.subject})));
 export const getCourse = id => courses.find(c=>c.id===id);
 export const questions = allTopics.flatMap(t => t.questions.map(q => ({...q,topicId:t.id,courseId:t.courseId})));
-const variantQuestions=questions.flatMap(variantsFor);
+const variantQuestions=questions.flatMap((q,i)=>variantsFor(q,previousOffsets.get(q.id)??i));
 export const questionById = id => questions.find(q => q.id === id)??variantQuestions.find(q=>q.id===id);
 export const sessionQuestions = (topic,round=0) => topic.questions.filter(q=>q.kind!=='diagnostic').map(q=>round?`${q.id}~v${round}`:q.id);
 export const topicById = id => allTopics.find(t => t.id === id);

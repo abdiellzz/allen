@@ -6,7 +6,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -153,7 +153,7 @@ def test_mixed_review_explain_back_and_scroll_restore_offline(mobile_url):
         assert state(page)['completed']==['parts','equivalent']
         page.get_by_role('heading',name='Elige la estrategia, no solo la respuesta',exact=True).wait_for()
         navigate(page,'Aprender')
-        page.get_by_text('Ver las 14 lecciones',exact=True).click()
+        page.get_by_text('Ver las 22 lecciones',exact=True).click()
         page.locator('.route-list article').first.get_by_role('button',name='Repasar tema',exact=True).click()
         page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
         for index in range(3):
@@ -164,7 +164,7 @@ def test_mixed_review_explain_back_and_scroll_restore_offline(mobile_url):
         page.locator('input[name=example][value=parts]').check()
         before_events=len(state(page)['events'])
         page.get_by_role('button',name='Comprobar mi explicación',exact=True).click()
-        assert 'Relacionaste la regla' in page.locator('#explanation-form').locator('..').inner_text()
+        expect(page.locator('#explanation-form').locator('..')).to_contain_text('Relacionaste la regla')
         assert len(state(page)['events'])==before_events
         navigate(page,'Mi progreso')
         page.evaluate('window.scrollTo(0,350)')
@@ -632,4 +632,88 @@ def test_school_subject_selection_switching_and_untimed_paths(mobile_url):
         }""")
         assert recovered['savedSessions']==state(page)['savedSessions']
         assert recovered['profile']['id']!=state(page)['profile']['id']
+        browser.close()
+
+
+def test_learning_labs_build_notes_and_rank_evidence_offline(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page()
+        page.goto(mobile_url)
+        create_profile(page,'Nora')
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        diagnose(page)
+        page.get_by_role('button',name='Empezar lección',exact=True).click()
+        before=state(page)['events']
+        page.get_by_role('button',name='Explora',exact=True).click()
+        page.get_by_role('button',name='Parte 2',exact=True).click()
+        page.get_by_label('Partes totales').select_option('4')
+        assert '2/4' in page.locator('.lab-output').inner_text()
+        page.get_by_role('button',name='Construye',exact=True).click()
+        page.get_by_role('button',name='Idea 1',exact=True).click()
+        assert page.get_by_role('button',name='Idea 1',exact=True).is_disabled()
+        page.get_by_role('button',name='Explícalo',exact=True).click()
+        page.get_by_label('Mi explicación').fill('Dos de cuatro partes iguales forman la mitad.')
+        page.get_by_role('button',name='Guardar mi explicación',exact=True).click()
+        assert state(page)['events']==before
+        assert state(page)['completed']==[]
+        context.set_offline(True)
+        page.reload()
+        page.get_by_role('button',name='Continuar aprendiendo',exact=True).click()
+        assert page.get_by_label('Mi explicación').input_value().startswith('Dos de cuatro')
+        page.evaluate("""async()=>{
+            const e=await import('./engine.mjs'),c=await import('./course.mjs'),st=await import('./storage.mjs'),db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db));
+            const finish=()=>{if(s.session.phase==='lesson')e.advance(s);while(s.session.phase==='practice'){e.submitAnswer(s,c.questionById(s.session.questionIds[s.session.index]).answer);e.advance(s);}};
+            finish();for(const id of ['equivalent','sum','fraction-compare','fraction-unlike']){e.startSession(s,'learn',id);finish();}await st.saveProfile(db,s);db.close();
+        }""")
+        page.reload()
+        navigate(page,'Mi progreso')
+        assert page.locator('.rank-current h3').inner_text()=='Explorador'
+        navigate(page,'Aprender')
+        page.get_by_text('Ver las 22 lecciones',exact=True).click()
+        page.locator('.route-list article').first.get_by_role('button',name='Repasar tema',exact=True).click()
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        for i in range(3):
+            value=page.evaluate("""async()=>{const c=await import('./course.mjs'),st=await import('./storage.mjs'),db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db));db.close();return c.questionById(s.session.questionIds[s.session.index]).answer;}""")
+            answer(page,value,last=i==2)
+        page.get_by_text('Explícamelo tú',exact=True).click()
+        page.locator('#explanation-form input[name="rule"][value="parts"]').check()
+        page.locator('#explanation-form input[name="example"][value="parts"]').check()
+        page.get_by_role('button',name='Comprobar mi explicación',exact=True).click()
+        page.get_by_text('Relacionaste la regla',exact=False).wait_for()
+        page.reload()
+        navigate(page,'Mi progreso')
+        assert page.locator('.rank-current h3').inner_text()=='Aprendiz'
+        page.get_by_text('Ver los cinco rangos',exact=True).click()
+        assert page.locator('.rank-gallery img').count()==5
+        assert page.locator('.rank-gallery img').evaluate_all('(images)=>images.every(i=>i.complete&&i.naturalWidth>0)')
+        browser.close()
+
+
+def test_subject_methods_map_sentence_and_molecules(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page();page.goto(mobile_url);create_profile(page)
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        context.set_offline(True)
+        def lesson(course):
+            page.evaluate("""async(id)=>{const e=await import('./engine.mjs'),c=await import('./course.mjs'),st=await import('./storage.mjs'),db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db));e.chooseCourse(s,id);e.startSession(s,'diagnostic');while(s.session.phase==='practice'){e.submitAnswer(s,c.questionById(s.session.questionIds[s.session.index]).answer);e.advance(s);}e.startSession(s,'learn',c.getCourse(id).topics[0].id);await st.saveProfile(db,s);db.close();}""",course)
+            page.reload();page.get_by_role('button',name='Continuar aprendiendo',exact=True).click()
+        lesson('geography-school-v1')
+        page.get_by_role('button',name='Explora',exact=True).click()
+        page.get_by_role('button',name='Este',exact=True).click()
+        assert state(page)['learningLabs']['geography-school-1']['values']==[1,0,0]
+        assert page.locator('.lab-map > span').count()==25
+        lesson('english-v1')
+        page.get_by_role('button',name='Construye',exact=True).click()
+        for word in ['I','am','a','student.']:
+            page.get_by_role('button',name=word,exact=True).click()
+        expect(page.locator('.lab-built')).to_contain_text('I → am → a → student.')
+        lesson('chemistry-school-v1')
+        page.get_by_role('button',name='Explora',exact=True).click()
+        page.get_by_label('Moléculas').select_option('3')
+        expect(page.locator('.lab-output')).to_contain_text('6 átomos de H y 3 de O')
+        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
         browser.close()

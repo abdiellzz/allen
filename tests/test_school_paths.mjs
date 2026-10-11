@@ -19,5 +19,5 @@ test('parked sessions reject foreign course questions, forged answers and nested
 });
 test('new subjects have independent module roots and real transfer checks',()=>{
  const added=courses.filter(c=>c.id.endsWith('-school-v1'));assert.equal(added.length,8);
- for(const c of added){assert.equal(c.topics.length,8);assert.equal(c.topics.filter(t=>!t.prerequisite).length,4);for(const t of c.topics){const check=t.questions.find(q=>q.kind==='check');assert.notEqual(check.prompt,t.questions.find(q=>q.kind==='practice').prompt);assert.ok(check.feedback.length>40);assert.equal(check.options.length,3);assert.equal(new Set(check.options).size,3);assert.equal(t.questions.filter(q=>q.kind==='practice').length,2);}}
+ for(const c of added){assert.equal(c.topics.length,16);assert.equal(c.topics.filter(t=>!t.prerequisite).length,4);for(const t of c.topics){const check=t.questions.find(q=>q.kind==='check');assert.notEqual(check.prompt,t.questions.find(q=>q.kind==='practice').prompt);assert.ok(check.feedback.length>40);assert.equal(check.options.length,3);assert.equal(new Set(check.options).size,3);assert.equal(t.questions.filter(q=>q.kind==='practice').length,2);}}
 });
