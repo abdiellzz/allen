@@ -56,14 +56,16 @@ Consulta [Instalación y primera ejecución](docs/INSTALLATION.md).
 
 **[Descargar ALLEN-demo-android.apk](https://github.com/abdiellzz/allen/raw/main/android/release/ALLEN-demo-android.apk)** (21 MB · Android 8.0 o superior)
 
-Versión publicada: **1.2.4-android-demo** (2026-10-10).
+Versión publicada: **1.2.4-android-demo** (2026-10-10, versión interna 2).
 
 Novedades de esta versión:
 
-- Diseño para teléfono: fondo crema, acento terracota, barra de navegación inferior y modo oscuro.
-- Recorrido guiado al abrir la app por primera vez, adaptado al modo elegido (Estudiante,
-  Profesor y Modo Feria). Se puede saltar y repetir desde **Configuración → Recorrido por ALLEN**.
-- **Configuración → Actualizar ALLEN** muestra la versión instalada y abre la descarga del APK más
+- La app abre la nueva experiencia educativa: seis cursos con diagnóstico, práctica guiada,
+  tarjetas de repaso, tutor con explicaciones preparadas y progreso por perfil.
+- Recorrido guiado al crear un perfil, adaptado a lo elegido («Reforzar lo que aprendo en la
+  escuela» o «Aprender algo nuevo por mi cuenta»). Se puede saltar y repetir desde
+  **Perfiles → Recorrido por ALLEN**.
+- **Perfiles → Actualizar ALLEN** muestra la versión instalada y abre la descarga del APK más
   reciente. Instálalo encima de la versión anterior: los datos se conservan.
 
 El enlace funciona con una sesión de GitHub que tenga acceso a este repositorio.
@@ -72,7 +74,7 @@ El enlace funciona con una sesión de GitHub que tenga acceso a este repositorio
 2. Abre el archivo desde **Descargas** o **Archivos**.
 3. Si Android avisa que no permite instalar apps desconocidas, pulsa **Configuración** y activa **Permitir de esta fuente**. Vuelve atrás.
 4. Pulsa **Instalar**. Si Play Protect avisa que la app no es conocida, elige **Más detalles → Instalar de todas formas**.
-5. Abre **ALLEN**. La primera vez tarda unos segundos mientras prepara Python en el teléfono.
+5. Abre **ALLEN** y crea tu perfil.
 
 Es una demo: funciona sin Internet y guarda los datos en el teléfono, pero el chat con IA generativa responde en modo demo y no pide licencia. Desinstalar la app borra sus datos.
 
@@ -222,4 +224,4 @@ El código fuente puede ejecutarse en Linux para desarrollo, pero la distribuci�
 
 ALLEN · aprendizaje local, privado y diseñado para seguir funcionando sin depender de una nube.
 
-La rama móvil integra esta interfaz en el código Android. El APK de `main` sigue siendo la demo anterior; las mejoras requieren recompilar. Ver [integración y pruebas](docs/MOBILE_ANDROID_INTEGRATION.md).
+La APK de Android abre esta interfaz. Ver [integración y pruebas](docs/MOBILE_ANDROID_INTEGRATION.md).
