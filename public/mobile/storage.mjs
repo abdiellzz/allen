@@ -1,3 +1,4 @@
+import {validAnswer,correctAnswer} from './activities.mjs';
 import {newState, RULES_VERSION} from './engine.mjs';
 import {course, courses, allTopics, getCourse, topicById, questionById, sessionQuestions} from './course.mjs';
 const NAME='allen-mobile-v1';
@@ -52,7 +53,7 @@ export function validateState(s){
   const eventIds=new Set();
   for(const e of s.events){
     if(!e||!uuid(e.id)||eventIds.has(e.id)||!topicById(e.topicId)||!timestamp(e.at)||!['answer','hint','help','practice_complete','check_complete','review_scheduled','card_review'].includes(e.type))fail();eventIds.add(e.id);
-    if(['answer','hint'].includes(e.type)){const q=questionById(e.questionId);if(!q||q.topicId!==e.topicId||!uuid(e.sessionId))fail();if(e.type==='answer'&&(!q.options.includes(e.answer)||typeof e.correct!=='boolean'||e.correct!==(e.answer===q.answer)))fail();}
+    if(['answer','hint'].includes(e.type)){const q=questionById(e.questionId);if(!q||q.topicId!==e.topicId||!uuid(e.sessionId))fail();if(e.type==='answer'&&(!validAnswer(q,e.answer)||typeof e.correct!=='boolean'||e.correct!==correctAnswer(q,e.answer)))fail();}
     if(e.type==='review_scheduled'&&!day(e.due))fail();
     if(e.type==='card_review'&&typeof e.remembered!=='boolean')fail();
     if(e.type==='help'&&!['explain','simple','alternative'].includes(e.action))fail();
@@ -69,7 +70,7 @@ export function validateState(s){
     if(a.kind==='mixed'&&(!Array.isArray(a.topicIds)||a.topicIds.length<2||a.topicIds.length>3||new Set(a.topicIds).size!==a.topicIds.length||a.topicId!==a.topicIds[0]||a.phase==='lesson'||a.topicIds.some(id=>!s.completed.includes(id)||topicById(id)?.courseId!==selected.id)))fail();
     const expected=a.kind==='mixed'?a.topicIds.map(id=>sessionQuestions(topicById(id),round).at(-1)):a.kind==='diagnostic'?selected.topics.flatMap(t=>t.questions.filter(q=>q.kind==='diagnostic').map(q=>q.id)):sessionQuestions(topicById(a.topicId),round);
     if(JSON.stringify(a.questionIds)!==JSON.stringify(expected)||!Number.isInteger(a.index)||a.index<0||a.index>=expected.length||!Array.isArray(a.answers)||a.answers.length>expected.length||!Array.isArray(a.hints)||a.hints.length>expected.length*2)fail();
-    const seen=new Set();for(const [index,r] of a.answers.entries()){const q=questionById(r.questionId);if(!q||r.questionId!==expected[index]||index>a.index||seen.has(r.questionId)||!q.options.includes(r.answer)||r.correct!==(r.answer===q.answer))fail();seen.add(r.questionId);}
+    const seen=new Set();for(const [index,r] of a.answers.entries()){const q=questionById(r.questionId);if(!q||r.questionId!==expected[index]||index>a.index||seen.has(r.questionId)||!validAnswer(q,r.answer)||r.correct!==correctAnswer(q,r.answer))fail();seen.add(r.questionId);}
     for(const id of a.hints){if(!expected.includes(id)||a.hints.filter(x=>x===id).length>questionById(id).hints.length)fail();}
     if(a.phase==='practice'&&![a.index,a.index+1].includes(a.answers.length))fail();
     if(a.phase==='complete'&&a.answers.length!==expected.length)fail();

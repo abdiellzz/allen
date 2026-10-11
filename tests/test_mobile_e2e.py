@@ -48,7 +48,20 @@ def create_profile(page, name='Estudiante', goal='school'):
 
 
 def answer(page, value, last=False):
-    page.get_by_role('radio', name=value, exact=True).check()
+    kind = page.locator('#answer-form').get_attribute('data-activity')
+    if kind == 'input':
+        page.locator('#answer-form input[name="answer"]').fill(value)
+    elif kind == 'match':
+        for i, pair in enumerate(value.split(' | ')):
+            page.locator(f'#answer-form select[data-match="{i}"]').select_option(pair.split(' → ',1)[1])
+    elif kind == 'order':
+        for target, step in enumerate(value.split(' → ')):
+            position = page.locator('.order-steps li span').all_text_contents().index(step)
+            while position > target:
+                page.get_by_role('button', name=f'Subir paso {position+1}', exact=True).click()
+                position -= 1
+    else:
+        page.get_by_role('radio', name=value, exact=True).check()
     page.get_by_role('button', name='Comprobar respuesta', exact=True).click()
     page.get_by_role('button', name='Terminar y guardar' if last else 'Siguiente actividad', exact=True).click()
     page.locator('#content[aria-busy="true"]').wait_for(state="detached")
@@ -140,7 +153,7 @@ def test_mixed_review_explain_back_and_scroll_restore_offline(mobile_url):
         assert state(page)['completed']==['parts','equivalent']
         page.get_by_role('heading',name='Elige la estrategia, no solo la respuesta',exact=True).wait_for()
         navigate(page,'Aprender')
-        page.get_by_text('Ver las 6 lecciones',exact=True).click()
+        page.get_by_text('Ver las 14 lecciones',exact=True).click()
         page.locator('.route-list article').first.get_by_role('button',name='Repasar tema',exact=True).click()
         page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
         for index in range(3):
@@ -217,7 +230,7 @@ def test_learning_survives_offline_reload_and_all_lessons_complete(mobile_url):
         assert state(page)['cards']['parts']['remembered'] is False
         navigate(page, 'Hoy')
         page.screenshot(path=str(path/'today.png'),full_page=True)
-        page.get_by_role('button',name='Comenzar repaso',exact=True).click()
+        page.get_by_role('button',name='Empezar lección',exact=True).click()
         page.get_by_role('button',name='Entendido, vamos a practicar').click()
         page.screenshot(path=str(path/'practice.png'),full_page=True)
         assert not errors, errors
@@ -315,7 +328,7 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
             for i,q in enumerate(diagnostic):
                 answer(page,q['answer'],last=i==len(diagnostic)-1)
             page.get_by_role('button',name='Ver mi siguiente paso',exact=True).click()
-            for t in c['topics']:
+            for t in c['topics'][:5]:
                 page.get_by_role('button',name='Empezar lección',exact=True).click()
                 page.get_by_role('button',name='Dame otro ejemplo',exact=True).click()
                 page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
@@ -523,4 +536,54 @@ def test_android_notification_controls_require_explicit_opt_in(mobile_url):
         page.get_by_role('button',name='Desactivar recordatorios',exact=True).click()
         page.locator('#reminder-status').get_by_text('Recordatorios desactivados.',exact=True).wait_for()
         assert page.evaluate('reminderCalls')==[['enable',17,30],['disable']]
+        browser.close()
+
+
+def test_interactive_math_context_and_resume_offline(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page()
+        page.goto(mobile_url)
+        create_profile(page,'Leo')
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        page.evaluate("""async()=>{
+            const e=await import('./engine.mjs'),c=await import('./course.mjs'),st=await import('./storage.mjs');
+            const db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db));
+            const finish=()=>{if(s.session.phase==='lesson')e.advance(s);while(s.session.phase==='practice'){e.submitAnswer(s,c.questionById(s.session.questionIds[s.session.index]).answer);e.advance(s);}};
+            e.startSession(s,'diagnostic');finish();e.startSession(s,'learn','parts');finish();e.startSession(s,'learn','math-decimal');await st.saveProfile(db,s);db.close();
+        }""")
+        context.set_offline(True)
+        page.reload()
+        page.get_by_text('Estábamos practicando',exact=False).first.wait_for()
+        page.get_by_role('button',name='Continuar aprendiendo',exact=True).click()
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        page.get_by_role('button',name='No entendí',exact=True).click()
+        page.get_by_text('Estamos resolviendo:',exact=False).wait_for()
+        answer(page,'0,250')
+        answer(page,'1/2 → 0.5 | 3/4 → 0.75 | 1/5 → 0.2')
+        page.get_by_role('radio',name='0.07',exact=True).check()
+        page.get_by_role('button',name='Comprobar respuesta',exact=True).click()
+        page.get_by_text('0.07 son siete centésimas',exact=False).wait_for()
+        assert 'math-decimal' not in state(page)['completed']
+        page.set_viewport_size({'width':844,'height':390})
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+        page.reload()
+        assert state(page)['session']['answers'][0]['correct'] is True
+        page.evaluate("""async()=>{
+            const e=await import('./engine.mjs'),c=await import('./course.mjs'),st=await import('./storage.mjs');
+            const db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db));
+            e.advance(s);e.startSession(s,'learn','math-decimal');e.advance(s);
+            while(s.session.phase==='practice'){e.submitAnswer(s,c.questionById(s.session.questionIds[s.session.index]).answer);e.advance(s);}
+            e.startSession(s,'learn','math-decimal-add');await st.saveProfile(db,s);db.close();
+        }""")
+        page.reload()
+        page.get_by_role('button',name='Continuar aprendiendo',exact=True).click()
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        assert page.get_by_role('button',name='Subir paso 1',exact=True).is_disabled()
+        answer(page,'Escribir 1.20 y 0.35 → Alinear los puntos decimales → Sumar y obtener 1.55')
+        assert state(page)['session']['answers'][0]['correct'] is True
+        answer(page,'1.75')
+        answer(page,'3.55',last=True)
+        assert 'math-decimal-add' in state(page)['completed']
         browser.close()

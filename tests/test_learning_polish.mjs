@@ -17,7 +17,7 @@ test('repeated fraction sessions have new parameters, durable identifiers and di
  for(const q of questions.filter(q=>q.kind!=='diagnostic'))for(let round=1;round<=3;round++){const v=questionById(`${q.id}~v${round}`);assert.equal(v.options.length,new Set(v.options).size);assert.equal(v.options.filter(o=>o===v.answer).length,1);assert.ok(v.feedback&&v.hints.length===2);}
 });
 test('fraction arithmetic variants are computed correctly rather than plausible strings',()=>{
- for(const topic of allTopics.filter(t=>t.courseId==='fractions-v1'))for(let round=1;round<=3;round++)for(const id of sessionQuestions(topic,round)){
+ for(const topic of allTopics.filter(t=>['parts','equivalent','sum','fraction-compare','fraction-unlike','fraction-amount'].includes(t.id)))for(let round=1;round<=3;round++)for(const id of sessionQuestions(topic,round)){
   const q=questionById(id),values=q.prompt.match(/\d+/g).map(Number);
   if(topic.id==='parts')assert.equal(q.answer,`${values[1]}/${values[0]}`);
   if(topic.id==='sum')assert.equal(q.answer,`${values[0]+values[2]}/${values[1]}`);

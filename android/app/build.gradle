@@ -10,7 +10,7 @@ android {
         applicationId "com.allen.tutor.demo"
         minSdk 26
         targetSdk 35
-        versionCode 4
+        versionCode 5
         versionName file("../../VERSION").text.trim() + "-android-guided"
     }
 

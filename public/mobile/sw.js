@@ -1,7 +1,7 @@
 // Scope and cache are limited to the public mobile sample. Never cache desktop API/data.
-const VERSION='allen-mobile-shell-v7';
+const VERSION='allen-mobile-shell-v8';
 const ROOT=new URL('./',self.location).pathname;
-const FILES=['./','./index.html','./mobile.css','./app.mjs','./engine.mjs','./storage.mjs','./course.mjs','./course-extensions.mjs','./guided-tutor.mjs','./companion.mjs','./variants.mjs','./learning-tools.mjs','./extra-courses.mjs','./scenario-courses.mjs','./capabilities.mjs','./manifest.webmanifest','./assets/allen-user-logo.png','./assets/allen-reading.png','./assets/allen-celebrate.png','./assets/allen-thinking-v1.png','./assets/allen-explaining-v1.png'];
+const FILES=['./','./index.html','./mobile.css','./app.mjs','./engine.mjs','./storage.mjs','./course.mjs','./course-extensions.mjs','./guided-tutor.mjs','./companion.mjs','./variants.mjs','./activities.mjs','./activity-ui.mjs','./reinforcement.mjs','./reinforcement-content.mjs','./learning-tools.mjs','./extra-courses.mjs','./scenario-courses.mjs','./capabilities.mjs','./manifest.webmanifest','./assets/allen-user-logo.png','./assets/allen-reading.png','./assets/allen-celebrate.png','./assets/allen-thinking-v1.png','./assets/allen-explaining-v1.png'];
 const URLS=FILES.map(f=>new URL(f,self.location).href);
 self.addEventListener('install',event=>{event.waitUntil((async()=>{const cache=await caches.open(VERSION);try{await cache.addAll(URLS);}catch(error){await caches.delete(VERSION);throw error;}})());});
 self.addEventListener('activate',event=>{event.waitUntil((async()=>{for(const key of await caches.keys())if(key.startsWith('allen-mobile-shell-')&&key!==VERSION)await caches.delete(key);await self.clients.claim();})());});

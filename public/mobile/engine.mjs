@@ -1,3 +1,4 @@
+import {validAnswer,correctAnswer,feedbackFor} from './activities.mjs';
 // Browser projection of backend/learning_engine.py. Parity covered by Python tests.
 // Keep changes synchronized with that implementation; see docs/MOBILE.md.
 import {course, courses, getCourse, questions, questionById, topicById, sessionQuestions} from './course.mjs';
@@ -44,7 +45,7 @@ export function chooseCourse(state,id){
 export function recommendation(state,now=new Date()) {
   const course=activeCourse(state);
   const minutes=state.profile.minutes;
-  if(state.session && state.session.phase!=='complete') return {kind:'continue',topicId:state.session.topicId,title:'Continúa tu sesión',reason:`Tu actividad está guardada. Dispones de ${minutes} minutos.`};
+  if(state.session && state.session.phase!=='complete'){const s=state.session,q=questionById(s.questionIds[s.index]),t=topicById(q?.topicId??s.topicId);return {kind:'continue',topicId:t?.id,title:'Continúa tu sesión',reason:`Estábamos practicando ${t?.title??'tu diagnóstico'}. ${s.phase==='lesson'?'Quedó pendiente leer el ejemplo y practicar.':`Estás en la actividad ${s.index+1} de ${s.questionIds.length}.`} Tu progreso está guardado; dispones de ${minutes} minutos.`};}
   if(!diagnosed(state)) return {kind:'diagnostic',title:'Encuentra tu punto de partida',reason:`${questions.filter(q=>q.kind==='diagnostic'&&q.courseId===course.id).length} preguntas breves para elegir el apoyo que necesitas. No es una calificación.`};
   const due=course.topics.find(t=>{const e=evidence(state,t.id,now);return e.next_review&&e.next_review<=localDay(now);});
   if(due) return {kind:'review',topicId:due.id,title:`Repasa ${due.title.toLowerCase()}`,reason:`Tu repaso estaba previsto para ${evidence(state,due.id,now).next_review}. Vamos a comprobar qué recuerdas.`};
@@ -79,16 +80,16 @@ export function requestHelp(state,action,now=new Date()) {
   }
   if(!['explain','alternative','simple'].includes(action))throw Error('Ayuda no válida.');
   const answered=q&&s.answers.find(a=>a.questionId===q.id);
-  const text=action==='alternative'?topic.alternative:action==='simple'?topic.simple:answered&&!answered.correct?`Revisemos tu respuesta ${answered.answer}. ${q.feedback} ${topic.simple}`:topic.explanation;
+  const text=action==='alternative'?topic.alternative:answered&&!answered.correct?`Revisemos tu respuesta ${answered.answer}. ${feedbackFor(q,answered.answer).text} ${topic.simple}`:s.phase==='practice'&&!answered?`Estamos resolviendo: ${q.prompt} Primer paso: ${q.hints[0]} ${action==='simple'?topic.simple:topic.explanation}`:action==='simple'?topic.simple:topic.explanation;
   event(state,'help',topic.id,{action},now);return {text,source:topic.source};
 }
 export function submitAnswer(state,answer,now=new Date()) {
   const s=state.session;if(!s||s.phase!=='practice')throw Error('No hay una pregunta activa.');
-  const q=questionById(s.questionIds[s.index]);if(!q||!q.options.includes(answer))throw Error('Elige una respuesta válida.');
+  const q=questionById(s.questionIds[s.index]);if(!q||!validAnswer(q,answer))throw Error('Escribe o elige una respuesta válida.');
   if(s.answers.some(a=>a.questionId===q.id))throw Error('Esta respuesta ya fue registrada.');
-  const correct=answer===q.answer;const row={questionId:q.id,answer,correct};
+  const correct=correctAnswer(q,answer);const row={questionId:q.id,answer,correct};
   s.answers.push(row);event(state,'answer',q.topicId,{...row,sessionId:s.id},now);
-  return {correct,text:q.feedback};
+  return feedbackFor(q,answer);
 }
 export function advance(state,now=new Date()) {
   const s=state.session;if(!s)throw Error('No hay una sesión activa.');

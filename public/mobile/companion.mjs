@@ -19,7 +19,7 @@ export function companionTip(state,view){
 }
 export function followUpQuestions(id,topicId){
  if(id==='context:status'||id==='context:recommend')return [{id:`topic:${topicId}:simple`,label:'No entendí'},{id:'context:recommend',label:'¿Qué hago después?'}];
- if(id?.endsWith(':simple')||id?.endsWith(':explain'))return [{id:`topic:${topicId}:example`,label:'Dame un ejemplo'},{id:`topic:${topicId}:card`,label:'¿Qué debo recordar?'}];
+ if(id?.endsWith(':simple')||id?.endsWith(':explain'))return [{id:'context:first-step',label:'Veamos el primer paso juntos'},{id:`topic:${topicId}:example`,label:'Dame un ejemplo'}];
  if(id?.endsWith(':example')||id?.endsWith(':alternative'))return [{id:`topic:${topicId}:simple`,label:'No entendí'},{id:'context:recommend',label:'¿Qué hago después?'}];
  if(id==='context:hint'||id==='context:feedback')return [{id:'context:status',label:'¿Cómo voy?'},{id:`topic:${topicId}:alternative`,label:'Dame otro ejemplo'}];
  return [{id:'context:recommend',label:'¿Qué hago después?'},{id:`topic:${topicId}:example`,label:'Dame un ejemplo'}];

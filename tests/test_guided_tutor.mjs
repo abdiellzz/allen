@@ -5,7 +5,7 @@ import {courses,allTopics,questionById} from '../public/mobile/course.mjs';
 import {knowledgeQuestions,contextualQuestions,answerPrepared,findQuestion} from '../public/mobile/guided-tutor.mjs';
 const fresh=name=>newState({id:crypto.randomUUID(),name,goal:'school',level:'bases',minutes:10});
 test('prepared knowledge covers every topic and responds without mutating educational data',()=>{
- const s=fresh('Ana'),before=JSON.stringify(s);assert.equal(knowledgeQuestions.length,235);
+ const s=fresh('Ana'),before=JSON.stringify(s);assert.equal(knowledgeQuestions.length,571);
  for(const topic of allTopics){const qs=contextualQuestions(s,topic.id);assert.equal(qs.filter(q=>q.id.startsWith('topic:')).length,7);for(const q of qs){const result=answerPrepared(s,q.id);assert.ok(result.text?.length>10);assert.ok(result.source);}}
  assert.equal(JSON.stringify(s),before);
 });

@@ -1,3 +1,4 @@
+import {addReinforcement} from './reinforcement.mjs';
 import {variantsFor} from './variants.mjs';
 import {extendCourses} from './course-extensions.mjs';
 import {scenarioCourses} from './scenario-courses.mjs';
@@ -61,7 +62,7 @@ export const course = {
     }
   ]
 };
-export const courses = extendCourses([course,...extraCourses,...scenarioCourses]);
+export const courses = addReinforcement(extendCourses([course,...extraCourses,...scenarioCourses]));
 export const allTopics = courses.flatMap(c=>c.topics.map(t=>({...t,courseId:c.id,source:c.source,subject:c.subject})));
 export const getCourse = id => courses.find(c=>c.id===id);
 export const questions = allTopics.flatMap(t => t.questions.map(q => ({...q,topicId:t.id,courseId:t.courseId})));
