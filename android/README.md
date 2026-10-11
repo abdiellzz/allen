@@ -7,7 +7,8 @@ APK de demostración que ejecuta ALLEN completo dentro del teléfono, sin servid
 ```text
 WebView (assets del APK)
   ├── frontend/ de ALLEN, sin cambios
-  ├── allen-android.js  → intercepta fetch('/api/...')
+  ├── allen-android.css → diseño de teléfono, solo en la APK
+  ├── allen-android.js  → intercepta fetch('/api/...'), recorrido guiado y opciones de la APK
   └── allen-worker.js   → Web Worker con Pyodide (Python 3.13 en WebAssembly)
         └── allen_bridge.py → backend/app.py real (FastAPI + SQLite)
 ```
@@ -16,6 +17,20 @@ WebView (assets del APK)
 - Los datos se guardan en el almacenamiento del WebView (IndexedDB) y sobreviven al cerrar la app.
 - La app no declara ningún permiso de Android, ni siquiera Internet.
 - El backend arranca en modo demo: sin licencia, sin PIN de profesor y con la IA local desconectada.
+- Todo lo propio de la APK vive en `android/web/` y se aplica solo dentro de la app (clase
+  `allen-android` en `<html>`): la versión de escritorio y la web no cambian.
+
+## Diseño y recorrido
+
+- **Diseño "pergamino cálido":** fondo crema, terracota como único acento, títulos en serif,
+  barra de navegación inferior (Inicio, Aprender, Quiz, Progreso y Perfil) y barra superior
+  delgada. El resto de secciones se abre desde la búsqueda (lupa) o las tarjetas de Inicio.
+- **Modo oscuro:** sigue el tema del teléfono hasta que se elige uno con el botón de tema de ALLEN.
+- **Recorrido guiado:** al abrir la app por primera vez, después de escribir el nombre, ALLEN
+  pregunta cómo se va a usar (Estudiante o Profesor) y muestra cada zona de ese modo, con lo que
+  se puede y no se puede hacer. El Modo Feria tiene su propio recorrido la primera vez que se abre,
+  y al cambiar a otro modo por primera vez aparece el recorrido de ese modo. Se puede saltar en
+  cualquier paso con **Saltar recorrido** y repetirlo desde **Configuración → Recorrido por ALLEN**.
 
 ## Descargar e instalar
 
@@ -31,9 +46,11 @@ GitHub que tenga acceso.
    **Más detalles → Instalar de todas formas**. Es normal: la demo no está publicada en Google Play.
 5. Abre **ALLEN**. La primera vez tarda unos segundos mientras prepara Python.
 
-Actualizar: instala el APK nuevo encima del anterior; los datos se conservan. Si Android dice que
-el paquete entra en conflicto, el APK se firmó en otro equipo: desinstala la versión anterior
-(esto borra sus datos) e instala la nueva.
+Actualizar: instala el APK nuevo encima del anterior; los datos se conservan. Desde la app,
+**Configuración → Actualizar ALLEN** muestra la versión instalada y abre esta misma descarga en el
+navegador del teléfono. La app no tiene permiso de Internet, así que no puede comprobar por sí sola
+si hay una versión más reciente. Si Android dice que el paquete entra en conflicto, el APK se firmó
+en otro equipo: desinstala la versión anterior (esto borra sus datos) e instala la nueva.
 
 Desinstalar la app borra todos sus datos del teléfono.
 
