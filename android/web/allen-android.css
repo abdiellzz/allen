@@ -414,6 +414,142 @@ html.allen-android .allen-apk-update small { color: var(--p-text-2); font-size: 
 @media (max-width: 640px) {
   html.allen-android .allen-apk-update .button-like { justify-self: stretch; }
 }
+html.allen-android .allen-apk-update button { min-height: 48px; padding: 0 20px; }
+
+/* ---------- First-run tour (added by allen-android.js) ---------- */
+html.allen-android.allen-tour-open body { overflow: hidden; }
+html.allen-android .allen-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  font-family: var(--p-sans);
+  color: var(--p-text);
+}
+html.allen-android .allen-tour.allen-tour-dim { background: rgba(20, 14, 9, .5); }
+/* The ring's huge shadow dims everything around the highlighted zone. */
+html.allen-android .allen-tour-ring {
+  position: fixed;
+  left: var(--x, 0);
+  top: var(--y, 0);
+  width: var(--w, 0);
+  height: var(--h, 0);
+  border: 2px solid var(--p-accent);
+  border-radius: var(--p-r-btn);
+  box-shadow: 0 0 0 9999px rgba(20, 14, 9, .5);
+  pointer-events: none;
+  transition: left .2s ease, top .2s ease, width .2s ease, height .2s ease;
+}
+html.allen-android .allen-tour-ring[hidden] { display: none; }
+html.allen-android .allen-tour-sheet {
+  position: fixed;
+  left: 50%;
+  width: min(480px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  transform: translateX(-50%);
+  background: var(--p-raised);
+  border: 1px solid var(--p-line);
+  border-radius: var(--p-r-card);
+  box-shadow: 0 12px 32px rgba(20, 14, 9, .22);
+}
+html.allen-android .allen-tour-bottom { bottom: calc(12px + env(safe-area-inset-bottom)); }
+html.allen-android .allen-tour-top { top: calc(12px + env(safe-area-inset-top)); }
+html.allen-android .allen-tour-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+html.allen-android .allen-tour-count {
+  color: var(--p-accent-ink);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+html.allen-android .allen-tour .allen-tour-skip {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--p-text-2);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+html.allen-android .allen-tour-body {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+html.allen-android .allen-tour-body img {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+html.allen-android .allen-tour h2 {
+  margin: 0 0 4px;
+  font: 400 22px/1.2 var(--p-serif);
+  color: var(--p-text);
+}
+html.allen-android .allen-tour p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--p-text-2);
+}
+html.allen-android .allen-tour-lists { display: grid; gap: 8px; }
+html.allen-android .allen-tour-lists > div {
+  padding: 10px 12px;
+  border-radius: var(--p-r-btn);
+}
+html.allen-android .allen-tour-can { background: var(--p-success-soft); }
+html.allen-android .allen-tour-cannot { background: var(--p-accent-soft); }
+html.allen-android .allen-tour h3 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--p-text);
+}
+html.allen-android .allen-tour ul { margin: 0; padding-left: 18px; }
+html.allen-android .allen-tour li { font-size: 15px; line-height: 1.4; color: var(--p-text); }
+html.allen-android .allen-tour-actions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+}
+html.allen-android .allen-tour-actions button { min-height: 48px; padding: 0 20px; }
+html.allen-android .allen-tour-modes { display: grid; gap: 8px; }
+html.allen-android .allen-tour-modes button {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 72px;
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid var(--p-line);
+  border-radius: var(--p-r-card);
+  background: var(--p-surface);
+}
+html.allen-android .allen-tour-modes button:active { border-color: var(--p-accent); background: var(--p-accent-soft); }
+html.allen-android .allen-tour-modes img { width: 56px; height: 56px; object-fit: contain; }
+html.allen-android .allen-tour-modes b { display: block; font-size: 17px; color: var(--p-text); }
+html.allen-android .allen-tour-modes small { display: block; font-size: 14px; color: var(--p-text-2); }
+@media (max-width: 380px) {
+  html.allen-android .allen-tour-body { grid-template-columns: 64px minmax(0, 1fr); }
+  html.allen-android .allen-tour-body img { width: 64px; height: 64px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.allen-android .allen-tour-ring { transition: none; }
+}
 
 /* ---------- Phone layout (APK only) ---------- */
 @media (max-width: 640px) {
