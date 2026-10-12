@@ -1,45 +1,30 @@
-"""Phone-size visual review of ALLEN with the APK stylesheet applied.
+"""Phone-size visual review of the ALLEN Android APK interface.
 
-Starts the FastAPI app on a throwaway database (no license, no PIN, onboarding done), opens it in
-Chromium at 375x812 in light and dark, injects android/web/allen-android.css plus the
-`allen-android` class on <html> (as allen-android.js does), and screenshots the key pages into .agents/review/. Reports horizontal
-overflow and controls hidden behind a fixed bottom bar. Exit code 1 when issues are found.
+Assembles the APK web assets (android/build_web_assets.py) into a temporary folder and serves them
+without HTTP headers, exactly like the WebView's asset loader, so the APK's own CSP applies. Opens
+Chromium at 375x812 in light and dark, creates a profile, skips the guided tour and screenshots the
+main views into .agents/review/. Reports horizontal overflow, controls hidden behind a fixed bottom
+bar and console errors (including CSP violations). Exit code 1 when issues are found.
 """
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
-import os
-import socket
-import subprocess
 import sys
 import tempfile
-import time
+import threading
 import unicodedata
-import urllib.request
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT = ROOT / ".agents" / "review"
-ANDROID_WEB = ROOT / "android" / "web"
-PAGES = ("Inicio", "Cursos", "Quiz", "Tarjetas", "Progreso", "Configuración")
-CSS_LINK = '<link rel="stylesheet" href="/static/android/allen-android.css">'
+# View name → label of its button in the section menu (None: reached another way).
+PAGES = {"Hoy": "Hoy", "Aprender": "Aprender", "Practicar": "Practicar", "Allen": "Allen",
+         "Mi progreso": "Mi progreso", "Perfiles": None}
 
-INIT_SCRIPT = """
-(scheme => {
-  try {
-    localStorage.setItem('allen-theme', scheme);
-    localStorage.setItem('allen-workspace-mode', 'student');
-  } catch {}
-  // <html> may not exist yet when init scripts run; mark it as soon as it does.
-  const mark = () => document.documentElement && document.documentElement.classList.add('allen-android');
-  mark();
-  document.addEventListener('readystatechange', mark);
-  document.addEventListener('DOMContentLoaded', mark);
-})(%s);
-"""
-
-# Returns overflow offenders and interactive elements covered by a fixed/sticky bottom bar.
 AUDIT_SCRIPT = """
 () => {
   const vw = document.documentElement.clientWidth, vh = window.innerHeight;
@@ -70,7 +55,6 @@ AUDIT_SCRIPT = """
   const bars = [...document.body.querySelectorAll('*')].filter(el => {
     const st = getComputedStyle(el);
     if (!['fixed', 'sticky'].includes(st.position) || st.display === 'none' || st.visibility === 'hidden') return false;
-    if (el.id === 'allen-android-boot') return false;
     const r = el.getBoundingClientRect();
     return r.height > 0 && r.height < vh * 0.3 && r.width >= vw * 0.6 && Math.abs(r.bottom - vh) <= 2;
   });
@@ -96,53 +80,30 @@ def slug(text: str) -> str:
     return plain.lower().replace(" ", "-")
 
 
-def free_port() -> int:
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        return sock.getsockname()[1]
+def assemble(target: Path) -> None:
+    spec = importlib.util.spec_from_file_location("build_web_assets", ROOT / "android" / "build_web_assets.py")
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+    builder.assemble(target)
 
 
-def wait_for(url: str, seconds: float = 30) -> None:
-    deadline = time.time() + seconds
-    while time.time() < deadline:
-        try:
-            with urllib.request.urlopen(url, timeout=1):  # nosec B310: loopback only
-                return
-        except OSError:
-            time.sleep(0.3)
-    raise SystemExit("ALLEN no respondió en " + url)
+def serve(directory: Path) -> tuple[ThreadingHTTPServer, str]:
+    class Handler(SimpleHTTPRequestHandler):
+        def log_message(self, *_args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), partial(Handler, directory=str(directory)))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server, f"http://127.0.0.1:{server.server_port}"
 
 
-def start_server(tmp: Path) -> tuple[subprocess.Popen, str]:
-    sys.path.insert(0, str(ROOT))
-    from backend.database import Database
-
-    db_path = tmp / "allen.sqlite3"
-    Database(db_path).remember(1, onboarded=True)
-    port = free_port()
-    env = {**os.environ, "ALLEN_DB_PATH": str(db_path), "ALLEN_DATA_ROOT": str(tmp)}
-    process = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "tests.e2e_server:app", "--host", "127.0.0.1", "--port", str(port), "--log-level", "error"],
-        cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    )
-    base = f"http://127.0.0.1:{port}"
-    wait_for(base + "/api/health")
-    return process, base
-
-
-def serve_android(route) -> None:
-    name = route.request.url.split("/static/android/", 1)[1].split("?", 1)[0]
-    path = ANDROID_WEB / name
-    if name != "allen-android.css" or not path.is_file():
-        route.fulfill(status=404, body="")
+def open_view(page, name: str) -> None:
+    if name == "Perfiles":
+        page.get_by_role("button", name="Perfiles", exact=True).click()
         return
-    route.fulfill(status=200, body=path.read_text(encoding="utf-8"), headers={"content-type": "text/css; charset=utf-8"})
-
-
-def inject_css(route) -> None:
-    response = route.fetch()
-    html = response.text()
-    route.fulfill(response=response, body=html.replace("</head>", CSS_LINK + "</head>", 1))
+    if page.locator("#section-menu[open]").count() == 0:
+        page.locator("#section-menu summary").click()
+    page.locator("#navigation").get_by_role("button", name=PAGES[name], exact=True).click()
 
 
 def review(base: str, schemes: list[str], pages: list[str]) -> list[dict]:
@@ -156,24 +117,18 @@ def review(base: str, schemes: list[str], pages: list[str]) -> list[dict]:
                 viewport={"width": 375, "height": 812}, device_scale_factor=2,
                 is_mobile=True, has_touch=True, color_scheme=scheme, locale="es-ES",
             )
-            context.add_init_script(INIT_SCRIPT % json.dumps(scheme))
-            context.route("**/static/android/**", serve_android)
             page = context.new_page()
             errors: list[str] = []
             page.on("console", lambda msg: errors.append(msg.text) if msg.type == "error" else None)
             page.on("pageerror", lambda exc: errors.append(str(exc)))
-            page.route(base + "/", inject_css)
-            page.goto(base + "/", wait_until="networkidle")
-            page.locator("main, #app, body").first.wait_for()
+            page.goto(base + "/mobile/index.html", wait_until="networkidle")
+            page.get_by_label("¿Cómo quieres que te llame?").fill("Estudiante")
+            page.get_by_role("button", name="Crear mi perfil", exact=True).click()
+            page.get_by_role("button", name="Saltar recorrido", exact=True).click()
             for name in pages:
                 errors.clear()
-                if name != "Inicio":
-                    clicked = page.evaluate(
-                        "n => { const b = document.querySelector(`[data-page=\"${n}\"]`); if (b) b.click(); return !!b; }", name
-                    )
-                    if not clicked:
-                        results.append({"page": name, "scheme": scheme, "error": "no existe [data-page] en el DOM"})
-                        continue
+                if name != "Hoy":
+                    open_view(page, name)
                 page.wait_for_load_state("networkidle")
                 page.wait_for_timeout(500)
                 stem = f"{slug(name)}-{scheme}"
@@ -183,6 +138,8 @@ def review(base: str, schemes: list[str], pages: list[str]) -> list[dict]:
                 audit = page.evaluate(AUDIT_SCRIPT)
                 page.screenshot(path=OUT / f"{stem}-bottom.png")
                 results.append({"page": name, "scheme": scheme, **audit, "consoleErrors": errors[:5]})
+                if name == "Perfiles" and pages[-1] != name:
+                    page.get_by_role("button", name="Abrir", exact=True).first.click()
             context.close()
         browser.close()
     return results
@@ -190,7 +147,7 @@ def review(base: str, schemes: list[str], pages: list[str]) -> list[dict]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--pages", nargs="+", default=list(PAGES))
+    parser.add_argument("--pages", nargs="+", default=list(PAGES), choices=list(PAGES))
     parser.add_argument("--schemes", nargs="+", default=["light", "dark"], choices=["light", "dark"])
     args = parser.parse_args()
     if hasattr(sys.stdout, "reconfigure"):
@@ -198,12 +155,13 @@ def main() -> int:
 
     OUT.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="allen-review-", ignore_cleanup_errors=True) as tmp:
-        process, base = start_server(Path(tmp))
+        assemble(Path(tmp))
+        server, base = serve(Path(tmp))
         try:
             results = review(base, args.schemes, args.pages)
         finally:
-            process.terminate()
-            process.wait(timeout=10)
+            server.shutdown()
+            server.server_close()
 
     (OUT / "report.json").write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
     issues = 0

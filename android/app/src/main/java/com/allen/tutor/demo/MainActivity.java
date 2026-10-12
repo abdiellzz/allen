@@ -9,6 +9,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.WindowInsets;
+import android.webkit.GeolocationPermissions;
+import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -20,9 +22,11 @@ import android.widget.FrameLayout;
 
 import androidx.webkit.WebViewAssetLoader;
 
+import java.io.ByteArrayInputStream;
+
 /**
- * ALLEN Android demo: a WebView that serves the bundled frontend and the Pyodide runtime
- * from APK assets. The Python backend runs inside the page, so no network access is needed.
+ * ALLEN Android demo: a WebView that serves the bundled mobile learning experience from APK
+ * assets. Everything runs on the device; the app declares no permissions, not even Internet.
  */
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
@@ -34,6 +38,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Only local debug builds; published release builds are never debuggable.
         if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             WebView.setWebContentsDebuggingEnabled(true);
         }
@@ -50,6 +55,9 @@ public class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
+        settings.setGeolocationEnabled(false);
+        settings.setJavaScriptCanOpenWindowsAutomatically(false);
+        settings.setSupportMultipleWindows(false);
 
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
                 .setDomain(HOST)
@@ -59,19 +67,33 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                return assetLoader.shouldInterceptRequest(request.getUrl());
+                Uri url = request.getUrl();
+                if (isAppUrl(url)) {
+                    WebResourceResponse response = assetLoader.shouldInterceptRequest(url);
+                    if (response != null) {
+                        return response;
+                    }
+                }
+                // Nothing outside the bundled assets is ever loaded inside the app.
+                return blocked();
             }
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri url = request.getUrl();
-                if (HOST.equals(url.getHost())) {
+                if (isAppUrl(url)) {
                     return false;
                 }
-                try {
-                    startActivity(new Intent(Intent.ACTION_VIEW, url));
-                } catch (ActivityNotFoundException ignored) {
-                    // No app can open this link; stay in ALLEN.
+                // Only explicit https links (the "Actualizar ALLEN" download) leave the app, and
+                // always to the browser; other schemes (intent:, file:, content:…) are ignored.
+                if ("https".equals(url.getScheme())) {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, url);
+                    intent.addCategory(Intent.CATEGORY_BROWSABLE);
+                    try {
+                        startActivity(intent);
+                    } catch (ActivityNotFoundException ignored) {
+                        // No app can open this link; stay in ALLEN.
+                    }
                 }
                 return true;
             }
@@ -79,13 +101,23 @@ public class MainActivity extends Activity {
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
+            public void onPermissionRequest(PermissionRequest request) {
+                request.deny();
+            }
+
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                callback.invoke(origin, false, false);
+            }
+
+            @Override
             public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
                 if (fileCallback != null) {
                     fileCallback.onReceiveValue(null);
                 }
                 fileCallback = callback;
-                // The page filters by extension (.pdf, .license, .allenpack…), which Android
-                // cannot express as MIME types, so let the user pick any document.
+                // Only progress copies (.json) are imported. File managers label JSON inconsistently,
+                // so let the user pick any document; the page validates size and content.
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType("*/*");
@@ -104,6 +136,15 @@ public class MainActivity extends Activity {
         } else {
             webView.restoreState(savedInstanceState);
         }
+    }
+
+    private static boolean isAppUrl(Uri url) {
+        return "https".equals(url.getScheme()) && HOST.equals(url.getHost());
+    }
+
+    private static WebResourceResponse blocked() {
+        return new WebResourceResponse("text/plain", "utf-8", 403, "Forbidden", null,
+                new ByteArrayInputStream(new byte[0]));
     }
 
     private void applySystemBarPadding(FrameLayout root) {
@@ -151,7 +192,7 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
-    /** Maps the app's routes ("/", "/fair") to HTML files and everything else to assets/www. */
+    /** Serves the mobile experience; "/" and "/index.html" open it, nothing else is remapped. */
     private static final class AppAssets implements WebViewAssetLoader.PathHandler {
         private final WebViewAssetLoader.AssetsPathHandler assets;
 
@@ -161,17 +202,8 @@ public class MainActivity extends Activity {
 
         @Override
         public WebResourceResponse handle(String path) {
-            boolean studentEntry = path.isEmpty() || path.equals("index.html") ||
-                    path.equals("fair") || path.equals("fair.html") ||
-                    path.equals("static/index.html") || path.equals("static/fair.html") ||
-                    path.equals("mobile/");
-            String file = studentEntry ? "mobile/index.html" : path;
-            WebResourceResponse response = assets.handle("www/" + file);
-            if (response != null && file.endsWith(".wasm")) {
-                // WebAssembly.instantiateStreaming requires this exact MIME type.
-                response.setMimeType("application/wasm");
-            }
-            return response;
+            String file = path.isEmpty() || path.equals("index.html") ? "mobile/index.html" : path;
+            return assets.handle("www/" + file);
         }
     }
 }

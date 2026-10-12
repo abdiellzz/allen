@@ -10,24 +10,24 @@ android {
         applicationId "com.allen.tutor.demo"
         minSdk 26
         targetSdk 35
-        versionCode 2
-        versionName file("../../VERSION").text.trim() + "-android-demo"
+        versionCode project.property("allenApkVersionCode").toInteger()
+        versionName file("../../VERSION").text.trim() + "-android-demo." + project.property("allenApkRevision")
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            // Published builds: never debuggable (no adb run-as, no WebView DevTools on children's data).
+            // Unsigned here; android/sign_release.py signs it with the release key and its rotation lineage.
+            debuggable false
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt")
         }
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
-    }
-
-    androidResources {
-        // Pyodide's wheels and wasm are already compressed; storing them avoids double work.
-        noCompress += ["wasm", "whl", "zip"]
     }
 }
 
@@ -37,9 +37,13 @@ dependencies {
 
 tasks.register("checkWebAssets") {
     doLast {
-        if (!file("src/main/assets/www/index.html").exists() ||
-                !file("src/main/assets/www/mobile/index.html").exists()) {
+        if (!file("src/main/assets/www/mobile/index.html").exists() ||
+                !file("src/main/assets/www/allen-manifest.json").exists()) {
             throw new GradleException("Faltan los assets web. Ejecuta primero: python android/build_web_assets.py")
+        }
+        // Assets from older builders shipped Python and the backend source; never package them again.
+        if (file("src/main/assets/www/pyodide").exists() || file("src/main/assets/www/allen-src.zip").exists()) {
+            throw new GradleException("Assets web obsoletos. Ejecuta de nuevo: python android/build_web_assets.py")
         }
     }
 }

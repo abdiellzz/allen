@@ -12,7 +12,7 @@ stylesheet.href = new URL('./android-extras.css', import.meta.url).href;
 document.head.append(stylesheet);
 
 const installedVersion = fetch('/allen-manifest.json', {cache: 'no-store'})
-  .then(response => response.json()).then(manifest => manifest.allen || '', () => '');
+  .then(response => response.json()).then(manifest => manifest.apk || manifest.allen || '', () => '');
 
 const GOALS = {
   school: {
@@ -163,7 +163,8 @@ function addProfilePanels(main, profile) {
   update.innerHTML = '<span class="eyebrow">App de Android</span><h2>Actualizar ALLEN</h2>' +
     '<p>Versión instalada: <strong class="allen-apk-version">demo</strong>. Descarga el APK más reciente e instálalo encima de esta versión: tus perfiles y tu progreso se conservan.</p>' +
     `<a class="allen-extra-button" href="${APK_URL}">Descargar actualización</a>` +
-    '<p class="small muted">Se abre en el navegador del teléfono y necesita una cuenta de GitHub con acceso a ALLEN. La app no se conecta a Internet, así que no puede comprobar sola si hay una versión nueva.</p>';
+    '<p class="small muted">Se abre en el navegador del teléfono y necesita una cuenta de GitHub con acceso a ALLEN. La app no se conecta a Internet, así que no puede comprobar sola si hay una versión nueva.</p>' +
+    '<p class="small muted">Android solo instala la actualización encima de esta app si está firmada con la clave de ALLEN. Si avisa de un conflicto o de una firma distinta, no la instales.</p>';
   installedVersion.then(version => { if (version) update.querySelector('.allen-apk-version').textContent = version; });
   main.append(update);
   if (!profile) return;

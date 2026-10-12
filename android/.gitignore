@@ -8,3 +8,11 @@ app/src/main/assets/www/
 
 # Published demo APK (download link in README).
 !release/ALLEN-demo-android.apk
+
+# Signing material lives in %LOCALAPPDATA%\allen-android-signing; never commit it.
+*.jks
+*.p12
+*.keystore
+*.idsig
+lineage.bin
+release-password.txt

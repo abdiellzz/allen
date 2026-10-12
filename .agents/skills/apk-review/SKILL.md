@@ -1,12 +1,12 @@
 ---
 name: apk-review
-description: Revisión visual de la interfaz de ALLEN en tamaño de teléfono (375x812) con los estilos de la APK aplicados, en tema claro y oscuro. Úsala después de cambiar android/web/allen-android.css o allen-android.js, antes de un commit de diseño, o cuando pidan capturas, "ver cómo se ve en el móvil" o revisar desbordes. Guarda capturas en .agents/review/ y reporta desbordes horizontales y contenido tapado por la barra inferior.
+description: Revisión visual de la interfaz que muestra la APK de Android (public/mobile/ con los extras de la APK y su CSP) en tamaño de teléfono (375x812), en tema claro y oscuro. Úsala después de cambiar public/mobile/ o android-extras.*, antes de un commit de diseño, o cuando pidan capturas, "ver cómo se ve en el móvil" o revisar desbordes. Guarda capturas en .agents/review/ y reporta desbordes, contenido tapado y errores de consola o CSP.
 ---
 
 # apk-review
 
-Levanta el frontend de ALLEN, aplica la hoja de la APK y toma capturas en 375×812 de **Inicio,
-Cursos, Quiz, Tarjetas, Progreso y Configuración**, en claro y oscuro.
+Ensambla los assets de la APK, los sirve igual que la WebView y toma capturas en 375×812 de
+**Hoy, Aprender, Practicar, Allen, Mi progreso y Perfiles**, en claro y oscuro.
 
 ## Requisitos
 
@@ -21,41 +21,33 @@ python -m playwright install chromium
 
 ```powershell
 python .agents/skills/apk-review/review.py
-python .agents/skills/apk-review/review.py --pages Quiz Tarjetas --schemes dark
+python .agents/skills/apk-review/review.py --pages Aprender "Mi progreso" --schemes dark
 ```
 
 ## Qué hace el script
 
-1. **Levanta el frontend** con FastAPI. No usa `python server.py` directamente porque ese arranque
-   abre la base real de `%LOCALAPPDATA%\ALLEN`, exige licencia, token de acceso de un solo uso y PIN
-   docente, y las capturas saldrían en la pantalla de licencia. En su lugar ejecuta
-   `uvicorn tests.e2e_server:app` (la misma `create_app` que `server.py`, sin licencia) en un puerto
-   libre, con una base SQLite temporal y el onboarding marcado como hecho.
-2. **Reproduce la APK**: inyecta `<link href="/static/android/allen-android.css">` antes de `</head>`
-   igual que `android/build_web_assets.py`, sirve ese archivo desde `android/web/` (sin necesidad de
-   regenerar assets) y añade la clase `allen-android` a `<html>`, igual que `allen-android.js`. No carga `allen-android.js` porque
-   arrancaría Pyodide; si un cambio de diseño depende de marcado creado por ese script, verifícalo
-   también en el APK real.
-3. Emula un teléfono táctil (375×812, DPR 2) con `prefers-color-scheme` claro u oscuro y
-   `localStorage['allen-theme']` igual al esquema, en modo Estudiante.
-4. Navega a cada página haciendo clic en su `[data-page]` y guarda en `.agents/review/`:
-   - `<pagina>-<tema>.png`: lo que se ve al abrir la página;
-   - `<pagina>-<tema>-full.png`: página completa;
-   - `<pagina>-<tema>-bottom.png`: tras desplazar todo hasta el final (para ver la barra inferior);
+1. **Ensambla la APK** con `android/build_web_assets.py` en una carpeta temporal (no toca
+   `assets/www/` ni descarga nada) y la sirve **sin cabeceras HTTP**, como `WebViewAssetLoader`:
+   así aplica la misma CSP que en el teléfono y cualquier violación aparece como error.
+2. Emula un teléfono táctil (375×812, DPR 2) con `prefers-color-scheme` claro u oscuro, crea un
+   perfil y salta el recorrido guiado.
+3. Abre cada vista desde el menú de secciones (o el botón Perfiles) y guarda en `.agents/review/`:
+   - `<vista>-<tema>.png`: lo que se ve al abrirla;
+   - `<vista>-<tema>-full.png`: página completa;
+   - `<vista>-<tema>-bottom.png`: tras desplazar todo hasta el final;
    - `report.json`: datos de cada vista.
-5. Revisa cada vista:
+4. Revisa cada vista:
    - **Desborde horizontal:** `document.documentElement.scrollWidth > clientWidth`, con los
      elementos que sobresalen del borde derecho.
-   - **Tapado por la barra inferior:** detecta elementos `fixed`/`sticky` pegados al borde inferior
-     (≥60% del ancho, <30% del alto) y, con todo desplazado al final, lista los controles interactivos
-     que quedan debajo de ella.
-   - Errores de consola (por ejemplo, CSP).
+   - **Tapado por una barra inferior:** elementos `fixed`/`sticky` pegados al borde inferior y los
+     controles interactivos que quedan debajo.
+   - **Errores de consola**, incluidas violaciones de CSP.
 
 Sale con código 1 si alguna vista tiene problemas.
 
 ## Informe
 
-Resume por página y tema: `OK` o el problema (elementos causantes y px). Abre y mira las capturas
-de las vistas con problemas, y también al menos Inicio y Quiz en ambos temas aunque estén OK: el
+Resume por vista y tema: `OK` o el problema (elementos causantes y px). Abre y mira las capturas
+de las vistas con problemas, y también al menos Hoy y Mi progreso en ambos temas aunque estén OK: el
 script no detecta contraste bajo, texto cortado ni jerarquía visual. Las capturas no se versionan
 (`.agents/review/` está en `.gitignore`).

@@ -1,138 +1,68 @@
 """Assemble the web assets for the ALLEN Android demo APK.
 
-Output: android/app/src/main/assets/www (git-ignored). Downloads are cached in
-android/.cache and verified against the SHA-256 published in pyodide-lock.json / PyPI.
+Output: android/app/src/main/assets/www (git-ignored). The APK only ships the mobile learning
+experience from public/mobile/: no Python runtime, no backend source and no network downloads.
+Only allowlisted file types are copied, and the page gets a strict Content-Security-Policy
+because WebViewAssetLoader serves files without HTTP security headers.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import shutil
-import urllib.request
-import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ANDROID = ROOT / "android"
+MOBILE = ROOT / "public" / "mobile"
 OUT = ANDROID / "app" / "src" / "main" / "assets" / "www"
-CACHE = ANDROID / ".cache"
-PYODIDE_VERSION = "0.29.5"
-CDN = f"https://cdn.jsdelivr.net/pyodide/v{PYODIDE_VERSION}/full/"
-CORE_FILES = ("pyodide.js", "pyodide.asm.js", "pyodide.asm.wasm", "python_stdlib.zip", "pyodide-lock.json")
-# Keep in sync with PACKAGES in web/allen-worker.js.
-PYODIDE_PACKAGES = ("fastapi", "httpx", "pydantic", "cryptography", "micropip", "sqlite3", "hashlib", "ssl")
-PYPI_WHEELS = ("pypdf", "qrcode")
-HEAD_INJECTION = (
-    '<link rel="stylesheet" href="/static/android/allen-android.css">'
-    '<script src="/static/android/allen-android.js"></script>'
+# Runtime files of the mobile experience. sw.js (web-only offline cache) and catalogue.json (desktop
+# backend snapshot) are deliberately left out.
+ALLOWED_SUFFIXES = {".html", ".mjs", ".css", ".webmanifest", ".png", ".svg"}
+EXCLUDED = {"sw.js", "catalogue.json"}
+CSP = (
+    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; "
+    "manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'"
 )
+CHARSET = '<meta charset="utf-8">'
 
 
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+def apk_version() -> str:
+    """Same versionName that android/app/build.gradle computes."""
+    properties = dict(
+        line.split("=", 1) for line in (ANDROID / "gradle.properties").read_text(encoding="utf-8").splitlines()
+        if "=" in line and not line.lstrip().startswith("#")
+    )
+    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    return f"{version}-android-demo.{properties['allenApkRevision'].strip()}"
 
 
-def download(url: str, name: str, expected_sha256: str | None = None) -> Path:
-    CACHE.mkdir(parents=True, exist_ok=True)
-    target = CACHE / name
-    if not target.exists() or (expected_sha256 and sha256(target) != expected_sha256):
-        print("descargando", name)
-        with urllib.request.urlopen(url, timeout=120) as response:  # nosec B310: fixed https URLs
-            target.write_bytes(response.read())
-    if expected_sha256 and sha256(target) != expected_sha256:
-        target.unlink()
-        raise SystemExit(f"hash SHA-256 incorrecto para {name}")
-    return target
+def harden(html: str) -> str:
+    """Add the CSP right after the charset (before any resource) and mark the bundled runtime."""
+    if CHARSET not in html or "</head>" not in html:
+        raise SystemExit("mobile/index.html sin <meta charset> o </head>")
+    html = html.replace(CHARSET, CHARSET + f'<meta http-equiv="Content-Security-Policy" content="{CSP}">', 1)
+    return html.replace("</head>", '<meta name="allen-runtime" content="bundled-android"></head>', 1)
 
 
-def pyodide_closure(lock: dict) -> list[dict]:
-    canonical = lambda name: name.lower().replace("_", "-")  # noqa: E731
-    packages = {canonical(name): package for name, package in lock["packages"].items()}
-    seen: dict[str, dict] = {}
-    pending = [canonical(name) for name in PYODIDE_PACKAGES]
-    while pending:
-        name = pending.pop()
-        if name in seen:
+def assemble(output: Path) -> None:
+    for path in sorted(MOBILE.rglob("*")):
+        if not path.is_file() or path.name in EXCLUDED or path.suffix.lower() not in ALLOWED_SUFFIXES:
             continue
-        seen[name] = packages[name]
-        pending.extend(canonical(dep) for dep in packages[name].get("depends", []))
-    return list(seen.values())
-
-
-def pinned_version(package: str) -> str:
-    for line in (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines():
-        name, _, version = line.partition("==")
-        if name.strip().lower() == package:
-            return version.strip()
-    raise SystemExit(f"{package} no está fijado en requirements.txt")
-
-
-def pypi_wheel(package: str) -> Path:
-    version = pinned_version(package)
-    with urllib.request.urlopen(f"https://pypi.org/pypi/{package}/{version}/json", timeout=60) as response:  # nosec B310
-        files = json.load(response)["urls"]
-    wheel = next(f for f in files if f["filename"].endswith("py3-none-any.whl"))
-    return download(wheel["url"], wheel["filename"], wheel["digests"]["sha256"])
-
-
-def inject(html: str) -> str:
-    if "</head>" not in html:
-        raise SystemExit("HTML sin </head>")
-    return html.replace("</head>", HEAD_INJECTION + "</head>", 1)
-
-
-def source_zip(target: Path) -> None:
-    with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
-        for path in sorted((ROOT / "backend").rglob("*.py")):
-            archive.write(path, path.relative_to(ROOT).as_posix())
-        for path in sorted((ROOT / "data" / "library").rglob("*")):
-            if path.is_file():
-                archive.write(path, path.relative_to(ROOT).as_posix())
-        archive.write(ROOT / "config" / "license_public_key.pem", "config/license_public_key.pem")
-        archive.write(ROOT / "VERSION", "VERSION")
-        archive.write(ROOT / "public" / "mobile" / "catalogue.json", "public/mobile/catalogue.json")
-        archive.write(ANDROID / "web" / "allen_bridge.py", "allen_bridge.py")
-
-
-def assemble_interfaces(output: Path) -> None:
-    """Bundle both interfaces without downloads; keeps the desktop demo available."""
-    shutil.copytree(ROOT / "frontend", output / "static")
-    (output / "static" / "android").mkdir()
-    for name in ("allen-android.js", "allen-worker.js", "allen-android.css"):
-        shutil.copy2(ANDROID / "web" / name, output / "static" / "android" / name)
-    # Only the new educational home is bundled as a student entry point.
-    redirect = '<!doctype html><meta http-equiv="refresh" content="0;url=/mobile/index.html"><a href="/mobile/index.html">Abrir ALLEN</a>'
-    for page in ("index.html", "fair.html"):
-        (output / page).write_text(redirect, encoding="utf-8")
-    shutil.copytree(ROOT / "public" / "mobile", output / "mobile")
-    mobile = output / "mobile" / "index.html"
-    mobile.write_text(mobile.read_text(encoding="utf-8").replace(
-        "</head>", '<meta name="allen-runtime" content="bundled-android"></head>', 1), encoding="utf-8")
+        target = output / "mobile" / path.relative_to(MOBILE)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, target)
+    index = output / "mobile" / "index.html"
+    index.write_text(harden(index.read_text(encoding="utf-8")), encoding="utf-8")
+    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    manifest = {"allen": version, "apk": apk_version()}
+    (output / "allen-manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
 
 def main() -> None:
     if OUT.exists():
         shutil.rmtree(OUT)
-    (OUT / "pyodide").mkdir(parents=True)
-    (OUT / "wheels").mkdir()
-
-    assemble_interfaces(OUT)
-
-    for name in CORE_FILES:
-        shutil.copy2(download(CDN + name, f"pyodide-{PYODIDE_VERSION}-{name}"), OUT / "pyodide" / name)
-    lock = json.loads((OUT / "pyodide" / "pyodide-lock.json").read_text(encoding="utf-8"))
-    for package in pyodide_closure(lock):
-        cached = download(CDN + package["file_name"], package["file_name"], package["sha256"])
-        shutil.copy2(cached, OUT / "pyodide" / package["file_name"])
-
-    wheels = [pypi_wheel(package) for package in PYPI_WHEELS]
-    for wheel in wheels:
-        shutil.copy2(wheel, OUT / "wheels" / wheel.name)
-
-    source_zip(OUT / "allen-src.zip")
-    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-    manifest = {"allen": version, "pyodide": PYODIDE_VERSION, "wheels": [w.name for w in wheels]}
-    (OUT / "allen-manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    OUT.mkdir(parents=True)
+    assemble(OUT)
     size = sum(p.stat().st_size for p in OUT.rglob("*") if p.is_file())
     print(f"assets listos en {OUT.relative_to(ROOT)} ({size / 1_000_000:.1f} MB)")
 

@@ -1,41 +1,57 @@
 # ALLEN para Android (demo)
 
-APK de demostración que ejecuta ALLEN completo dentro del teléfono, sin servidor y sin Internet.
+APK de demostración con la experiencia educativa móvil de ALLEN, dentro del teléfono, sin servidor y
+sin Internet.
 
 ## Cómo funciona
 
 ```text
-WebView (assets del APK)
-  ├── public/mobile/ → experiencia educativa inicial
-  │     └── android-extras.mjs → recorrido guiado y «Actualizar ALLEN» (solo en la APK)
-  ├── frontend/ de ALLEN → recursos heredados, sin acceso alternativo en Perfiles
-  ├── allen-android.js  → intercepta fetch('/api/...')
-  └── allen-worker.js   → Web Worker con Pyodide (Python 3.13 en WebAssembly)
-        └── allen_bridge.py → backend/app.py real (FastAPI + SQLite)
+WebView (assets del APK, origen https://appassets.androidplatform.net)
+  └── public/mobile/ → experiencia educativa (cursos, diagnóstico, práctica, tarjetas, progreso)
+        └── android-extras.mjs → recorrido guiado y «Actualizar ALLEN» (solo en la APK)
 ```
 
-- Python corre en un Web Worker para que la interfaz siga respondiendo mientras arranca.
-- Los perfiles móviles se guardan directamente en IndexedDB. La interfaz original conserva SQLite sobre IDBFS del WebView; ambos almacenes son independientes. Los datos sobreviven al cerrar la app.
-- La app no declara ningún permiso de Android, ni siquiera Internet.
-- El backend arranca en modo demo: sin licencia, sin PIN de profesor y con la IA local desconectada.
+- Los perfiles se guardan en IndexedDB del WebView, dentro del almacenamiento privado de la app.
+- El APK no incluye Python, el backend de escritorio ni la interfaz de escritorio.
 
-## Recorrido y actualización
+## Seguridad y privacidad
 
-`public/mobile/app.mjs` carga `android-extras.mjs` solo cuando corre dentro de la APK; la PWA web no
-lo usa.
+ALLEN lo usan niños; la APK está pensada para que su progreso no salga del teléfono:
 
-- **Recorrido guiado:** al crear un perfil, ALLEN recorre las secciones (Hoy, Aprender, Practicar,
-  Allen, Mi progreso y Perfiles) y termina con lo que se puede y no se puede hacer. Se adapta a lo
-  que se eligió en el perfil: «Reforzar lo que aprendo en la escuela» o «Aprender algo nuevo por mi
-  cuenta». Cada opción tiene su recorrido la primera vez que aparece. Se puede saltar en cualquier
-  paso con **Saltar recorrido** (o Escape) y repetir desde **Perfiles → Recorrido por ALLEN**.
-- **Perfiles → Actualizar ALLEN:** muestra la versión instalada y abre la descarga del APK más
-  reciente en el navegador del teléfono.
+- **Sin permisos de Android**, ni siquiera Internet. La WebView solo carga los archivos del APK por
+  `https`; cualquier otra petición se bloquea, y los permisos web (cámara, micrófono, ubicación) se
+  deniegan siempre.
+- **Sin copias automáticas:** ni copia en la nube de Google ni transferencia al cambiar de teléfono
+  (`res/xml/data_extraction_rules.xml`). El progreso solo sale si el usuario exporta su copia.
+- **Compilación de release, no depurable:** no permite `adb run-as` ni DevTools sobre la WebView.
+- **CSP estricta** en la página (`default-src 'none'`, sin scripts en línea), añadida por el builder
+  porque la WebView no envía cabeceras HTTP.
+- Solo los enlaces `https` (la descarga de actualizaciones) salen al navegador; otros esquemas se
+  ignoran.
+- Las copias de progreso importadas se validan campo a campo y se recuperan como un perfil nuevo.
+
+Limitaciones asumidas de la demo: los perfiles no tienen PIN (cualquiera con el teléfono desbloqueado
+puede abrirlos), la copia exportada es JSON sin cifrar, y el progreso del móvil no es evidencia
+verificable para calificar.
+
+## Firma y actualizaciones
+
+| Versión | Firma |
+| --- | --- |
+| hasta 1.2.4-android-demo | Clave de depuración (`CN=Android Debug`, SHA-256 `a2e095c7…cc7eda4`) |
+| desde 1.2.4-android-demo.1 | Clave de release (`CN=ALLEN Android`, SHA-256 en [release/signing-certificate.sha256](release/signing-certificate.sha256)) con rotación v3 desde la clave anterior |
+
+La rotación permite instalar el parche encima de la versión anterior **sin perder el progreso** en
+Android 9 o superior, y desde entonces Android rechaza actualizaciones firmadas solo con la clave de
+depuración. Android 8.x no entiende la rotación: sigue verificando la clave anterior.
+
+El SHA-256 del APK publicado está en
+[release/ALLEN-demo-android.apk.sha256](release/ALLEN-demo-android.apk.sha256).
 
 ## Descargar e instalar
 
 **[Descargar ALLEN-demo-android.apk](https://github.com/abdiellzz/allen/raw/main/android/release/ALLEN-demo-android.apk)**
-(26 MB · Android 8.0 o superior). El repositorio es privado: el enlace funciona con una sesión de
+(3,4 MB · Android 8.0 o superior). El repositorio es privado: el enlace funciona con una sesión de
 GitHub que tenga acceso.
 
 1. Descarga el APK en el teléfono, o en el PC y pásalo al teléfono por cable, Drive o WhatsApp.
@@ -49,38 +65,43 @@ GitHub que tenga acceso.
 Actualizar: instala el APK nuevo encima del anterior; los datos se conservan. Desde la app,
 **Perfiles → Actualizar ALLEN** muestra la versión instalada y abre esta misma descarga en el
 navegador del teléfono. La app no tiene permiso de Internet, así que no puede comprobar por sí sola
-si hay una versión más reciente. Si Android dice que el paquete entra en conflicto, el APK se firmó
-en otro equipo: desinstala la versión anterior (esto borra sus datos) e instala la nueva.
+si hay una versión más reciente. Si Android dice que el paquete entra en conflicto o que la firma no
+coincide, **no lo instales ni desinstales ALLEN**: ese APK no está firmado por ALLEN.
 
-Desinstalar la app borra todos sus datos del teléfono.
+Desinstalar la app borra todos sus datos del teléfono. Antes de cambiar de teléfono, exporta la
+copia de cada perfil desde **Mi progreso**.
 
 ## Qué funciona y qué no
 
-El APK abre únicamente la experiencia educativa: seis cursos, diagnóstico, práctica, tarjetas, tutor preparado,
-progreso y recuperación por perfil. Modo Feria ya no es un inicio alternativo.
-Teacher Studio y los datos de escritorio se conservan en `/teacher`.
-Ver [UI_SINGLE_HOME.md](../docs/UI_SINGLE_HOME.md).
+El APK abre únicamente la experiencia educativa: seis cursos, diagnóstico, práctica, tarjetas,
+tutor preparado, progreso y recuperación por perfil. Teacher Studio y el resto de ALLEN siguen en la
+versión de escritorio. Ver [UI_SINGLE_HOME.md](../docs/UI_SINGLE_HOME.md).
 
-Limitaciones de la demo:
+- No hay IA generativa en el teléfono: Allen responde con explicaciones y pistas preparadas.
+- La copia del progreso se exporta como texto JSON; no hay guardado nativo de archivos.
 
-- El chat con IA generativa responde en modo demo (no hay llama.cpp en el teléfono).
-  El tutor de aritmética sí responde.
-- La pantalla móvil permite exportar manualmente el JSON del perfil; no hay guardado nativo de archivos. Course Packs y descargas de la interfaz original siguen pendientes.
-- La interfaz educativa móvil no inicia Python. Los recursos heredados de Pyodide
-  se conservan por compatibilidad; no se ofrecen como otro inicio al estudiante.
+## Compilar y publicar
 
-## Compilar
-
-Requisitos: Python 3, JDK 17 y Android SDK (platform 35).
+Requisitos: Python 3, JDK 17 y Android SDK (platform 35 y build-tools). No hace falta Internet
+salvo para la primera descarga de Gradle, verificada con `distributionSha256Sum`.
 
 ```bash
-python android/build_web_assets.py          # arma android/app/src/main/assets/www
+python android/build_web_assets.py          # arma android/app/src/main/assets/www (sin descargas)
 cd android
-./gradlew assembleDebug                      # Windows: gradlew.bat assembleDebug
+./gradlew assembleRelease                    # Windows: gradlew.bat assembleRelease
+cd ..
+python android/sign_release.py               # firma, verifica y copia a android/release/
 ```
 
-El APK queda en `android/app/build/outputs/apk/debug/app-debug.apk`. Para publicar una versión nueva,
-cópialo a `android/release/ALLEN-demo-android.apk`, que es el archivo del enlace de descarga.
+`sign_release.py` falla si el APK es depurable, declara permisos o no lleva la rotación de la clave
+publicada a la de release. Antes de publicar, sube `allenApkRevision` y `allenApkVersionCode` en
+[gradle.properties](gradle.properties).
 
-`build_web_assets.py` descarga Pyodide 0.29.5 y los paquetes necesarios, y verifica cada
-archivo con el SHA-256 de `pyodide-lock.json` o de PyPI. Los archivos generados no se suben al repositorio.
+La clave de release vive fuera del repositorio, en `%LOCALAPPDATA%\allen-android-signing`
+(`ALLEN_ANDROID_SIGNING_DIR` para otra ruta), junto con su contraseña, la clave anterior y la línea
+de rotación. Solo se crea una vez (`python android/sign_release.py init`). **Guarda una copia offline
+de esa carpeta:** si se pierde, ninguna versión futura podrá instalarse encima de las existentes.
+Para que otra persona publique, compártele la carpeta por un canal seguro; nunca la subas al
+repositorio.
+
+Para pruebas locales sigue existiendo `assembleDebug`, pero ese APK es depurable y nunca se publica.
