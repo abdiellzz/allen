@@ -41,12 +41,14 @@ python -m http.server 8081 --directory public
 
 Abrir `http://localhost:8081/mobile/`. Crear un perfil, esperar «Curso guardado · listo sin conexión», hacer el diagnóstico y probar los repasos con la red desactivada. La caché v4 instala también las imágenes; el progreso conserva el esquema anterior.
 
-Para escritorio usar el lanzador habitual de ALLEN: `/` abre la experiencia educativa y `/teacher` mantiene las herramientas administrativas. Para preparar Android:
+Para escritorio usar el lanzador habitual de ALLEN: `/` abre la experiencia educativa y `/teacher` mantiene las herramientas administrativas. Para preparar Android (release no depurable y firmada; ver `android/README.md`):
 
 ```bash
 python android/build_web_assets.py
 cd android
-./gradlew assembleDebug
+./gradlew assembleRelease
+cd ..
+python android/sign_release.py
 ```
 
 ## Verificación y límites reales

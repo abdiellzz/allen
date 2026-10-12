@@ -102,13 +102,15 @@ APK: skill `apk-build`.
 | 1.2.2 | 2026-10-08 | Corrección de los críticos: launcher con smoke test, evaluaciones sin respuestas antes de enviar, PIN docente con scrypt + sesión HttpOnly + rate limiting, Modo Feria aislado, token de apertura de un solo uso, backups AES-256-GCM, progreso y simulacros endurecidos, backup/restore con validación de esquema y claves foráneas, UTC centralizado (`time_utils`), WAL, planes limitados a 365 días, CSP corregida. |
 | 1.2.3 | 2026-10-08 | Segunda auditoría: los 5 críticos y 7 altos revalidados como corregidos (incluidos zona horaria y CSP). Caché de biblioteca y calidad pedagógica de distractores. |
 | 1.2.4 | 2026-10-08 | Protección contra suplantación del puerto 8787, `/api/health` mínimo, PIN obligatorio antes del uso comercial, límites para Course Packs maliciosos, PDF cifrado rechazado, Bandit en CI. |
+| 1.2.4-android-demo.1 | 2026-10-11 | **Parche de seguridad de la APK:** el APK publicado era depurable y estaba firmado con la clave de depuración (datos de niños legibles por USB); ahora es release no depurable con clave propia y rotación v3 (actualiza sin perder progreso). El APK ya no incluye Python ni el código del backend (25,6 → 3,4 MB), CSP estricta, sin copia en la nube ni transferencia entre dispositivos, WebView limitada a sus assets, textos escapados y Gradle verificado por hash. |
 
 Pendientes estructurales reconocidos (no son fallos abiertos): dividir `backend/app.py` en routers,
 modularizar `frontend/app.js`, optimizar Teacher Analytics, FTS5 para biblioteca, firma Authenticode,
 lockfiles con hashes y reglas de rama/CodeQL en GitHub.
 
 Detalle: `docs/SECURITY_AUDIT_2026-10-07.md`, `docs/SECURITY_AUDIT_2026-10-08.md`,
-`docs/SECURITY_AUDIT_RECHECK_2026-10-08.md`, `SECURITY.md` y `CHANGELOG.md`.
+`docs/SECURITY_AUDIT_RECHECK_2026-10-08.md`, `docs/SECURITY_AUDIT_APK_2026-10-11.md`, `SECURITY.md` y
+`CHANGELOG.md`.
 
 Reglas de seguridad al editar:
 
@@ -120,24 +122,23 @@ Reglas de seguridad al editar:
 
 ## APK de Android (demo)
 
-WebView que ejecuta ALLEN completo dentro del teléfono, sin servidor y sin Internet:
+WebView que muestra la experiencia educativa móvil dentro del teléfono, sin servidor y sin Internet:
 
 ```text
-WebView (assets del APK)
-  ├── frontend/ sin cambios + allen-android.css
-  ├── allen-android.js  → intercepta fetch('/api/...')
-  └── allen-worker.js   → Web Worker con Pyodide 0.29.5 (Python 3.13 en WebAssembly)
-        └── allen_bridge.py → backend/app.py real, SQLite en IndexedDB
+WebView (assets del APK, https://appassets.androidplatform.net)
+  └── public/mobile/ → cursos, diagnóstico, práctica, tarjetas y progreso en IndexedDB
+        └── android-extras.mjs → recorrido guiado y «Actualizar ALLEN» (solo en la APK)
 ```
 
-- Modo demo: sin licencia, sin PIN docente, IA generativa en modo demo (sin llama.cpp). No declara
-  permisos de Android.
-- Limitaciones: exportar backups y Course Packs no está conectado; el primer arranque tarda unos
-  segundos mientras carga Python.
-- `android/app/src/main/assets/www/` se genera con `python android/build_web_assets.py` y está
-  ignorado por git. No editarlo a mano.
-- APK publicado: `android/release/ALLEN-demo-android.apk` (Android 8.0+).
-- Más detalle: `android/README.md`.
+- Sin permisos de Android, sin Python ni backend, sin copia en la nube ni transferencia entre
+  dispositivos. CSP estricta inyectada por el builder.
+- Se publica **solo** como release no depurable: `python android/build_web_assets.py`,
+  `gradlew assembleRelease` y `python android/sign_release.py` (clave de release fuera del repo con
+  rotación v3 desde la clave de depuración que firmó hasta 1.2.4-android-demo).
+- `android/app/src/main/assets/www/` es generado e ignorado por git. No editarlo a mano.
+- APK publicado: `android/release/ALLEN-demo-android.apk` (Android 8.0+), con su SHA-256 y el del
+  certificado al lado.
+- Reglas y alcance: `android/AGENTS.md`. Detalle: `android/README.md`.
 
 ## Skills del repositorio
 
@@ -145,7 +146,7 @@ En `.agents/skills/`:
 
 | Skill | Uso |
 | --- | --- |
-| `apk-build` | Regenerar assets web y compilar el APK debug |
-| `apk-review` | Capturas 375×812 claro/oscuro y detección de desbordes |
+| `apk-build` | Regenerar assets web, compilar el APK release y firmarlo |
+| `apk-review` | Capturas 375×812 claro/oscuro de la APK, desbordes y errores de CSP |
 | `scope-check` | Verificar que el diff no sale de las rutas permitidas |
 | `client-report` | PDF profesional para el cliente con hallazgos o correcciones |

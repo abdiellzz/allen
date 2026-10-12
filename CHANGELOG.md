@@ -14,6 +14,22 @@ Todos los cambios relevantes de ALLEN se documentan aquí.
 
 ## [Unreleased]
 
+## [1.2.4-android-demo.1] — 2026-10-11 · Parche de seguridad de la APK
+
+### Seguridad y privacidad
+- El APK publicado ya no es depurable: se compila como release y se firma con una clave propia de ALLEN
+  en vez de la clave de depuración. Con la rotación de firma v3 se instala encima de la versión
+  anterior sin perder el progreso (Android 9+), y la clave de depuración deja de servir para
+  actualizar.
+- El APK ya no incluye Python (Pyodide), el código del backend ni la interfaz de escritorio, que no se
+  usaban: de 25,6 MB a 3,4 MB y sin descargas al compilar.
+- CSP estricta dentro del APK; los textos de los cursos y los identificadores se escapan antes de
+  mostrarse.
+- Sin copia en la nube ni transferencia entre dispositivos del progreso de los niños.
+- La WebView solo carga sus propios assets por https, bloquea cualquier otra petición, deniega
+  permisos web y solo abre enlaces https en el navegador.
+- Gradle verificado con `distributionSha256Sum`; CI compila la release y verifica el APK publicado.
+
 ## [1.2.4] — 2026-10-08
 
 ### Seguridad y robustez

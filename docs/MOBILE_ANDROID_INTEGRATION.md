@@ -1,5 +1,10 @@
 # Integración Android y ampliación educativa
 
+> **Actualización 2026-10-11 (1.2.4-android-demo.1):** el APK ya no incluye Pyodide, el backend ni la
+> interfaz original; se compila como release no depurable y se firma con `android/sign_release.py`.
+> Las secciones sobre Pyodide, `allen-src.zip` y `assembleDebug` describen el estado anterior. Ver
+> [SECURITY_AUDIT_APK_2026-10-11.md](SECURITY_AUDIT_APK_2026-10-11.md) y `android/README.md`.
+
 Se integran las aportaciones de Sebastián de `main` en la rama
 `feature/mobile-learning-pwa`: demo Android, Pyodide, constructor de recursos,
 APK publicado y correcciones de iconos. Base revisada:

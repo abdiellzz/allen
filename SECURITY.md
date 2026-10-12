@@ -104,6 +104,20 @@ La landing no debe contener:
 - endpoints privados;
 - datos reales.
 
+## APK de Android
+
+La APK la usan niños. Controles (detalle en `android/README.md` y
+`docs/SECURITY_AUDIT_APK_2026-10-11.md`):
+
+- sin permisos de Android, ni siquiera Internet;
+- solo se publica como release **no depurable**, firmada con la clave de ALLEN (rotación v3 desde la
+  clave de depuración usada hasta 1.2.4-android-demo); `android/sign_release.py` lo verifica;
+- la clave de release, su contraseña y la línea de rotación viven fuera del repositorio;
+- el APK solo contiene la experiencia móvil: ni Python, ni backend, ni interfaz de escritorio;
+- CSP estricta dentro del APK y WebView limitada a sus propios assets;
+- sin copia en la nube ni transferencia entre dispositivos;
+- CI compila la release y verifica el APK publicado.
+
 ## Dependencias
 
 Antes de una release:
