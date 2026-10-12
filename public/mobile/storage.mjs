@@ -1,5 +1,8 @@
+import {validateTrail} from './allen-trail.mjs';
+import {validateLab,validReflection} from './learning-labs.mjs';
+import {validAnswer,correctAnswer} from './activities.mjs';
 import {newState, RULES_VERSION, SUMMARY_FIELDS} from './engine.mjs';
-import {course, courses, allTopics, getCourse, topicById, questionById} from './course.mjs';
+import {course, courses, allTopics, getCourse, topicById, questionById, sessionQuestions} from './course.mjs';
 const NAME='allen-mobile-v1';
 const requestResult = request => new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
 const done = tx => new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error??Error('No se pudo guardar.'));});
@@ -27,9 +30,10 @@ export async function saveProfile(db,state,{creating=false}={}){
     await complete.catch(()=>{});throw error;
   }
 }
-export async function createProfile(db,{name,goal,level,minutes}) {
-  const profile={id:crypto.randomUUID(),name:String(name).trim(),goal,level,minutes:Number(minutes)};
-  return saveProfile(db,{...newState(profile),revision:0},{creating:true});
+export async function createProfile(db,{name,goal,level,course:chosen}) {
+  const profile={id:crypto.randomUUID(),name:String(name).trim(),goal,level};
+  if(chosen!==undefined&&!getCourse(chosen))throw Error('Elige una materia disponible.');
+  return saveProfile(db,{...newState(profile),activeCourse:chosen??course.id,revision:0},{creating:true});
 }
 export async function deleteProfile(db,id){
   const tx=db.transaction(['profiles','meta'],'readwrite'),complete=done(tx);tx.objectStore('profiles').delete(id);
@@ -40,11 +44,20 @@ const day=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Nu
 const timestamp=value=>typeof value==='string'&&value.length<=30&&!Number.isNaN(Date.parse(value));
 const uuid=value=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 export function validateState(s){
+  if(s?.allenTrail!==undefined)validateTrail(s.allenTrail);
   if(!s||s.version!==1||s.rulesVersion!==RULES_VERSION||s.courseId!==course.id||!Number.isSafeInteger(s.revision)||s.revision<0)fail();
   if(s.activeCourse!==undefined&&!getCourse(s.activeCourse))fail();
+  if(s.savedSessions!==undefined){
+    if(!s.savedSessions||Array.isArray(s.savedSessions)||typeof s.savedSessions!=='object'||Object.keys(s.savedSessions).length>courses.length)fail();
+    for(const [id,session] of Object.entries(s.savedSessions)){if(!getCourse(id)||id===(s.activeCourse??course.id)||!session||session.courseId!==id||session.phase==='complete')fail();validateState({...s,activeCourse:id,session,savedSessions:undefined});}
+  }
   if(s.diagnosticCourses!==undefined&&(!Array.isArray(s.diagnosticCourses)||s.diagnosticCourses.length>courses.length||s.diagnosticCourses.some(id=>!getCourse(id))||new Set(s.diagnosticCourses).size!==s.diagnosticCourses.length))fail();
-  if(s.preferences!==undefined&&(!s.preferences||!['normal','large'].includes(s.preferences.textSize)))fail();
-  const p=s.profile;if(!p||!uuid(p.id)||typeof p.name!=='string'||p.name.trim().length<1||p.name.length>40||!['school','explore'].includes(p.goal)||!['bases','practice','challenge'].includes(p.level)||![5,10,15].includes(p.minutes))fail();
+  if(s.preferences?.surface!==undefined&&!['glass','solid'].includes(s.preferences.surface))fail();
+  if(s.preferences!==undefined&&(!s.preferences||!['normal','large'].includes(s.preferences.textSize)||(s.preferences.theme!==undefined&&!['light','dark','system'].includes(s.preferences.theme))||(s.preferences.reduceMotion!==undefined&&typeof s.preferences.reduceMotion!=='boolean')))fail();
+  if(s.notebook!==undefined){if(!s.notebook||Array.isArray(s.notebook)||typeof s.notebook!=='object'||Object.keys(s.notebook).length>allTopics.length)fail();for(const [id,n] of Object.entries(s.notebook)){if(!topicById(id)||!n||typeof n.text!=='string'||n.text.length>800||!timestamp(n.at)||typeof n.understood!=='boolean')fail();}}
+  if(s.learningLabs!==undefined){if(!s.learningLabs||typeof s.learningLabs!=='object'||Array.isArray(s.learningLabs)||Object.keys(s.learningLabs).length>allTopics.length)fail();for(const [id,lab] of Object.entries(s.learningLabs)){if(!topicById(id))fail();try{validateLab(lab);}catch{fail();}}}
+  if(s.reflections!==undefined){if(!s.reflections||typeof s.reflections!=='object'||Array.isArray(s.reflections)||Object.keys(s.reflections).length>allTopics.length)fail();for(const [id,r]of Object.entries(s.reflections)){if(!s.completed?.includes(id)||!validReflection(id,r))fail();}}
+  const p=s.profile;if(!p||!uuid(p.id)||typeof p.name!=='string'||p.name.trim().length<1||p.name.length>40||!['school','explore'].includes(p.goal)||!['bases','practice','challenge'].includes(p.level)||(p.minutes!==undefined&&![5,10,15].includes(p.minutes)))fail();
   if(typeof s.diagnosticComplete!=='boolean'||!Array.isArray(s.completed)||s.completed.length>allTopics.length||new Set(s.completed).size!==s.completed.length||s.completed.some(id=>!topicById(id)))fail();
   for(const id of s.completed){const pre=topicById(id).prerequisite;if(pre&&!s.completed.includes(pre))fail();}
   if(!Array.isArray(s.events)||s.events.length>5000)fail();
@@ -52,7 +65,7 @@ export function validateState(s){
   for(const e of s.events){
     if(!e||!uuid(e.id)||eventIds.has(e.id)||!topicById(e.topicId)||!timestamp(e.at)||!['answer','hint','help','practice_complete','check_complete','review_scheduled','card_review','summary'].includes(e.type))fail();eventIds.add(e.id);
     if(e.type==='summary'&&(SUMMARY_FIELDS.some(k=>!Number.isSafeInteger(e[k])||e[k]<0)||e.correct+e.incorrect!==e.attempts))fail();
-    if(['answer','hint'].includes(e.type)){const q=questionById(e.questionId);if(!q||q.topicId!==e.topicId||!uuid(e.sessionId))fail();if(e.type==='answer'&&(!q.options.includes(e.answer)||typeof e.correct!=='boolean'||e.correct!==(e.answer===q.answer)))fail();}
+    if(['answer','hint'].includes(e.type)){const q=questionById(e.questionId);if(!q||q.topicId!==e.topicId||!uuid(e.sessionId))fail();if(e.type==='answer'&&(!validAnswer(q,e.answer)||typeof e.correct!=='boolean'||e.correct!==correctAnswer(q,e.answer)))fail();}
     if(e.type==='review_scheduled'&&!day(e.due))fail();
     if(e.type==='card_review'&&typeof e.remembered!=='boolean')fail();
     if(e.type==='help'&&!['explain','simple','alternative'].includes(e.action))fail();
@@ -60,14 +73,16 @@ export function validateState(s){
   if(!s.cards||typeof s.cards!=='object'||Array.isArray(s.cards))fail();
   for(const [id,c] of Object.entries(s.cards)){if(!topicById(id)||!c||typeof c.remembered!=='boolean'||!day(c.due)||!timestamp(c.at))fail();}
   if(s.session!==null){
-    const a=s.session;if(!a||!uuid(a.id)||!['diagnostic','learn','review'].includes(a.kind)||!['lesson','practice','complete'].includes(a.phase))fail();
+    const a=s.session;if(!a||!uuid(a.id)||!['diagnostic','learn','review','mixed'].includes(a.kind)||!['lesson','practice','complete'].includes(a.phase))fail();
     if(a.kind!=='diagnostic'&&!topicById(a.topicId))fail();
     if(a.kind==='diagnostic'&&(a.topicId!==null||a.phase==='lesson'))fail();
     const selected=getCourse(a.courseId??course.id);if(!selected)fail();
     if(a.kind!=='diagnostic'&&topicById(a.topicId).courseId!==selected.id)fail();
-    const expected=a.kind==='diagnostic'?selected.topics.flatMap(t=>t.questions.filter(q=>q.kind==='diagnostic').map(q=>q.id)):topicById(a.topicId).questions.filter(q=>q.kind!=='diagnostic').map(q=>q.id);
+    const round=a.round??0;if(!Number.isInteger(round)||round<0||round>3||(a.kind==='diagnostic'&&round!==0))fail();
+    if(a.kind==='mixed'&&(!Array.isArray(a.topicIds)||a.topicIds.length<2||a.topicIds.length>3||new Set(a.topicIds).size!==a.topicIds.length||a.topicId!==a.topicIds[0]||a.phase==='lesson'||a.topicIds.some(id=>!s.completed.includes(id)||topicById(id)?.courseId!==selected.id)))fail();
+    const expected=a.kind==='mixed'?a.topicIds.map(id=>sessionQuestions(topicById(id),round).at(-1)):a.kind==='diagnostic'?selected.topics.flatMap(t=>t.questions.filter(q=>q.kind==='diagnostic').map(q=>q.id)):sessionQuestions(topicById(a.topicId),round);
     if(JSON.stringify(a.questionIds)!==JSON.stringify(expected)||!Number.isInteger(a.index)||a.index<0||a.index>=expected.length||!Array.isArray(a.answers)||a.answers.length>expected.length||!Array.isArray(a.hints)||a.hints.length>expected.length*2)fail();
-    const seen=new Set();for(const [index,r] of a.answers.entries()){const q=questionById(r.questionId);if(!q||r.questionId!==expected[index]||index>a.index||seen.has(r.questionId)||!q.options.includes(r.answer)||r.correct!==(r.answer===q.answer))fail();seen.add(r.questionId);}
+    const seen=new Set();for(const [index,r] of a.answers.entries()){const q=questionById(r.questionId);if(!q||r.questionId!==expected[index]||index>a.index||seen.has(r.questionId)||!validAnswer(q,r.answer)||r.correct!==correctAnswer(q,r.answer))fail();seen.add(r.questionId);}
     for(const id of a.hints){if(!expected.includes(id)||a.hints.filter(x=>x===id).length>questionById(id).hints.length)fail();}
     if(a.phase==='practice'&&![a.index,a.index+1].includes(a.answers.length))fail();
     if(a.phase==='complete'&&a.answers.length!==expected.length)fail();
@@ -76,6 +91,7 @@ export function validateState(s){
   return s;
 }
 export function exportBackup(state){validateState(state);return JSON.stringify({format:'allen-mobile-backup',version:1,state},null,2);}
+function cleanSession(session){return session?{id:session.id,...(session.courseId?{courseId:session.courseId}:{}),kind:session.kind,topicId:session.topicId,...(session.round!==undefined?{round:session.round}:{}),...(session.kind==='mixed'?{topicIds:session.topicIds}:{}),index:session.index,phase:session.phase,questionIds:session.questionIds,answers:session.answers.map(a=>({questionId:a.questionId,answer:a.answer,correct:a.correct})),hints:session.hints}:null;}
 export function parseBackup(text){
   if(typeof text!=='string'||text.length>2_000_000)fail();
   let value;try{value=JSON.parse(text);}catch{fail();}
@@ -83,7 +99,7 @@ export function parseBackup(text){
   validateState(value.state);
   // Only copy known properties. Never accept executable courses, privileges or AI settings.
   const s=value.state;
-  return structuredClone({version:s.version,rulesVersion:s.rulesVersion,courseId:s.courseId,...(s.preferences?{preferences:{textSize:s.preferences.textSize}}:{}),...(s.activeCourse?{activeCourse:s.activeCourse}:{}),...(s.diagnosticCourses?{diagnosticCourses:s.diagnosticCourses}:{}),profile:{id:s.profile.id,name:s.profile.name,goal:s.profile.goal,level:s.profile.level,minutes:s.profile.minutes},diagnosticComplete:s.diagnosticComplete,events:s.events.map(e=>Object.fromEntries(Object.entries(e).filter(([k])=>['id','type','topicId','at','questionId','answer','correct','sessionId','action','due','remembered',...SUMMARY_FIELDS].includes(k)))),completed:s.completed,session:s.session?{id:s.session.id,...(s.session.courseId?{courseId:s.session.courseId}:{}),kind:s.session.kind,topicId:s.session.topicId,index:s.session.index,phase:s.session.phase,questionIds:s.session.questionIds,answers:s.session.answers.map(a=>({questionId:a.questionId,answer:a.answer,correct:a.correct})),hints:s.session.hints}:null,cards:Object.fromEntries(Object.entries(s.cards).map(([k,c])=>[k,{due:c.due,remembered:c.remembered,at:c.at}])),revision:s.revision});
+  return structuredClone({...(s.allenTrail?{allenTrail:{level:s.allenTrail.level,x:s.allenTrail.x,y:s.allenTrail.y,collected:s.allenTrail.collected,moves:s.allenTrail.moves}}:{}),...(s.learningLabs?{learningLabs:Object.fromEntries(Object.entries(s.learningLabs).map(([id,l])=>[id,{step:l.step,values:l.values,built:l.built,note:l.note,at:l.at}]))}:{}),...(s.reflections?{reflections:Object.fromEntries(Object.entries(s.reflections).map(([id,r])=>[id,{rule:r.rule,example:r.example,at:r.at}]))}:{}),version:s.version,rulesVersion:s.rulesVersion,courseId:s.courseId,...(s.preferences?{preferences:{textSize:s.preferences.textSize,...(s.preferences.surface?{surface:s.preferences.surface}:{}),...(s.preferences.theme?{theme:s.preferences.theme}:{}),...(s.preferences.reduceMotion!==undefined?{reduceMotion:s.preferences.reduceMotion}:{})}}:{}),...(s.notebook?{notebook:Object.fromEntries(Object.entries(s.notebook).map(([id,n])=>[id,{text:n.text,understood:n.understood,at:n.at}]))}:{}),...(s.activeCourse?{activeCourse:s.activeCourse}:{}),...(s.savedSessions?{savedSessions:Object.fromEntries(Object.entries(s.savedSessions).map(([id,session])=>[id,cleanSession(session)]))}:{}),...(s.diagnosticCourses?{diagnosticCourses:s.diagnosticCourses}:{}),profile:{id:s.profile.id,name:s.profile.name,goal:s.profile.goal,level:s.profile.level,...(s.profile.minutes!==undefined?{minutes:s.profile.minutes}:{})},diagnosticComplete:s.diagnosticComplete,events:s.events.map(e=>Object.fromEntries(Object.entries(e).filter(([k])=>['id','type','topicId','at','questionId','answer','correct','sessionId','action','due','remembered',...SUMMARY_FIELDS].includes(k)))),completed:s.completed,session:cleanSession(s.session),cards:Object.fromEntries(Object.entries(s.cards).map(([k,c])=>[k,{due:c.due,remembered:c.remembered,at:c.at}])),revision:s.revision});
 }
 export function prepareRecovery(text){const s=parseBackup(text);const suffix=' · recuperado';s.profile.id=crypto.randomUUID();s.profile.name=s.profile.name.slice(0,40-suffix.length)+suffix;s.revision=0;validateState(s);return s;}
 export async function restoreBackup(db,text){return saveProfile(db,prepareRecovery(text),{creating:true});}

@@ -6,7 +6,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -44,14 +44,24 @@ def create_profile(page, name='Estudiante', goal='school'):
     page.get_by_label('¿Cómo quieres que te llame?').fill(name)
     page.get_by_label('¿Qué quieres hacer?').select_option(goal)
     page.get_by_role('button', name='Crear mi perfil', exact=True).click()
-    page.locator('h1', has_text=f'Hola, {name}').wait_for()
-    if page.locator('meta[name="allen-runtime"]').count():
-        # The APK build starts a guided tour after the first profile; its dialog repeats the greeting.
-        page.get_by_role('button', name='Saltar recorrido', exact=True).click()
+    page.get_by_role('heading', name=f'Hola, {name}', exact=True, level=1).wait_for()
 
 
 def answer(page, value, last=False):
-    page.get_by_role('radio', name=value, exact=True).check()
+    kind = page.locator('#answer-form').get_attribute('data-activity')
+    if kind == 'input':
+        page.locator('#answer-form input[name="answer"]').fill(value)
+    elif kind == 'match':
+        for i, pair in enumerate(value.split(' | ')):
+            page.locator(f'#answer-form select[data-match="{i}"]').select_option(pair.split(' → ',1)[1])
+    elif kind == 'order':
+        for target, step in enumerate(value.split(' → ')):
+            position = page.locator('.order-steps li span').all_text_contents().index(step)
+            while position > target:
+                page.get_by_role('button', name=f'Subir paso {position+1}', exact=True).click()
+                position -= 1
+    else:
+        page.get_by_role('radio', name=value, exact=True).check()
     page.get_by_role('button', name='Comprobar respuesta', exact=True).click()
     page.get_by_role('button', name='Terminar y guardar' if last else 'Siguiente actividad', exact=True).click()
     page.locator('#content[aria-busy="true"]').wait_for(state="detached")
@@ -70,6 +80,101 @@ def diagnose(page):
         answer(page, value, last=index==5)
     page.get_by_role('heading', name='Ya tenemos una primera orientación').wait_for()
     page.get_by_role('button', name='Ver mi siguiente paso').click()
+
+
+def test_rescue_notebook_accessibility_and_native_export_contract(mobile_url):
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(viewport={'width':375, 'height':812})
+        page.add_init_script("window.AllenFiles={exportProgress:data=>{window.exportedProgress=data}}")
+        page.goto(mobile_url)
+        create_profile(page)
+        diagnose(page)
+        page.get_by_role('button',name='Empezar lección',exact=True).click()
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        answer(page,'8/3')
+        page.get_by_role('radio',name='6/2',exact=True).check()
+        page.get_by_role('button',name='Comprobar respuesta',exact=True).click()
+        page.get_by_text('Hagamos una pausa juntos',exact=True).wait_for()
+        page.get_by_role('button',name='Más sencillo y otro ejemplo',exact=True).click()
+        assert 'Otro ejemplo:' in page.locator('#help-panel').inner_text()
+        page.get_by_role('button',name='Guardar lo que comprendí',exact=True).click()
+        page.get_by_label('Mi descubrimiento').fill('<script>alert(1)</script> El denominador cuenta el total.')
+        page.get_by_role('button',name='Guardar descubrimiento',exact=True).click()
+        assert state(page)['notebook']['parts']['understood'] is True
+        page.reload()
+        navigate(page,'Mi progreso')
+        page.get_by_role('button',name='Abrir mi cuaderno',exact=True).click()
+        assert '<script>alert(1)</script>' in page.get_by_label('Mi descubrimiento').input_value()
+        assert page.locator('#content script').count()==0
+        page.locator('#settings-button').click()
+        page.get_by_label('Apariencia').select_option('dark')
+        page.locator('#accessibility-form select[name=textSize]').select_option('large')
+        page.get_by_label('Reducir movimiento').check()
+        page.get_by_role('button',name='Guardar accesibilidad',exact=True).click()
+        page.locator('html[data-theme=dark]').wait_for()
+        assert page.locator('html').get_attribute('data-reduce-motion')=='true'
+        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+        navigate(page,'Mi progreso')
+        page.get_by_role('button',name='Exportar mi progreso',exact=True).click()
+        page.wait_for_function('window.exportedProgress')
+        exported=json.loads(page.evaluate('window.exportedProgress'))
+        assert exported['state']['notebook']['parts']['understood'] is True
+        assert exported['state']['preferences']['theme']=='dark'
+        assert exported['state']['session']['answers'][-1]['correct'] is False
+        page.evaluate("window.dispatchEvent(new CustomEvent('allen-file-status',{detail:'Copia guardada.'}))")
+        assert page.locator('#notice').inner_text()=='Copia guardada.'
+        browser.close()
+
+
+def test_mixed_review_explain_back_and_scroll_restore_offline(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page()
+        page.goto(mobile_url)
+        create_profile(page)
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        page.evaluate("""async()=>{
+            const e=await import('./engine.mjs'),c=await import('./course.mjs'),d=await import('./storage.mjs');
+            const db=await d.openStorage(),s=await d.loadProfile(db,await d.activeProfile(db));
+            function finish(){if(s.session.phase==='lesson')e.advance(s);while(s.session.phase==='practice'){const q=c.questionById(s.session.questionIds[s.session.index]);e.submitAnswer(s,q.answer);e.advance(s);}}
+            e.startSession(s,'diagnostic');finish();for(const id of ['parts','equivalent']){e.startSession(s,'learn',id);finish();}
+            await d.saveProfile(db,s);db.close();
+        }""")
+        context.set_offline(True)
+        page.reload()
+        # New numeric variants remain available without network access.
+        navigate(page,'Practicar')
+        page.get_by_role('button',name='Mezclar mis temas',exact=True).click()
+        for index in range(2):
+            value=page.evaluate("""async()=>{const c=await import('./course.mjs'),d=await import('./storage.mjs');const db=await d.openStorage(),s=await d.loadProfile(db,await d.activeProfile(db));db.close();return c.questionById(s.session.questionIds[s.session.index]).answer;}""")
+            answer(page,value,last=index==1)
+        assert state(page)['completed']==['parts','equivalent']
+        page.get_by_role('heading',name='Elige la estrategia, no solo la respuesta',exact=True).wait_for()
+        navigate(page,'Aprender')
+        page.get_by_text('Ver las 22 lecciones',exact=True).click()
+        page.locator('.route-list article').first.get_by_role('button',name='Repasar tema',exact=True).click()
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        for index in range(3):
+            value=page.evaluate("""async()=>{const c=await import('./course.mjs'),d=await import('./storage.mjs');const db=await d.openStorage(),s=await d.loadProfile(db,await d.activeProfile(db));db.close();return c.questionById(s.session.questionIds[s.session.index]).answer;}""")
+            answer(page,value,last=index==2)
+        page.get_by_text('Explícamelo tú',exact=True).click()
+        page.locator('input[name=rule][value=parts]').check()
+        page.locator('input[name=example][value=parts]').check()
+        before_events=len(state(page)['events'])
+        page.get_by_role('button',name='Comprobar mi explicación',exact=True).click()
+        expect(page.locator('#explanation-form').locator('..')).to_contain_text('Relacionaste la regla')
+        assert len(state(page)['events'])==before_events
+        navigate(page,'Mi progreso')
+        page.evaluate('window.scrollTo(0,350)')
+        before=page.evaluate('scrollY')
+        page.locator('#settings-button').click()
+        navigate(page,'Mi progreso')
+        assert abs(page.evaluate('scrollY')-before)<5
+        assert page.evaluate('window.allenNavigateBack()') is True
+        page.get_by_role('heading',name='Hola, Estudiante',exact=True).wait_for()
+        browser.close()
 
 
 def test_learning_survives_offline_reload_and_all_lessons_complete(mobile_url):
@@ -102,14 +207,14 @@ def test_learning_survives_offline_reload_and_all_lessons_complete(mobile_url):
         page.get_by_role('heading', name='Comprobación superada').wait_for()
         assert state(page)['completed']==['parts']
         page.get_by_role('button', name='Ver mi siguiente paso').click()
-        for answers in (['3', '6/8', '4/10'], ['3/6', '5/7', '6/9']):
+        for answers in (['3', '6/8', '4/10'], ['3/6', '5/7', '6/9'], ['5/7', '3/4 es mayor', 'El de 2/3'], ['4/6', '3/4', '5/6 de litro'], ['6', '12', '16']):
             page.get_by_role('button', name='Empezar lección', exact=True).click()
             page.get_by_role('button', name='Entendido, vamos a practicar').click()
             for i, value in enumerate(answers):
                 answer(page, value, last=i==2)
             page.get_by_role('heading', name='Comprobación superada').wait_for()
             page.get_by_role('button', name='Ver mi siguiente paso').click()
-        assert state(page)['completed']==['parts','equivalent','sum']
+        assert state(page)['completed']==['parts','equivalent','sum','fraction-compare','fraction-unlike','fraction-amount']
         navigate(page, 'Mi progreso')
         page.get_by_role('heading', name='Tu progreso tiene una historia').wait_for()
         for width in [320,360,390,768,1366]:
@@ -125,7 +230,7 @@ def test_learning_survives_offline_reload_and_all_lessons_complete(mobile_url):
         assert state(page)['cards']['parts']['remembered'] is False
         navigate(page, 'Hoy')
         page.screenshot(path=str(path/'today.png'),full_page=True)
-        page.get_by_role('button',name='Comenzar repaso',exact=True).click()
+        page.get_by_role('button',name='Empezar lección',exact=True).click()
         page.get_by_role('button',name='Entendido, vamos a practicar').click()
         page.screenshot(path=str(path/'practice.png'),full_page=True)
         assert not errors, errors
@@ -150,7 +255,7 @@ def test_backup_recovery_profile_isolation_and_safe_import(mobile_url, tmp_path)
         assert state(page)['events']==[]
         assert state(page)['profile']['goal']=='explore'
         navigate(page, 'Allen')
-        page.get_by_text('La IA generativa está desconectada por defecto.', exact=False).wait_for()
+        page.get_by_role('heading',name='¿Qué vamos a entender hoy?',exact=True).wait_for()
         assert 'Uno' not in page.locator('#content').inner_text()
         navigate(page, 'Mi progreso')
         with page.expect_file_chooser() as chooser:
@@ -213,9 +318,9 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
         page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
         navigate(page, 'Aprender')
         page.screenshot(path=str(ROOT/'docs/images/mobile/catalogue.png'),full_page=True)
-        assert page.locator('.course-card').count() == 6
+        assert page.locator('.course-card').count() == 14
         context.set_offline(True)
-        for c in catalogue[1:]:
+        for c in catalogue[1:6]:
             navigate(page, 'Aprender')
             page.locator(f'[data-course="{c["id"]}"]').click()
             page.get_by_role('button',name='Hacer diagnóstico',exact=True).click()
@@ -223,7 +328,7 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
             for i,q in enumerate(diagnostic):
                 answer(page,q['answer'],last=i==len(diagnostic)-1)
             page.get_by_role('button',name='Ver mi siguiente paso',exact=True).click()
-            for t in c['topics']:
+            for t in c['topics'][:5]:
                 page.get_by_role('button',name='Empezar lección',exact=True).click()
                 page.get_by_role('button',name='Dame otro ejemplo',exact=True).click()
                 page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
@@ -231,28 +336,17 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
                 for i,q in enumerate(practice):
                     answer(page,q['answer'],last=i==len(practice)-1)
                 page.get_by_role('button',name='Ver mi siguiente paso',exact=True).click()
-        assert len(state(page)['completed']) == 10
+        assert len(state(page)['completed']) == 25
         page.reload()
         page.get_by_role('heading',name='Hola, Luna',exact=True).wait_for()
-        assert len(state(page)['completed']) == 10
-        context.set_offline(False)
-        # UI contract only: the backend adapter is verified separately with TestClient.
-        page.route('**/api/mobile/bootstrap',lambda route:route.fulfill(json={'connected':True,'token':'test-token'}))
-        sent = []
-        def tutor(route):
-            sent.append(route.request.post_data_json)
-            route.fulfill(json={'answer':'Una explicación de prueba','source':'Contenido revisable','generated':True})
-        page.route('**/api/mobile/tutor',tutor)
+        assert len(state(page)['completed']) == 25
         navigate(page, 'Allen')
         before = state(page)['events']
-        page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).click()
-        page.get_by_label('¿Qué quieres entender?').fill('Dame otra explicación')
-        page.get_by_role('button',name='Pedir explicación',exact=True).click()
-        page.get_by_text('Respuesta generada · verificar con el curso',exact=True).wait_for()
-        assert sent[0]['topic_id']=='science-fair-test'
-        assert set(sent[0])=={'message','topic_id','question_id','last_answer','level'}
+        page.get_by_label('Tema que quieres entender').select_option('science-data')
+        page.locator('.question-chips').get_by_role('button',name='Dame un ejemplo',exact=True).click()
+        page.locator('.chat-message').filter(has_text='Una planta mide 5, 7 y 9 cm').wait_for()
         assert state(page)['events']==before
-        page.screenshot(path=str(ROOT/'docs/images/mobile/tutor-local.png'),full_page=True)
+        page.screenshot(path=str(ROOT/'artifacts/mobile/tutor-guided.png'),full_page=True)
         navigate(page, 'Mi progreso')
         page.get_by_label('Tamaño del texto').select_option('large')
         page.get_by_role('button',name='Guardar preferencias',exact=True).click()
@@ -263,58 +357,43 @@ def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
         page.get_by_role('button',name='Perfiles',exact=True).click()
         create_profile(page,'Sol')
         navigate(page, 'Allen')
-        assert page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).is_visible()
+        assert page.locator('.chat-message').count()==0
         assert page.get_by_text('Una explicación de prueba',exact=True).count()==0
         assert state(page)['events']==[]
         browser.close()
 
 
-def test_browser_uses_desktop_bridge_and_handles_model_loss(tmp_path):
-    import socket
-    import time
-    import uvicorn
-    from backend.app import create_app
-    from tests.test_mobile_tutor import ModelStub
-
-    model = ModelStub()
-    app = create_app(tmp_path/'bridge.sqlite3',ai=model,require_license=False,
-                     require_local_access=False,require_teacher_auth=False)
-    sock = socket.socket()
-    sock.bind(('127.0.0.1',0))
-    server = uvicorn.Server(uvicorn.Config(app,log_level='error'))
-    thread = threading.Thread(target=server.run,kwargs={'sockets':[sock]},daemon=True)
-    thread.start()
-    try:
-        deadline = time.monotonic()+10
-        while not server.started and time.monotonic()<deadline:
-            time.sleep(.02)
-        assert server.started
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            page = browser.new_page(viewport={'width':390,'height':844})
-            page.goto(f'http://127.0.0.1:{sock.getsockname()[1]}/mobile/')
-            create_profile(page)
-            page.get_by_role('button',name='Comenzar diagnóstico').click()
-            navigate(page, 'Allen')
-            page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).click()
-            page.get_by_label('¿Qué quieres entender?').fill('Ayúdame a razonar')
-            before = state(page)
-            page.get_by_role('button',name='Pedir explicación',exact=True).click()
-            page.get_by_text('Respuesta generada · verificar con el curso',exact=True).wait_for()
-            assert len(model.calls)==1
-            assert state(page)==before
-            model.connected = False
-            page.get_by_label('¿Qué quieres entender?').fill('Otro ejemplo')
-            page.get_by_role('button',name='Pedir explicación',exact=True).click()
-            page.get_by_text('Inicia tu modelo local. El tutor guiado sigue disponible sin IA.',exact=True).wait_for()
-            page.get_by_role('button',name='No entendí',exact=True).click()
-            page.get_by_text('Explicación preparada',exact=True).wait_for()
-            assert len(state(page)['events'])==1
-            browser.close()
-    finally:
-        server.should_exit = True
-        thread.join(timeout=10)
-        sock.close()
+def test_prepared_chat_offline_questions_safety_and_profile_reset(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':375,'height':812})
+        page=context.new_page()
+        requests=[]
+        page.on('request',lambda req:requests.append(req.url))
+        page.goto(mobile_url)
+        create_profile(page,'Ana')
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        context.set_offline(True)
+        navigate(page,'Allen')
+        page.get_by_label('Tema que quieres entender').select_option('python-loop')
+        page.get_by_label('También puedes escribir una duda breve').fill('¿Me muestras un ejemplo?')
+        page.get_by_role('button',name='Preguntar a Allen',exact=True).click()
+        page.locator('.chat-message').filter(has_text='0, 1 y 2').wait_for()
+        page.get_by_label('También puedes escribir una duda breve').fill('<svg onload=alert(1)> desconocido')
+        page.get_by_role('button',name='Preguntar a Allen',exact=True).click()
+        page.get_by_text('No tengo una respuesta preparada',exact=False).wait_for()
+        assert page.locator('svg[onload]').count()==0
+        assert state(page)['events']==[]
+        for width in [320,375,768,1440]:
+            page.set_viewport_size({'width':width,'height':812})
+            assert page.evaluate('document.documentElement.scrollWidth-innerWidth')<=2
+        assert not any('/api/' in url for url in requests)
+        page.get_by_role('button',name='Perfiles',exact=True).click()
+        create_profile(page,'Luis')
+        navigate(page,'Allen')
+        assert page.locator('.chat-message').count()==0
+        assert state(page)['events']==[]
+        browser.close()
 
 
 def test_bundled_android_ui_search_and_manual_backup(mobile_url):
@@ -331,11 +410,12 @@ def test_bundled_android_ui_search_and_manual_backup(mobile_url):
         page.route('**/mobile/index.html',bundled_html)
         page.goto(mobile_url+'index.html')
         create_profile(page)
+        page.get_by_role('button',name='Saltar recorrido',exact=True).click()
         page.get_by_text('Contenido incluido · sin Internet',exact=True).wait_for()
         assert page.evaluate('navigator.serviceWorker.getRegistrations().then(r=>r.length)')==0
         assert not any('/api/' in url or 'allen-worker.js' in url for url in requests)
         navigate(page, 'Aprender')
-        page.get_by_label('Buscar un objetivo').fill('cuentas')
+        page.get_by_label('Buscar un objetivo').fill('Protege tu vida digital')
         assert page.locator('.course-card').count()==1
         assert page.get_by_role('heading',name='Protege tu vida digital',exact=True).is_visible()
         page.get_by_label('Buscar un objetivo').fill('no existe esta ruta')
@@ -346,11 +426,11 @@ def test_bundled_android_ui_search_and_manual_backup(mobile_url):
         navigate(page, 'Practicar')
         page.get_by_text('Misiones de aplicación',exact=True).click()
         page.get_by_role('heading',name='Misiones para la vida real').wait_for()
-        assert page.get_by_role('button',name='Preparar esta misión',exact=True).count()==6
+        assert page.get_by_role('button',name='Preparar esta misión',exact=True).count()==3
         page.evaluate("document.querySelector('#notice').hidden=true")
         page.locator('.mission-list').screenshot(path=str(ROOT/'docs/images/mobile/missions.png'))
         navigate(page, 'Allen')
-        page.get_by_role('heading',name='Tu tutor está listo sin conexión').wait_for()
+        page.get_by_role('heading',name='¿Qué vamos a entender hoy?',exact=True).wait_for()
         assert page.get_by_role('button',name='Comprobar y conectar IA local',exact=True).count()==0
         navigate(page, 'Mi progreso')
         page.get_by_role('heading',name='Tu mapa de aprendizaje').wait_for()
@@ -376,7 +456,9 @@ def test_compact_navigation_identity_and_companion(mobile_url):
         page.get_by_text('Vamos paso a paso.',exact=False).wait_for()
         assert state(page)==before
         page.locator('#notice').evaluate('(el)=>el.hidden=true')
-        assert page.locator('#content').bounding_box()['height'] < 750
+        page.get_by_role('button',name='Minimizar',exact=True).click()
+        expect(page.locator('.companion-small')).to_have_count(1)
+        assert page.locator('#content').bounding_box()['height'] < 820
         page.screenshot(path=str(ROOT/'docs/images/mobile/home-compact.png'),full_page=True)
         page.get_by_role('button',name='Abrir secciones',exact=True).click()
         box=page.locator('#navigation').bounding_box()
@@ -396,4 +478,326 @@ def test_compact_navigation_identity_and_companion(mobile_url):
         page.set_viewport_size({'width':1440,'height':900})
         assert page.locator('#content').bounding_box()['width']>=1100
         page.screenshot(path=str(ROOT/'docs/images/mobile/catalogue-desktop.png'),full_page=True)
+        browser.close()
+
+
+def test_companion_followup_and_close_use_real_evidence(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        page=browser.new_page(viewport={'width':375,'height':812})
+        page.goto(mobile_url)
+        create_profile(page,'Ana')
+        page.get_by_role('button',name='Minimizar',exact=True).click()
+        page.reload()
+        expect(page.locator('.companion-small')).to_have_count(1)
+        page.get_by_role('button',name='Ver consejo',exact=True).click()
+        page.get_by_role('button',name='Comenzar diagnóstico',exact=True).click()
+        page.get_by_role('radio',name='4/1',exact=True).check()
+        page.get_by_role('button',name='Comprobar respuesta',exact=True).click()
+        page.locator('.companion-card').get_by_text('Vamos a revisar la idea',exact=True).wait_for()
+        navigate(page,'Allen')
+        page.locator('.question-chips').get_by_role('button',name='No entendí',exact=True).click()
+        page.locator('.chat-message').first.wait_for()
+        assert page.locator('.chat-message').count()==1
+        page.locator('.chat-message').get_by_role('button',name='Dame un ejemplo',exact=True).click()
+        page.locator('.chat-message').nth(1).wait_for()
+        assert page.locator('.chat-message').count()==2
+        assert page.locator('.chat-message').last.get_by_role('button',name='¿Qué hago después?',exact=True).count()==1
+        navigate(page,'Hoy')
+        page.get_by_role('button',name='Terminar por hoy',exact=True).click()
+        page.get_by_role('heading',name='Tu aprendizaje queda contigo',exact=True).wait_for()
+        page.get_by_text('Hoy respondiste 1 actividades, con 0 aciertos.',exact=False).wait_for()
+        assert 'Partes de un entero' in page.locator('#content').inner_text()
+        before=state(page)
+        page.get_by_role('button',name='Configurar recordatorios',exact=True).click()
+        assert page.get_by_role('button',name='Activar recordatorios',exact=True).count()==0
+        assert state(page)==before
+        path=ROOT/'artifacts/mobile';path.mkdir(parents=True,exist_ok=True)
+        page.screenshot(path=str(path/'settings-guided.png'),full_page=True)
+        browser.close()
+
+
+def test_android_notification_controls_require_explicit_opt_in(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        page=browser.new_page(viewport={'width':375,'height':812})
+        page.add_init_script("""window.reminderCalls=[];window.AllenReminders={
+            status:()=> 'Recordatorios desactivados.',clearSummary:()=>{},saveSummary:()=>{},
+            enable:(h,m)=>{reminderCalls.push(['enable',h,m]);dispatchEvent(new CustomEvent('allen-reminder-status',{detail:'Permiso rechazado. Puedes seguir aprendiendo.'}));},
+            disable:()=>{reminderCalls.push(['disable']);dispatchEvent(new CustomEvent('allen-reminder-status',{detail:'Recordatorios desactivados.'}));}
+        };""")
+        page.goto(mobile_url);create_profile(page,'Ana')
+        assert page.evaluate('reminderCalls')==[]
+        page.get_by_role('button',name='Abrir ajustes',exact=True).click()
+        page.get_by_label('Hora del recordatorio').fill('17:30')
+        page.get_by_role('button',name='Activar recordatorios',exact=True).click()
+        page.get_by_text('Permiso rechazado. Puedes seguir aprendiendo.',exact=True).wait_for()
+        assert page.evaluate('reminderCalls')==[['enable',17,30]]
+        page.get_by_role('button',name='Desactivar recordatorios',exact=True).click()
+        page.locator('#reminder-status').get_by_text('Recordatorios desactivados.',exact=True).wait_for()
+        assert page.evaluate('reminderCalls')==[['enable',17,30],['disable']]
+        browser.close()
+
+
+def test_interactive_math_context_and_resume_offline(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page()
+        page.goto(mobile_url)
+        create_profile(page,'Leo')
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        page.evaluate("""async()=>{
+            const e=await import('./engine.mjs'),c=await import('./course.mjs'),st=await import('./storage.mjs');
+            const db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db));
+            const finish=()=>{if(s.session.phase==='lesson')e.advance(s);while(s.session.phase==='practice'){e.submitAnswer(s,c.questionById(s.session.questionIds[s.session.index]).answer);e.advance(s);}};
+            e.startSession(s,'diagnostic');finish();e.startSession(s,'learn','parts');finish();e.startSession(s,'learn','math-decimal');await st.saveProfile(db,s);db.close();
+        }""")
+        context.set_offline(True)
+        page.reload()
+        page.get_by_text('Estábamos practicando',exact=False).first.wait_for()
+        page.get_by_role('button',name='Continuar aprendiendo',exact=True).click()
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        page.get_by_role('button',name='No entendí',exact=True).click()
+        page.get_by_text('Estamos resolviendo:',exact=False).wait_for()
+        answer(page,'0,250')
+        answer(page,'1/2 → 0.5 | 3/4 → 0.75 | 1/5 → 0.2')
+        page.get_by_role('radio',name='0.07',exact=True).check()
+        page.get_by_role('button',name='Comprobar respuesta',exact=True).click()
+        page.locator('.feedback').get_by_text('0.07 son siete centésimas',exact=False).wait_for()
+        assert 'math-decimal' not in state(page)['completed']
+        page.set_viewport_size({'width':844,'height':390})
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+        page.reload()
+        assert state(page)['session']['answers'][0]['correct'] is True
+        page.evaluate("""async()=>{
+            const e=await import('./engine.mjs'),c=await import('./course.mjs'),st=await import('./storage.mjs');
+            const db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db));
+            e.advance(s);e.startSession(s,'learn','math-decimal');e.advance(s);
+            while(s.session.phase==='practice'){e.submitAnswer(s,c.questionById(s.session.questionIds[s.session.index]).answer);e.advance(s);}
+            e.startSession(s,'learn','math-decimal-add');await st.saveProfile(db,s);db.close();
+        }""")
+        page.reload()
+        page.get_by_role('button',name='Continuar aprendiendo',exact=True).click()
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        assert page.get_by_role('button',name='Subir paso 1',exact=True).is_disabled()
+        answer(page,'Escribir 1.20 y 0.35 → Alinear los puntos decimales → Sumar y obtener 1.55')
+        assert state(page)['session']['answers'][0]['correct'] is True
+        answer(page,'1.75')
+        answer(page,'3.55',last=True)
+        assert 'math-decimal-add' in state(page)['completed']
+        browser.close()
+
+
+def test_school_subject_selection_switching_and_untimed_paths(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page()
+        page.goto(mobile_url)
+        expect(page.locator('#profile-form select[name="course"] option')).to_have_count(14)
+        assert page.locator('select[name="minutes"]').count()==0
+        page.locator('#profile-form select[name="course"]').select_option('history-school-v1')
+        create_profile(page,'Sofía')
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        assert state(page)['activeCourse']=='history-school-v1'
+        assert 'minutes' not in state(page)['profile']
+        page.get_by_role('button',name='Comenzar diagnóstico',exact=True).click()
+        answer(page,'Orden temporal de hechos')
+        answer(page,'Ocurrió antes',last=True)
+        page.get_by_role('button',name='Ver mi siguiente paso',exact=True).click()
+        page.get_by_role('button',name='Empezar lección',exact=True).click()
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        answer(page,'Orden temporal de hechos')
+        pending=state(page)['session']
+        context.set_offline(True)
+        page.get_by_role('button',name='Perfiles',exact=True).click()
+        page.locator('#learning-choice-form select[name="course"]').select_option('geography-school-v1')
+        page.get_by_role('button',name='Cambiar materia',exact=True).click()
+        assert state(page)['savedSessions']['history-school-v1']==pending
+        assert page.locator('.route-module').count()==4
+        page.get_by_role('button',name='Hacer diagnóstico',exact=True).click()
+        answer(page,'Arriba en un mapa orientado al norte')
+        page.get_by_role('button',name='Perfiles',exact=True).click()
+        page.locator('#learning-choice-form select[name="course"]').select_option('history-school-v1')
+        page.get_by_role('button',name='Cambiar materia',exact=True).click()
+        page.get_by_role('button',name='Continuar mi ruta',exact=True).click()
+        assert page.locator('#answer-form[data-activity="match"]').is_visible()
+        page.reload()
+        assert state(page)['session']==pending
+        assert state(page)['savedSessions']['geography-school-v1']['index']==1
+        recovered=page.evaluate("""async()=>{
+            const st=await import('./storage.mjs'),db=await st.openStorage();
+            const s=await st.loadProfile(db,await st.activeProfile(db));db.close();return st.prepareRecovery(st.exportBackup(s));
+        }""")
+        assert recovered['savedSessions']==state(page)['savedSessions']
+        assert recovered['profile']['id']!=state(page)['profile']['id']
+        browser.close()
+
+
+def test_learning_labs_build_notes_and_rank_evidence_offline(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page()
+        page.goto(mobile_url)
+        create_profile(page,'Nora')
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        diagnose(page)
+        page.get_by_role('button',name='Empezar lección',exact=True).click()
+        before=state(page)['events']
+        page.get_by_role('button',name='Explora',exact=True).click()
+        page.get_by_role('button',name='Parte 2',exact=True).click()
+        page.get_by_label('Partes totales').select_option('4')
+        assert '2/4' in page.locator('.lab-output').inner_text()
+        page.get_by_role('button',name='Construye',exact=True).click()
+        page.get_by_role('button',name='Idea 1',exact=True).click()
+        assert page.get_by_role('button',name='Idea 1',exact=True).is_disabled()
+        page.get_by_role('button',name='Explícalo',exact=True).click()
+        page.get_by_label('Mi explicación').fill('Dos de cuatro partes iguales forman la mitad.')
+        page.get_by_role('button',name='Guardar mi explicación',exact=True).click()
+        assert state(page)['events']==before
+        assert state(page)['completed']==[]
+        context.set_offline(True)
+        page.reload()
+        page.get_by_role('button',name='Continuar aprendiendo',exact=True).click()
+        assert page.get_by_label('Mi explicación').input_value().startswith('Dos de cuatro')
+        page.evaluate("""async()=>{
+            const e=await import('./engine.mjs'),c=await import('./course.mjs'),st=await import('./storage.mjs'),db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db));
+            const finish=()=>{if(s.session.phase==='lesson')e.advance(s);while(s.session.phase==='practice'){e.submitAnswer(s,c.questionById(s.session.questionIds[s.session.index]).answer);e.advance(s);}};
+            finish();for(const id of ['equivalent','sum','fraction-compare','fraction-unlike']){e.startSession(s,'learn',id);finish();}await st.saveProfile(db,s);db.close();
+        }""")
+        page.reload()
+        navigate(page,'Mi progreso')
+        assert page.locator('.rank-current h3').inner_text()=='Explorador'
+        navigate(page,'Aprender')
+        page.get_by_text('Ver las 22 lecciones',exact=True).click()
+        page.locator('.route-list article').first.get_by_role('button',name='Repasar tema',exact=True).click()
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        for i in range(3):
+            value=page.evaluate("""async()=>{const c=await import('./course.mjs'),st=await import('./storage.mjs'),db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db));db.close();return c.questionById(s.session.questionIds[s.session.index]).answer;}""")
+            answer(page,value,last=i==2)
+        page.get_by_text('Explícamelo tú',exact=True).click()
+        page.locator('#explanation-form input[name="rule"][value="parts"]').check()
+        page.locator('#explanation-form input[name="example"][value="parts"]').check()
+        page.get_by_role('button',name='Comprobar mi explicación',exact=True).click()
+        page.get_by_text('Relacionaste la regla',exact=False).wait_for()
+        page.reload()
+        navigate(page,'Mi progreso')
+        assert page.locator('.rank-current h3').inner_text()=='Aprendiz'
+        page.get_by_text('Ver los cinco rangos',exact=True).click()
+        assert page.locator('.rank-gallery img').count()==5
+        assert page.locator('.rank-gallery img').evaluate_all('(images)=>images.every(i=>i.complete&&i.naturalWidth>0)')
+        browser.close()
+
+
+def test_subject_methods_map_sentence_and_molecules(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page();page.goto(mobile_url);create_profile(page)
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        context.set_offline(True)
+        def lesson(course):
+            page.evaluate("""async(id)=>{const e=await import('./engine.mjs'),c=await import('./course.mjs'),st=await import('./storage.mjs'),db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db));e.chooseCourse(s,id);e.startSession(s,'diagnostic');while(s.session.phase==='practice'){e.submitAnswer(s,c.questionById(s.session.questionIds[s.session.index]).answer);e.advance(s);}e.startSession(s,'learn',c.getCourse(id).topics[0].id);await st.saveProfile(db,s);db.close();}""",course)
+            page.reload();page.get_by_role('button',name='Continuar aprendiendo',exact=True).click()
+        lesson('geography-school-v1')
+        page.get_by_role('button',name='Explora',exact=True).click()
+        page.get_by_role('button',name='Este',exact=True).click()
+        assert state(page)['learningLabs']['geography-school-1']['values']==[1,0,0]
+        assert page.locator('.lab-map > span').count()==25
+        lesson('english-v1')
+        page.get_by_role('button',name='Construye',exact=True).click()
+        for word in ['Hello!','My','name','is','Ana.']:
+            page.get_by_role('button',name=word,exact=True).click()
+        expect(page.locator('.lab-built')).to_contain_text('Hello! → My → name → is → Ana.')
+        lesson('chemistry-school-v1')
+        page.get_by_role('button',name='Explora',exact=True).click()
+        page.get_by_label('Moléculas').select_option('3')
+        expect(page.locator('.lab-output')).to_contain_text('6 átomos de H y 3 de O')
+        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+        browser.close()
+
+
+def test_allen_trail_offline_keyboard_profiles_and_glass(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page();page.goto(mobile_url);create_profile(page,'Exploradora')
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        context.set_offline(True)
+        navigate(page,'Practicar')
+        page.get_by_role('button',name='Jugar con Allen',exact=True).click()
+        expect(page.locator('.trail-board')).to_be_visible()
+        page.locator('#content[aria-busy="true"]').wait_for(state='detached')
+        for key in ['ArrowRight']*2+['ArrowUp']*4+['ArrowRight']*3+['ArrowDown']:
+            page.locator('.trail-board').press(key)
+            page.locator('#content[aria-busy="true"]').wait_for(state='detached')
+        expect(page.locator('.trail-finished')).to_contain_text('Páginas recuperadas')
+        assert state(page)['allenTrail']['collected']==[0,1,2]
+        assert state(page)['events']==[] and state(page)['completed']==[]
+        page.get_by_role('button',name='Siguiente sendero',exact=True).click()
+        page.locator('#content[aria-busy="true"]').wait_for(state='detached')
+        expect(page.get_by_role('heading',name='Las páginas equivalentes',exact=True)).to_be_visible()
+        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+        page.screenshot(path='/tmp/allen-trail-light.png',full_page=True)
+        page.reload();navigate(page,'Practicar');page.get_by_role('button',name='Jugar con Allen',exact=True).click()
+        expect(page.get_by_role('heading',name='Las páginas equivalentes',exact=True)).to_be_visible()
+        assert page.evaluate("[...document.querySelectorAll('.trail-panel img')].every(i=>i.complete&&i.naturalWidth>0)")
+        page.get_by_role('button',name='Abrir ajustes',exact=True).click()
+        page.get_by_label('Superficies').select_option('solid')
+        page.get_by_label('Apariencia').select_option('dark')
+        page.get_by_role('button',name='Guardar accesibilidad',exact=True).click()
+        expect(page.locator('html')).to_have_attribute('data-surface','solid')
+        navigate(page,'Practicar');page.get_by_role('button',name='Jugar con Allen',exact=True).click()
+        page.screenshot(path='/tmp/allen-trail-dark.png',full_page=True)
+        original=state(page)['profile']['id']
+        page.get_by_role('button',name='Perfiles',exact=True).click();create_profile(page,'Otro')
+        navigate(page,'Practicar');page.get_by_role('button',name='Jugar con Allen',exact=True).click()
+        expect(page.get_by_role('heading',name='La brújula del bosque',exact=True)).to_be_visible()
+        assert state(page).get('allenTrail') is None
+        page.get_by_role('button',name='Perfiles',exact=True).click()
+        page.locator(f'[data-action="select-profile"][data-id="{original}"]').click()
+        navigate(page,'Practicar');page.get_by_role('button',name='Jugar con Allen',exact=True).click()
+        expect(page.get_by_role('heading',name='Las páginas equivalentes',exact=True)).to_be_visible()
+        assert page.evaluate("window.allenNavigateBack()") is True
+        expect(page.get_by_role('button',name='Jugar con Allen',exact=True)).to_be_visible()
+        browser.close()
+
+
+def test_topic_specific_models_filters_and_contextual_error_coach(mobile_url):
+    with sync_playwright() as p:
+        browser=p.chromium.launch();context=browser.new_context(viewport={'width':390,'height':844})
+        page=context.new_page();page.goto(mobile_url);create_profile(page)
+        page.get_by_text('Curso guardado · listo sin conexión',exact=True).wait_for()
+        context.set_offline(True)
+        def lesson(topic):
+            page.evaluate("""async(id)=>{const e=await import('./engine.mjs'),c=await import('./course.mjs'),st=await import('./storage.mjs'),db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db)),t=c.topicById(id);function finish(){if(s.session.phase==='lesson')e.advance(s);while(s.session.phase==='practice'){e.submitAnswer(s,c.questionById(s.session.questionIds[s.session.index]).answer);e.advance(s);}}e.chooseCourse(s,t.courseId);e.startSession(s,'diagnostic');finish();for(const candidate of c.getCourse(t.courseId).topics){e.startSession(s,'learn',candidate.id);if(candidate.id===id)break;finish();}await st.saveProfile(db,s);db.close();}""",topic)
+            page.reload();page.get_by_role('button',name='Continuar aprendiendo',exact=True).click()
+            page.get_by_role('button',name='Explora',exact=True).click()
+        lesson('geography-school-6')
+        expect(page.locator('.lab-output')).to_contain_text('20 habitantes/km²')
+        page.get_by_label('Superficie en km²',exact=True).fill('20')
+        page.get_by_label('Superficie en km²',exact=True).press('Tab')
+        expect(page.locator('.lab-output')).to_contain_text('10 habitantes/km²')
+        lesson('chemistry-school-2')
+        page.get_by_label('Moléculas').select_option('3')
+        expect(page.locator('.lab-output')).to_contain_text('3 átomos de C y 6 de O')
+        lesson('money-school-6')
+        expect(page.locator('.lab-output')).to_contain_text('Precio final: 40')
+        page.get_by_role('button',name='Entendido, vamos a practicar',exact=True).click()
+        wrong=page.evaluate("""async()=>{const c=await import('./course.mjs'),st=await import('./storage.mjs'),db=await st.openStorage(),s=await st.loadProfile(db,await st.activeProfile(db)),q=c.questionById(s.session.questionIds[s.session.index]);db.close();return q.options.find(o=>o!==q.answer);} """)
+        page.get_by_role('radio',name=wrong,exact=True).check()
+        page.get_by_role('button',name='Comprobar respuesta',exact=True).click()
+        expect(page.locator('.companion-card')).to_contain_text('Primer paso:')
+        page.locator('.companion-card').get_by_role('button',name='Veamos el primer paso juntos',exact=True).click()
+        expect(page.locator('.chat-message').last).to_contain_text('Comprender descuentos')
+        navigate(page,'Aprender')
+        page.get_by_label('Mi objetivo ahora').select_option('reinforce')
+        expect(page.locator('.course-card')).to_have_count(1)
+        page.get_by_label('Tipo de actividad').select_option('project')
+        page.get_by_text('Ver las 16 lecciones',exact=True).click()
+        assert all(title.startswith('Proyecto:') for title in page.locator('.module-lessons h3').all_text_contents())
+        assert state(page)['session']['phase']=='practice'
+        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
         browser.close()

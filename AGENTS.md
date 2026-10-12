@@ -131,7 +131,8 @@ WebView (assets del APK, https://appassets.androidplatform.net)
         └── android-extras.mjs → recorrido guiado y «Actualizar ALLEN» (solo en la APK)
 ```
 
-- Sin permisos de Android, sin Python ni backend, sin copia en la nube ni transferencia entre
+- Sin Internet: solo los permisos de los recordatorios locales opcionales (notificaciones y
+  reprogramarlos al reiniciar). Sin Python ni backend, sin copia en la nube ni transferencia entre
   dispositivos. CSP estricta inyectada por el builder.
 - Se publica **solo** como release no depurable: `python android/build_web_assets.py`,
   `gradlew assembleRelease` y `python android/sign_release.py` (clave de release fuera del repo con

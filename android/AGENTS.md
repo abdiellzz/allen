@@ -17,12 +17,16 @@ sin una acción explícita del usuario.** Detalle en [README.md](README.md).
 - Cambios en el resto de `public/mobile/` afectan también a la PWA web: coordínalos.
 - `android/app/src/main/assets/www/` es una **copia generada** e ignorada por git. Nunca editarla a
   mano: se regenera con `python android/build_web_assets.py`.
-- El builder copia solo tipos permitidos (`.html`, `.mjs`, `.css`, `.webmanifest`, `.png`, `.svg`)
-  de `public/mobile/`. Un archivo nuevo de otro tipo no llegará al APK sin cambiar el builder.
+- El builder copia solo tipos permitidos (`.html`, `.mjs`, `.css`, `.webmanifest`, `.png`, `.svg`,
+  `.webp`) de `public/mobile/` y añade la CSP a **todas** las páginas HTML. Un archivo nuevo de otro
+  tipo no llegará al APK sin cambiar el builder.
+- `ALLEN_ANDROID_DEBUG_KEYSTORE` solo firma compilaciones *debug* de prueba; nunca se publican.
 
 ## Reglas de seguridad (no negociables)
 
-- **Nada de permisos de Android** en el manifiesto, ni siquiera `INTERNET`.
+- **Ningún permiso salvo los de los recordatorios locales** (`POST_NOTIFICATIONS`,
+  `RECEIVE_BOOT_COMPLETED`). Nunca `INTERNET`. Añadir otro exige cambiar `ALLOWED_PERMISSIONS` en
+  `sign_release.py`, el test y CI, y justificarlo por la privacidad de los niños.
 - **Nunca publicar un APK depurable ni firmado con la clave de depuración.** Se publica solo con
   `assembleRelease` + `python android/sign_release.py`, que lo verifica.
 - No volver a empaquetar Python, el backend, la interfaz de escritorio ni descargas en el APK.

@@ -14,6 +14,17 @@ android {
         versionName file("../../VERSION").text.trim() + "-android-demo." + project.property("allenApkRevision")
     }
 
+    // Optional private key for local *debug* test builds only. Published APKs are release builds
+    // signed by android/sign_release.py. Never put any keystore in Git.
+    def allenDebugKeystore = providers.environmentVariable("ALLEN_ANDROID_DEBUG_KEYSTORE").orNull
+    if (allenDebugKeystore) {
+        signingConfigs {
+            debug {
+                storeFile file(allenDebugKeystore)
+            }
+        }
+    }
+
     buildTypes {
         release {
             // Published builds: never debuggable (no adb run-as, no WebView DevTools on children's data).

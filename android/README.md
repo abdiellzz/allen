@@ -18,7 +18,9 @@ WebView (assets del APK, origen https://appassets.androidplatform.net)
 
 ALLEN lo usan niños; la APK está pensada para que su progreso no salga del teléfono:
 
-- **Sin permisos de Android**, ni siquiera Internet. La WebView solo carga los archivos del APK por
+- **Sin Internet.** Solo pide los permisos de los recordatorios opcionales: notificaciones (al
+  activarlos) y reprogramarlos tras reiniciar. Las notificaciones son privadas en la pantalla de
+  bloqueo. La WebView solo carga los archivos del APK por
   `https`; cualquier otra petición se bloquea, y los permisos web (cámara, micrófono, ubicación) se
   deniegan siempre.
 - **Sin copias automáticas:** ni copia en la nube de Google ni transferencia al cambiar de teléfono

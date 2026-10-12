@@ -1,7 +1,7 @@
 name: android-apk
 
-# Builds the release APK from source and verifies the published one: never debuggable, no Android
-# permissions, signed with the ALLEN release key through the v3 rotation lineage.
+# Builds the release APK from source and verifies the published one: never debuggable, only the
+# local reminder permissions, signed with the ALLEN release key through the v3 rotation lineage.
 on:
   push:
     branches: [main]
@@ -26,13 +26,18 @@ jobs:
       - name: Build release APK (Gradle distribution verified by distributionSha256Sum)
         working-directory: android
         run: JAVA_HOME="$JAVA_HOME_17_X64" sh ./gradlew assembleRelease --no-daemon
-      - name: Built APK is not debuggable and requests no permissions
+      - name: Built APK is not debuggable and only requests reminder permissions
         run: |
           aapt2="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2"
           badging="$("$aapt2" dump badging android/app/build/outputs/apk/release/app-release-unsigned.apk)"
           echo "$badging" | grep -E "^package:"
-          if echo "$badging" | grep -qE "application-debuggable|uses-permission"; then
-            echo "::error::APK depurable o con permisos"; exit 1
+          if echo "$badging" | grep -q "application-debuggable"; then
+            echo "::error::APK depurable"; exit 1
+          fi
+          # Only the local reminder permissions are allowed (never INTERNET).
+          extra="$(echo "$badging" | grep -oE "uses-permission: name='[^']+'" | grep -vE "POST_NOTIFICATIONS|RECEIVE_BOOT_COMPLETED" || true)"
+          if [ -n "$extra" ]; then
+            echo "::error::Permisos no permitidos: $extra"; exit 1
           fi
       - name: Published APK is signed, rotated, not debuggable and permission-free
         run: JAVA_HOME="$JAVA_HOME_17_X64" PATH="$JAVA_HOME_17_X64/bin:$PATH" python android/sign_release.py verify

@@ -109,7 +109,8 @@ La landing no debe contener:
 La APK la usan niños. Controles (detalle en `android/README.md` y
 `docs/SECURITY_AUDIT_APK_2026-10-11.md`):
 
-- sin permisos de Android, ni siquiera Internet;
+- sin Internet; solo los permisos de los recordatorios locales opcionales (notificaciones, que se
+  piden al activarlos, y reprogramarlos al reiniciar);
 - solo se publica como release **no depurable**, firmada con la clave de ALLEN (rotación v3 desde la
   clave de depuración usada hasta 1.2.4-android-demo); `android/sign_release.py` lo verifica;
 - la clave de release, su contraseña y la línea de rotación viven fuera del repositorio;

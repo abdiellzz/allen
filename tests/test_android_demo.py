@@ -22,9 +22,14 @@ def load_module(name):
     return module
 
 
-def test_manifest_requests_no_permissions_and_keeps_data_on_the_phone():
+def test_manifest_only_requests_opt_in_reminders_and_keeps_data_on_the_phone():
     manifest = (MAIN / "AndroidManifest.xml").read_text(encoding="utf-8")
-    assert "uses-permission" not in manifest
+    # Local study reminders only: notifications (asked at runtime) and rescheduling after a reboot.
+    permissions = re.findall(r'uses-permission android:name="([^"]+)"', manifest)
+    assert set(permissions) == {"android.permission.POST_NOTIFICATIONS", "android.permission.RECEIVE_BOOT_COMPLETED"}
+    assert "android.permission.INTERNET" not in manifest
+    assert "SCHEDULE_EXACT_ALARM" not in manifest
+    assert 'android:exported="false"' in manifest
     assert 'android:allowBackup="false"' in manifest
     assert 'android:usesCleartextTraffic="false"' in manifest
     assert 'android:dataExtractionRules="@xml/data_extraction_rules"' in manifest
@@ -40,7 +45,7 @@ def test_release_build_is_not_debuggable_and_build_inputs_are_pinned():
     gradle = (ANDROID / "app" / "build.gradle").read_text(encoding="utf-8")
     release = gradle.split("release {", 1)[1].split("}", 1)[0]
     assert "debuggable false" in release and "minifyEnabled true" in release
-    assert "signingConfig" not in gradle  # signed only by android/sign_release.py
+    assert "signingConfig" not in release  # published builds are signed only by android/sign_release.py
     wrapper = (ANDROID / "gradle" / "wrapper" / "gradle-wrapper.properties").read_text(encoding="utf-8")
     assert re.search(r"^distributionSha256Sum=[0-9a-f]{64}$", wrapper, re.M)
     jar = (ANDROID / "gradle" / "wrapper" / "gradle-wrapper.jar").read_bytes()
@@ -82,8 +87,9 @@ def test_apk_page_gets_a_strict_csp_before_any_resource(tmp_path):
 
 def test_course_text_is_escaped_before_reaching_innerhtml():
     app = (ROOT / "public" / "mobile" / "app.mjs").read_text(encoding="utf-8")
-    for raw in ("${q.prompt}", "${q.feedback}", "<h2>${t.title}</h2>", "<span>${t.title}<small", 'data-topic="${t.id}"', 'data-id="${s.profile.id}"'):
-        assert raw not in app, raw
+    # Course text written straight into an HTML tag or attribute (plain strings later escaped are fine).
+    unescaped = re.findall(r'(?:>|="|de )\$\{(?:q|t|c|topic|m|s|target)\.(?:prompt|feedback|title|id|profile\.id)\}', app)
+    assert unescaped == [], unescaped
 
 
 def test_published_apk_rotation_constants():

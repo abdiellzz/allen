@@ -1,6 +1,7 @@
+import {validAnswer,correctAnswer,feedbackFor} from './activities.mjs';
 // Browser projection of backend/learning_engine.py. Parity covered by Python tests.
 // Keep changes synchronized with that implementation; see docs/MOBILE.md.
-import {course, courses, getCourse, questions, questionById, topicById} from './course.mjs';
+import {course, courses, getCourse, questions, questionById, topicById, sessionQuestions} from './course.mjs';
 export const RULES_VERSION = 'learning-engine-1';
 // Python round uses ties-to-even; preserve it in the browser projection.
 const roundEven = v => {const n=Math.floor(v),f=v-n;return f===.5?(n%2===0?n:n+1):Math.round(v);};
@@ -42,19 +43,21 @@ export const activeCourse = state => getCourse(state.activeCourse??course.id)??c
 export const diagnosed = (state,id=activeCourse(state).id) => id===course.id?state.diagnosticComplete:(state.diagnosticCourses??[]).includes(id);
 export function chooseCourse(state,id){
   if(!getCourse(id))throw Error('Curso no válido.');
-  if(state.session&&state.session.phase!=='complete')throw Error('Termina la actividad actual antes de cambiar de curso.');
-  state.activeCourse=id;
+  const current=activeCourse(state).id;if(id===current)return;
+  const saved={...(state.savedSessions??{})};
+  if(state.session&&state.session.phase!=='complete')saved[current]={...structuredClone(state.session),courseId:current};
+  state.session=saved[id]??null;delete saved[id];
+  state.savedSessions=saved;state.activeCourse=id;
 }
 export function recommendation(state,now=new Date()) {
   const course=activeCourse(state);
-  const minutes=state.profile.minutes;
-  if(state.session && state.session.phase!=='complete') return {kind:'continue',topicId:state.session.topicId,title:'Continúa tu sesión',reason:`Tu actividad está guardada. Dispones de ${minutes} minutos.`};
-  if(!diagnosed(state)) return {kind:'diagnostic',title:'Encuentra tu punto de partida',reason:`${course.topics.length*2} preguntas breves para elegir el apoyo que necesitas. No es una calificación.`};
+  if(state.session && state.session.phase!=='complete'){const s=state.session,q=questionById(s.questionIds[s.index]),t=topicById(q?.topicId??s.topicId);return {kind:'continue',topicId:t?.id,title:'Continúa tu sesión',reason:`Estábamos practicando ${t?.title??'tu diagnóstico'}. ${s.phase==='lesson'?'Quedó pendiente leer el ejemplo y practicar.':`Estás en la actividad ${s.index+1} de ${s.questionIds.length}.`} Tu progreso está guardado. Continúa a tu ritmo.`};}
+  if(!diagnosed(state)) return {kind:'diagnostic',title:'Encuentra tu punto de partida',reason:`${questions.filter(q=>q.kind==='diagnostic'&&q.courseId===course.id).length} preguntas breves para elegir el apoyo que necesitas. No es una calificación.`};
   const due=course.topics.find(t=>{const e=evidence(state,t.id,now);return e.next_review&&e.next_review<=localDay(now);});
   if(due) return {kind:'review',topicId:due.id,title:`Repasa ${due.title.toLowerCase()}`,reason:`Tu repaso estaba previsto para ${evidence(state,due.id,now).next_review}. Vamos a comprobar qué recuerdas.`};
   const target=course.topics.find(t=>!state.completed.includes(t.id));
   if(target){const e=evidence(state,target.id,now);const rec=recommendForState({mastery_score:e.score,topic:target.title,status:e.status});
-    return {kind:'learn',topicId:target.id,title:target.title,reason:`${rec.reason} ${minutes<=5?'Hoy puedes hacer una explicación y una práctica; el resto queda guardado.':'La sesión incluye un ejemplo, dos prácticas y una comprobación.'}`};}
+    return {kind:'learn',topicId:target.id,title:target.title,reason:`${rec.reason} Estudia, practica y comprueba. Tu camino queda guardado.`};}
   return {kind:'review',topicId:course.topics.reduce((a,b)=>evidence(state,a.id,now).score<=evidence(state,b.id,now).score?a:b).id,title:'Consolida lo que aprendiste',reason:`Completaste las ${course.topics.length} comprobaciones del curso. Puedes repasar sin esperar la fecha programada.`};
 }
 export function newState(profile) {return {version:1,rulesVersion:RULES_VERSION,courseId:course.id,profile,diagnosticComplete:false,events:[],completed:[],session:null,cards:{}};}
@@ -66,9 +69,10 @@ export function startSession(state,kind='learn',topicId=null) {
   const selected=kind==='diagnostic'?activeCourse(state):getCourse(topic?.courseId);
   if(kind!=='diagnostic'&&!topic) throw Error('Tema no válido.');
   if(kind!=='diagnostic'&&topic.prerequisite&&!state.completed.includes(topic.prerequisite)) throw Error(`Primero completa ${topicById(topic.prerequisite).title}.`);
-  const ids=kind==='diagnostic'?questions.filter(q=>q.kind==='diagnostic'&&q.courseId===selected.id).map(q=>q.id):topic.questions.filter(q=>q.kind!=='diagnostic').map(q=>q.id);
+  const round=kind==='diagnostic'?0:state.events.filter(e=>e.type==='practice_complete'&&e.topicId===topicId).length%4;
+  const ids=kind==='diagnostic'?questions.filter(q=>q.kind==='diagnostic'&&q.courseId===selected.id).map(q=>q.id):sessionQuestions(topic,round);
   state.activeCourse=selected.id;
-  state.session={id:crypto.randomUUID(),courseId:selected.id,kind,topicId,index:0,phase:kind==='diagnostic'?'practice':'lesson',questionIds:ids,answers:[],hints:[]};
+  state.session={id:crypto.randomUUID(),courseId:selected.id,kind,topicId,round,index:0,phase:kind==='diagnostic'?'practice':'lesson',questionIds:ids,answers:[],hints:[]};
 }
 // Keeps long-term profiles usable: the oldest events become per-topic summaries with the same counters,
 // so mastery is unchanged. The latest review_scheduled of each topic and the newest events stay as they are.
@@ -89,7 +93,7 @@ export function compactEvents(state) {
 }
 function event(state,type,topicId,values={},now=new Date()) {if(state.events.length>=EVENT_LIMIT)compactEvents(state);state.events.push({id:crypto.randomUUID(),type,topicId,at:now.toISOString(),...values});}
 export function requestHelp(state,action,now=new Date()) {
-  const s=state.session;const q=s&&questionById(s.questionIds[s.index]); const topic=topicById(s?.topicId??q?.topicId);
+  const s=state.session;const q=s&&questionById(s.questionIds[s.index]); const topic=topicById(s?.kind==='mixed'?q?.topicId:s?.topicId??q?.topicId);
   if(!topic) throw Error('Abre una lección para recibir ayuda contextual.');
   if(action==='hint'){
     if(s.phase!=='practice'||s.answers.some(a=>a.questionId===q.id))throw Error('Las pistas se usan antes de responder.');
@@ -99,16 +103,16 @@ export function requestHelp(state,action,now=new Date()) {
   }
   if(!['explain','alternative','simple'].includes(action))throw Error('Ayuda no válida.');
   const answered=q&&s.answers.find(a=>a.questionId===q.id);
-  const text=action==='alternative'?topic.alternative:action==='simple'?topic.simple:answered&&!answered.correct?`Revisemos tu respuesta ${answered.answer}. ${q.feedback} ${topic.simple}`:topic.explanation;
+  const text=action==='alternative'?topic.alternative:answered&&!answered.correct?`Revisemos tu respuesta ${answered.answer}. ${feedbackFor(q,answered.answer).text} ${topic.simple}`:s.phase==='practice'&&!answered?`Estamos resolviendo: ${q.prompt} Primer paso: ${q.hints[0]} ${action==='simple'?topic.simple:topic.explanation}`:action==='simple'?topic.simple:topic.explanation;
   event(state,'help',topic.id,{action},now);return {text,source:topic.source};
 }
 export function submitAnswer(state,answer,now=new Date()) {
   const s=state.session;if(!s||s.phase!=='practice')throw Error('No hay una pregunta activa.');
-  const q=questionById(s.questionIds[s.index]);if(!q||!q.options.includes(answer))throw Error('Elige una respuesta válida.');
+  const q=questionById(s.questionIds[s.index]);if(!q||!validAnswer(q,answer))throw Error('Escribe o elige una respuesta válida.');
   if(s.answers.some(a=>a.questionId===q.id))throw Error('Esta respuesta ya fue registrada.');
-  const correct=answer===q.answer;const row={questionId:q.id,answer,correct};
+  const correct=correctAnswer(q,answer);const row={questionId:q.id,answer,correct};
   s.answers.push(row);event(state,'answer',q.topicId,{...row,sessionId:s.id},now);
-  return {correct,text:q.feedback};
+  return feedbackFor(q,answer);
 }
 export function advance(state,now=new Date()) {
   const s=state.session;if(!s)throw Error('No hay una sesión activa.');
@@ -117,8 +121,9 @@ export function advance(state,now=new Date()) {
   if(s.index<s.questionIds.length-1){s.index++;return;}
   s.phase='complete';
   if(s.kind==='diagnostic'){if((s.courseId??course.id)===course.id)state.diagnosticComplete=true;else state.diagnosticCourses=[...new Set([...(state.diagnosticCourses??[]),s.courseId])];return;}
+  if(s.kind==='mixed'){for(const id of s.topicIds){event(state,'practice_complete',id,{sessionId:s.id},now);event(state,'review_scheduled',id,{due:nextReviewDate(evidence(state,id,now).score,now)},now);}return;}
   const correct=s.answers.filter(a=>a.correct).length, check=s.answers.at(-1).correct;
-  event(state,'practice_complete',s.topicId,{},now);event(state,'check_complete',s.topicId,{},now);
+  event(state,'practice_complete',s.topicId,{},now);event(state,'check_complete',s.topicId,{sessionId:s.id},now);
   if(correct>=2&&check&&!state.completed.includes(s.topicId))state.completed.push(s.topicId);
   const due=nextReviewDate(evidence(state,s.topicId,now).score,now);event(state,'review_scheduled',s.topicId,{due},now);
 }
@@ -126,4 +131,21 @@ export function reviewCard(state,topicId,remembered,now=new Date()) {
   if(!topicById(topicId)||!state.completed.includes(topicId))throw Error('Completa primero la lección.');
   const due=nextReviewDate(remembered?80:20,now);state.cards[topicId]={due,remembered,at:now.toISOString()};
   event(state,'card_review',topicId,{remembered},now);
+}
+
+export function startMixedReview(state){
+ if(state.session&&state.session.phase!=='complete')throw Error('Continúa la sesión actual antes de iniciar otra.');
+ const selected=activeCourse(state),topics=selected.topics.filter(t=>state.completed.includes(t.id));
+ if(!diagnosed(state)||topics.length<2)throw Error('Comprueba al menos dos temas de esta ruta.');
+ const ids=topics.sort((a,b)=>evidence(state,a.id).score-evidence(state,b.id).score).slice(0,3).map(t=>t.id);
+ const round=1+state.events.filter(e=>e.type==='practice_complete'&&e.topicId===ids[0]).length%3;
+ state.session={id:crypto.randomUUID(),courseId:selected.id,kind:'mixed',topicId:ids[0],topicIds:ids,round,index:0,phase:'practice',questionIds:ids.map(id=>sessionQuestions(topicById(id),round).at(-1)),answers:[],hints:[]};
+}
+export function rescueFor(state){
+ const s=state.session;if(!s||s.kind==='diagnostic'||s.phase==='lesson')return null;
+ const q=questionById(s.questionIds[s.index]),topic=topicById(q?.topicId);
+ if(!topic)return null;
+ const recent=state.events.filter(e=>e.type==='answer'&&e.topicId===topic.id).slice(-2);
+ if(recent.length<2||recent.some(e=>e.correct))return null;
+ return {topic,base:topicById(topic.prerequisite)??topic};
 }

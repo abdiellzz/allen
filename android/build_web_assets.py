@@ -17,7 +17,7 @@ MOBILE = ROOT / "public" / "mobile"
 OUT = ANDROID / "app" / "src" / "main" / "assets" / "www"
 # Runtime files of the mobile experience. sw.js (web-only offline cache) and catalogue.json (desktop
 # backend snapshot) are deliberately left out.
-ALLOWED_SUFFIXES = {".html", ".mjs", ".css", ".webmanifest", ".png", ".svg"}
+ALLOWED_SUFFIXES = {".html", ".mjs", ".css", ".webmanifest", ".png", ".svg", ".webp"}
 EXCLUDED = {"sw.js", "catalogue.json"}
 CSP = (
     "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; "
@@ -36,12 +36,12 @@ def apk_version() -> str:
     return f"{version}-android-demo.{properties['allenApkRevision'].strip()}"
 
 
-def harden(html: str) -> str:
-    """Add the CSP right after the charset (before any resource) and mark the bundled runtime."""
+def harden(html: str, entry: bool = False) -> str:
+    """Add the CSP right after the charset (before any resource); mark the bundled runtime on the entry page."""
     if CHARSET not in html or "</head>" not in html:
-        raise SystemExit("mobile/index.html sin <meta charset> o </head>")
+        raise SystemExit("página HTML sin <meta charset> o </head>")
     html = html.replace(CHARSET, CHARSET + f'<meta http-equiv="Content-Security-Policy" content="{CSP}">', 1)
-    return html.replace("</head>", '<meta name="allen-runtime" content="bundled-android"></head>', 1)
+    return html.replace("</head>", '<meta name="allen-runtime" content="bundled-android"></head>', 1) if entry else html
 
 
 def assemble(output: Path) -> None:
@@ -51,8 +51,9 @@ def assemble(output: Path) -> None:
         target = output / "mobile" / path.relative_to(MOBILE)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, target)
-    index = output / "mobile" / "index.html"
-    index.write_text(harden(index.read_text(encoding="utf-8")), encoding="utf-8")
+    # Every page (legal, contact, error pages included) gets the CSP: the WebView sends no headers.
+    for page in (output / "mobile").rglob("*.html"):
+        page.write_text(harden(page.read_text(encoding="utf-8"), entry=page.name == "index.html" and page.parent.name == "mobile"), encoding="utf-8")
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     manifest = {"allen": version, "apk": apk_version()}
     (output / "allen-manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

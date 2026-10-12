@@ -36,6 +36,8 @@ RELEASE_CERT_FILE = ANDROID / "release" / "signing-certificate.sha256"
 RELEASE_ALIAS = "allen-release"
 LEGACY_ALIAS = "androiddebugkey"
 ROTATION_MIN_SDK = "28"  # first Android version that understands key rotation (v3)
+# Local study reminders only. Anything else (INTERNET above all) blocks publication.
+ALLOWED_PERMISSIONS = {"android.permission.POST_NOTIFICATIONS", "android.permission.RECEIVE_BOOT_COMPLETED"}
 
 
 def signing_dir() -> Path:
@@ -131,7 +133,7 @@ def init() -> None:
 
 
 def verify(apk: Path) -> str:
-    """Fail unless the APK is signed for rotation, not debuggable and permission-free."""
+    """Fail unless the APK is signed for rotation, not debuggable and only asks for reminder permissions."""
     release_cert = RELEASE_CERT_FILE.read_text(encoding="ascii").strip()
     out = run(build_tool("apksigner"), "verify", "-v", "--print-certs", "--min-sdk-version", "26", str(apk))
     if "Verified using v2 scheme (APK Signature Scheme v2): true" not in out or \
@@ -144,9 +146,9 @@ def verify(apk: Path) -> str:
     badging = run(build_tool("aapt2"), "dump", "badging", str(apk))
     if "application-debuggable" in badging:
         raise SystemExit("el APK es depurable; compila con assembleRelease")
-    if "uses-permission" in badging:
-        raise SystemExit("el APK declara permisos de Android:\n" + "\n".join(
-            line for line in badging.splitlines() if "uses-permission" in line))
+    permissions = set(re.findall(r"uses-permission: name='([^']+)'", badging))
+    if permissions - ALLOWED_PERMISSIONS:
+        raise SystemExit("el APK declara permisos no permitidos: " + ", ".join(sorted(permissions - ALLOWED_PERMISSIONS)))
     return re.search(r"versionName='([^']+)'", badging).group(1)
 
 

@@ -34,8 +34,8 @@ test('hint budget is bounded and help does not reveal a solution to an unanswere
  const s=diagnosed();startSession(s,'learn','parts');advance(s,now);requestHelp(s,'hint',now);requestHelp(s,'hint',now);requestHelp(s,'hint',now);assert.equal(s.session.hints.length,2);assert.equal(s.session.answers.length,0);
 });
 
-test('all three lessons can be completed and backup restores resume position',()=>{
- const s=diagnosed();for(const t of course.topics){startSession(s,'learn',t.id);finish(s);}assert.equal(s.completed.length,3);
+test('all fraction lessons can be completed and backup restores resume position',()=>{
+ const s=diagnosed();for(const t of course.topics){startSession(s,'learn',t.id);finish(s);}assert.equal(s.completed.length,course.topics.length);
  const copy=parseBackup(exportBackup(s));assert.deepEqual(copy.completed,s.completed);assert.equal(copy.session.phase,'complete');
  startSession(s,'review','parts');advance(s,now);const q=questionById(s.session.questionIds[0]);submitAnswer(s,q.answer,now);const resumed=parseBackup(exportBackup(s));assert.equal(resumed.session.answers.length,1);assert.throws(()=>submitAnswer(resumed,q.answer),/registrada/);
 });
@@ -63,16 +63,16 @@ test('recovery preserves valid maximum-length names without overwriting profile 
 });
 
 
-test('all six courses diagnose, teach, validate and review through one engine',()=>{
- const s=state();for(const c of courses){chooseCourse(s,c.id);assert.equal(recommendation(s,now).kind,'diagnostic');startSession(s,'diagnostic');assert.equal(s.session.questionIds.length,c.topics.length*2);finish(s);for(const t of c.topics){startSession(s,'learn',t.id);requestHelp(s,'simple',now);finish(s);assert.ok(s.completed.includes(t.id));}validateState(s);}
- assert.equal(s.completed.length,13);assert.equal(allTopics.length,13);assert.equal(s.events.filter(e=>e.type==='answer').length,65);const copy=parseBackup(exportBackup(s));assert.deepEqual(copy.completed,s.completed);assert.deepEqual(copy.diagnosticCourses,s.diagnosticCourses);assert.equal(copy.activeCourse,'science-v1');
+test('all school and skill courses diagnose, teach, validate and review through one engine',()=>{
+ const s=state();for(const c of courses){chooseCourse(s,c.id);assert.equal(recommendation(s,now).kind,'diagnostic');startSession(s,'diagnostic');assert.equal(s.session.questionIds.length,c.topics.flatMap(t=>t.questions).filter(q=>q.kind==='diagnostic').length);finish(s);for(const t of c.topics){startSession(s,'learn',t.id);requestHelp(s,'simple',now);finish(s);assert.ok(s.completed.includes(t.id));}validateState(s);}
+ assert.equal(s.completed.length,255);assert.equal(allTopics.length,255);assert.equal(s.events.filter(e=>e.type==='answer').length,807);const copy=parseBackup(exportBackup(s));assert.deepEqual(copy.completed,s.completed);assert.deepEqual(copy.diagnosticCourses,s.diagnosticCourses);assert.equal(copy.activeCourse,'money-school-v1');
 });
 
 test('catalogue snapshot stays aligned with course source and editorial identifiers',async()=>{
  const {readFile}=await import('node:fs/promises');const json=JSON.parse(await readFile(new URL('../public/mobile/catalogue.json',import.meta.url),'utf8'));assert.deepEqual(json,courses);
- const ids=new Set();for(const c of courses){assert.ok(c.source);for(const t of c.topics){assert.ok(t.simple&&t.alternative&&t.card.back);if(t.prerequisite)assert.ok(c.topics.some(p=>p.id===t.prerequisite));for(const q of t.questions){assert.ok(!ids.has(q.id));ids.add(q.id);assert.ok(q.options.includes(q.answer));assert.equal(q.hints.length,2);assert.ok(q.feedback);}}}assert.equal(ids.size,65);
+ const ids=new Set();for(const c of courses){assert.ok(c.source);for(const t of c.topics){assert.ok(t.simple&&t.alternative&&t.card.back);if(t.prerequisite)assert.ok(c.topics.some(p=>p.id===t.prerequisite));for(const q of t.questions){assert.ok(!ids.has(q.id));ids.add(q.id);assert.ok(q.options.includes(q.answer));assert.equal(q.hints.length,2);assert.ok(q.feedback);}}}assert.equal(ids.size,807);
 });
 
 test('old backups migrate additively; course switching cannot discard a session',()=>{
- const s=diagnosed();delete s.activeCourse;const old=parseBackup(exportBackup(s));assert.equal(recommendation(old,now).topicId,'parts');chooseCourse(old,'reading-v1');startSession(old,'diagnostic');assert.throws(()=>chooseCourse(old,'python-v1'));finish(old);old.preferences={textSize:'large'};const restored=parseBackup(exportBackup(old));assert.equal(restored.preferences.textSize,'large');const invalid=structuredClone(restored);invalid.session.courseId='english-v1';assert.throws(()=>validateState(invalid));assert.equal(restored.diagnosticComplete,true);assert.equal(restored.events.filter(e=>e.topicId==='parts').length,2);
+ const s=diagnosed();delete s.activeCourse;const old=parseBackup(exportBackup(s));assert.equal(recommendation(old,now).topicId,'parts');chooseCourse(old,'reading-v1');startSession(old,'diagnostic');const pending=structuredClone(old.session);chooseCourse(old,'python-v1');assert.deepEqual(old.savedSessions['reading-v1'],pending);chooseCourse(old,'reading-v1');assert.deepEqual(old.session,pending);finish(old);old.preferences={textSize:'large'};const restored=parseBackup(exportBackup(old));assert.equal(restored.preferences.textSize,'large');const invalid=structuredClone(restored);invalid.session.courseId='english-v1';assert.throws(()=>validateState(invalid));assert.equal(restored.diagnosticComplete,true);assert.equal(restored.events.filter(e=>e.topicId==='parts').length,2);
 });

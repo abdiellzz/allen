@@ -32,7 +32,7 @@ const GOALS = {
       'Ver tu progreso por tema y guardar una copia'],
   },
 };
-const CANNOT = ['Crear o editar cursos: vienen incluidos en la app', 'Usar IA generativa: en el teléfono Allen responde con explicaciones y pistas preparadas',
+const CANNOT = ['Crear o editar cursos: vienen incluidos en la app',
   'Sincronizar con otros dispositivos: tu progreso se queda en este teléfono', 'Guardar la copia como archivo: por ahora se copia como texto'];
 
 function stepsFor(goal, name) {
@@ -46,7 +46,7 @@ function stepsFor(goal, name) {
     {view: 'practice', image: 'allen-reading.png', title: 'Practicar',
       text: 'Misiones para aplicar lo aprendido y tarjetas de repaso, que se habilitan al superar la comprobación de cada lección.'},
     {view: 'allen', image: 'allen-reading.png', title: 'Allen',
-      text: 'Te explico el tema de tu actividad actual y te doy pistas cuando las pidas. Las ayudas quedan registradas en tu progreso.'},
+      text: 'Elige preguntas sobre cualquier curso o la app. Te explico con ejemplos preparados y te doy pistas por pasos. Las ayudas de una actividad quedan registradas en tu progreso.'},
     {view: 'progress', image: 'allen-reading.png', title: 'Mi progreso',
       text: 'Tu dominio estimado por tema, con aciertos, pistas y próximos repasos. Aquí también puedes hacer una copia de tu progreso.'},
     {target: '#profiles-button', image: 'allen-reading.png', title: 'Perfiles',
@@ -161,7 +161,7 @@ function addProfilePanels(main, profile) {
   update.id = 'allen-apk-update';
   update.className = 'panel allen-extra-panel';
   update.innerHTML = '<span class="eyebrow">App de Android</span><h2>Actualizar ALLEN</h2>' +
-    '<p>Versión instalada: <strong class="allen-apk-version">demo</strong>. Descarga el APK más reciente e instálalo encima de esta versión: tus perfiles y tu progreso se conservan.</p>' +
+    '<p>Versión instalada: <strong class="allen-apk-version">demo</strong>. Guarda una copia privada de tu progreso antes de instalar. La actualización conserva datos cuando coincide la firma de la APK. Si Android rechaza la actualización, conserva la app anterior hasta tener tu copia.</p>' +
     `<a class="allen-extra-button" href="${APK_URL}">Descargar actualización</a>` +
     '<p class="small muted">Se abre en el navegador del teléfono y necesita una cuenta de GitHub con acceso a ALLEN. La app no se conecta a Internet, así que no puede comprobar sola si hay una versión nueva.</p>' +
     '<p class="small muted">Android solo instala la actualización encima de esta app si está firmada con la clave de ALLEN. Si avisa de un conflicto o de una firma distinta, no la instales.</p>';
@@ -182,3 +182,4 @@ export function rendered({view, profile, main}) {
   if (view === 'profiles') { addProfilePanels(main, profile); return; }
   if (profile && !isOpen() && !seen[profile.goal]) start(profile);
 }
+

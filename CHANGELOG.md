@@ -14,6 +14,15 @@ Todos los cambios relevantes de ALLEN se documentan aquí.
 
 ## [Unreleased]
 
+### APK 1.2.4-android-demo.3 (versionCode 10)
+- Integra la entrega «guided» (tutor preparado, Sendero, páginas legales, exportación y recordatorios)
+  con el endurecimiento de seguridad: release no depurable firmada con la clave de ALLEN, CSP en todas
+  las páginas, WebView limitada a sus assets y textos escapados.
+- Únicos permisos: los de los recordatorios locales opcionales (notificaciones y reprogramar tras
+  reiniciar). Sin Internet.
+- Quien instaló las entregas de prueba «guided»/«V1» (otra clave de depuración) debe exportar su
+  progreso y reinstalar; las instalaciones originales actualizan encima sin perder datos.
+
 ### Corrección de bugs (cacería del 2026-10-11)
 - El detector de autolesiones reconoce las frases que escriben los niños («me quiero morir», «me voy a matar»…).
 - Borrar un perfil lo elimina también de los snapshots de recuperación.
