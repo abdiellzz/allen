@@ -14,6 +14,18 @@ Todos los cambios relevantes de ALLEN se documentan aquí.
 
 ## [Unreleased]
 
+### Corrección de bugs (cacería del 2026-10-11)
+- El detector de autolesiones reconoce las frases que escriben los niños («me quiero morir», «me voy a matar»…).
+- Borrar un perfil lo elimina también de los snapshots de recuperación.
+- «Me llamo Juan y quiero…» ya no renombra el perfil.
+- Quizzes: la respuesta comprobada queda fijada; el diagnóstico no repite el examen y se hace una vez; el examen ya no se adivina por la plantilla de los distractores.
+- Un curso aprobado sigue aprobado al repasarlo o al publicar una nueva versión; editar un curso publicado publica una versión nueva en vez de despublicarlo.
+- Exámenes de más de 10 preguntas, sesiones completadas que se reabrían y el bloqueo de 5.000 eventos del móvil.
+- Respaldos: un único límite de 30 MB para exportar, cifrar y restaurar.
+- Licencias: el atraso del reloj no se salta reinstalando, una licencia dañada no bloquea otra y el License Manager no emite renovaciones inválidas.
+- Respuestas tipo `1e10000000`, Course Packs mal formados, fechas UTC de SQLite, bloqueo heredado del Modo Feria y doble lanzador.
+- Tests que fallaban en Windows o por la noche (zona horaria). Detalle: `docs/BUG_HUNT_2026-10-11.md`.
+
 ## [1.2.4-android-demo.1] — 2026-10-11 · Parche de seguridad de la APK
 
 ### Seguridad y privacidad

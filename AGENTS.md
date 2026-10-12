@@ -103,14 +103,15 @@ APK: skill `apk-build`.
 | 1.2.3 | 2026-10-08 | Segunda auditoría: los 5 críticos y 7 altos revalidados como corregidos (incluidos zona horaria y CSP). Caché de biblioteca y calidad pedagógica de distractores. |
 | 1.2.4 | 2026-10-08 | Protección contra suplantación del puerto 8787, `/api/health` mínimo, PIN obligatorio antes del uso comercial, límites para Course Packs maliciosos, PDF cifrado rechazado, Bandit en CI. |
 | 1.2.4-android-demo.1 | 2026-10-11 | **Parche de seguridad de la APK:** el APK publicado era depurable y estaba firmado con la clave de depuración (datos de niños legibles por USB); ahora es release no depurable con clave propia y rotación v3 (actualiza sin perder progreso). El APK ya no incluye Python ni el código del backend (25,6 → 3,4 MB), CSP estricta, sin copia en la nube ni transferencia entre dispositivos, WebView limitada a sus assets, textos escapados y Gradle verificado por hash. |
+| — | 2026-10-11 | **Cacería de bugs:** 30 bugs corregidos con regresiones: detector de autolesiones, snapshots con perfiles borrados, integridad de quizzes/diagnóstico/examen, cursos aprobados que se perdían, respaldos no restaurables, licencias (reloj y archivo dañado), DoS por notación científica, fechas UTC, bloqueo del Modo Feria y doble lanzador. APK `1.2.4-android-demo.2`. |
 
 Pendientes estructurales reconocidos (no son fallos abiertos): dividir `backend/app.py` en routers,
 modularizar `frontend/app.js`, optimizar Teacher Analytics, FTS5 para biblioteca, firma Authenticode,
 lockfiles con hashes y reglas de rama/CodeQL en GitHub.
 
 Detalle: `docs/SECURITY_AUDIT_2026-10-07.md`, `docs/SECURITY_AUDIT_2026-10-08.md`,
-`docs/SECURITY_AUDIT_RECHECK_2026-10-08.md`, `docs/SECURITY_AUDIT_APK_2026-10-11.md`, `SECURITY.md` y
-`CHANGELOG.md`.
+`docs/SECURITY_AUDIT_RECHECK_2026-10-08.md`, `docs/SECURITY_AUDIT_APK_2026-10-11.md`,
+`docs/BUG_HUNT_2026-10-11.md`, `SECURITY.md` y `CHANGELOG.md`.
 
 Reglas de seguridad al editar:
 

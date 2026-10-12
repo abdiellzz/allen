@@ -22,6 +22,7 @@ Este directorio es la fuente oficial de documentación del proyecto.
 - [Auditoría de ciberseguridad 2026-10-07](SECURITY_AUDIT_2026-10-07.md)
 - [Segunda auditoría técnica 2026-10-08](SECURITY_AUDIT_RECHECK_2026-10-08.md)
 - [Auditoría de seguridad de la APK 2026-10-11](SECURITY_AUDIT_APK_2026-10-11.md)
+- [Cacería de bugs 2026-10-11](BUG_HUNT_2026-10-11.md)
 - [Guía de desarrollo](DEVELOPMENT.md)
 - [Proceso de release](RELEASE_PROCESS.md)
 - [Landing pública](WEB_LANDING.md)
