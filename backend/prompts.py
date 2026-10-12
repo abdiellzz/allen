@@ -66,9 +66,19 @@ ALIASES={'simpler':'simplify','example':'another_example','steps':'step_by_step'
 def normalized(text):
     return ''.join(c for c in unicodedata.normalize('NFD',text.lower()) if unicodedata.category(c)!='Mn')
 
+# Words that turn "me llamo X" into a longer sentence rather than a name ("Me llamo Juan y quiero…").
+NOT_NAME_WORDS={'y','e','o','u','pero','que','porque','quiero','quisiera','tengo','soy','estoy','necesito','me','te','se','mi','tu',
+    'and','but','i','want','am','have','need','ayuda','ayudame','una','un','pregunta','sobre','para','como','cuanto'}
+
 def declared_name(text):
     match=re.fullmatch(r"\s*(?:(?:yo )?me llamo|mi nombre es|my name is)\s+([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ '-]{0,39})[.!]?\s*",text,re.I)
-    return match.group(1).strip() if match else None
+    if not match:
+        return None
+    name=' '.join(match.group(1).split())
+    words=name.lower().split()
+    if len(words)>4 or any(w in NOT_NAME_WORDS for w in words):
+        return None
+    return name
 
 def identity_reply(text):
     t=normalized(text).strip()

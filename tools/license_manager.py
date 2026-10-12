@@ -158,6 +158,12 @@ def renew_payload(existing: dict, days: int, today: date | None = None) -> dict:
     else:
         valid_from = today
         valid_until = today + timedelta(days=days - 1)
+    # ALLEN rejects licenses spanning more than 3660 days: restart the period today when the
+    # original start would exceed it, and refuse renewals that would still be too long.
+    if (valid_until - valid_from).days > 3660:
+        valid_from = today
+    if (valid_until - valid_from).days > 3660:
+        raise ValueError("La vigencia resultante supera los 3660 días que acepta ALLEN. Reduce la duración de la renovación.")
     return {
         "schema": 1,
         "license_id": str(existing["license_id"]),

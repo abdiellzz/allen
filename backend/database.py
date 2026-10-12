@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from .migrations import apply_migrations, LATEST_SCHEMA_VERSION
-from .recovery import ensure_pre_migration_snapshot, create_snapshot, list_snapshots, integrity_report, restore_snapshot
+from .recovery import ensure_pre_migration_snapshot, create_snapshot, list_snapshots, integrity_report, restore_snapshot, purge_user
 from .time_utils import utc_now_iso, local_day, local_day_iso, local_day_from_timestamp
 
 SCHEMA = '''
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS settings(id INTEGER PRIMARY KEY CHECK(id=1), value TE
 CREATE TABLE IF NOT EXISTS teacher_security(id INTEGER PRIMARY KEY CHECK(id=1), salt TEXT NOT NULL, pin_hash TEXT NOT NULL, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS conversations(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, title TEXT, messages TEXT NOT NULL, updated TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS progress(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, kind TEXT, subject TEXT, xp INTEGER, day TEXT, reference TEXT, UNIQUE(user_id,kind,reference));
-CREATE TABLE IF NOT EXISTS quiz_results(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, config TEXT, questions TEXT, result TEXT, created TEXT);
+CREATE TABLE IF NOT EXISTS quiz_results(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, config TEXT, questions TEXT, result TEXT, created TEXT, checked TEXT NOT NULL DEFAULT '{}');
 CREATE TABLE IF NOT EXISTS flashcards(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, question TEXT, answer TEXT, due TEXT, interval INTEGER DEFAULT 0, reviews INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS learning_sessions(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, subject TEXT, seconds INTEGER, created TEXT);
 CREATE TABLE IF NOT EXISTS library_packs(id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, title TEXT NOT NULL, documents TEXT NOT NULL);
@@ -95,6 +95,10 @@ class Database:
             }
             for column,sql in sim_migrations.items():
                 if column not in sim_existing: db.execute(sql)
+            # Answers already checked one by one are locked so /answer cannot be used to find the key.
+            quiz_existing={row['name'] for row in db.execute("PRAGMA table_info(quiz_results)").fetchall()}
+            if 'checked' not in quiz_existing:
+                db.execute("ALTER TABLE quiz_results ADD COLUMN checked TEXT NOT NULL DEFAULT '{}'")
             apply_migrations(db)
             # Backfill a baseline history row for courses created before numbered migrations existed.
             if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='course_versions'").fetchone():
@@ -214,6 +218,7 @@ class Database:
             db.execute('DELETE FROM users WHERE id=?', (user,))
             if not db.execute('SELECT 1 FROM users LIMIT 1').fetchone():
                 db.execute("INSERT INTO users VALUES (1,'Explorador',NULL,'Premedia','🐵')")
+        purge_user(self.path, user)
 
     def memory(self, user_id):
         import json

@@ -3,14 +3,18 @@ import re
 
 MEASURABLE=("explica","aplica","identifica","compara","distingue","resuelve","analiza","describe","demuestra","clasifica")
 
+def _dicts(value):
+    """Courses stored before stricter validation may hold malformed items; skip them instead of crashing."""
+    return [item for item in value if isinstance(item,dict)] if isinstance(value,list) else []
+
 def evaluate_course(structure):
     issues=[]; checks=0; passed=0
-    units=structure.get("units") or []
-    topics=[(ui,ti,t) for ui,u in enumerate(units) for ti,t in enumerate(u.get("topics") or [])]
+    units=_dicts(structure.get("units"))
+    topics=[(ui,ti,t) for ui,u in enumerate(units) for ti,t in enumerate(_dicts(u.get("topics")))]
     checks+=1
     if units and topics: passed+=1
     else: issues.append({"severity":"error","code":"empty_course","message":"El curso no tiene suficientes unidades o temas."})
-    sizes=[len(u.get("topics") or []) for u in units]
+    sizes=[len(_dicts(u.get("topics"))) for u in units]
     if sizes:
         checks+=1
         if max(sizes)-min(sizes)<=4: passed+=1
@@ -27,7 +31,7 @@ def evaluate_course(structure):
         if any(v in objective for v in MEASURABLE) and not boilerplate: passed+=1
         elif boilerplate: issues.append({"severity":"warning","code":"generic_objective","location":loc,"message":"El objetivo usa la plantilla genérica; el docente debe concretar qué evidencia demostrará dominio."})
         else: issues.append({"severity":"warning","code":"weak_objective","location":loc,"message":"El objetivo no usa un verbo claramente medible."})
-        questions=t.get("questions") or []
+        questions=_dicts(t.get("questions"))
         checks+=1
         if questions: passed+=1
         else: issues.append({"severity":"error","code":"no_questions","location":loc,"message":"Tema sin preguntas de comprobación."})
@@ -46,13 +50,13 @@ def evaluate_course(structure):
             checks+=1
             if len(prompt)>=18 and not re.search(r"\b(todo|algo|cosa)\b",prompt): passed+=1
             else: issues.append({"severity":"warning","code":"ambiguous_question","location":loc,"message":"Pregunta demasiado corta o ambigua."})
-    exam=structure.get("final_exam") or []
+    exam=_dicts(structure.get("final_exam"))
     checks+=1
     if exam: passed+=1
     else: issues.append({"severity":"warning","code":"no_final_exam","message":"El curso no tiene examen final."})
     known_correct={str(q.get("correct","")).strip() for q in exam if q.get("correct")}
     for idx,q in enumerate(exam):
-        options=[str(x).strip() for x in q.get("options",[]) if str(x).strip()]
+        options=[str(x).strip() for x in (q.get("options") if isinstance(q.get("options"),list) else []) if str(x).strip()]
         correct=str(q.get("correct","")).strip()
         checks+=1
         if len(options)>=3 and correct in options and len(set(options))==len(options):

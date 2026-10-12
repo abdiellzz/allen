@@ -94,6 +94,10 @@ class Submission(Strict):
             raise ValueError('Respuesta demasiado larga')
         return values
 
+class CourseExamSubmission(Submission):
+    # Course final exams accept as many questions as validate_course_structure allows.
+    answers: list[str] = Field(max_length=100)
+
 class Card(Strict):
     profile_id: int = Field(ge=1)
     question: str = Field(min_length=1, max_length=500)
@@ -249,7 +253,7 @@ class CourseHelp(Strict):
 
 class CourseExamProgress(Strict):
     profile_id: int = Field(ge=1)
-    answers: list[str] = Field(default_factory=list,max_length=50)
+    answers: list[str] = Field(default_factory=list,max_length=100)
     status: Literal['active','paused'] = 'active'
 
 

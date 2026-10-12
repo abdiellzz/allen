@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 @pytest.fixture
 def mobile_url():
-    headers = json.loads((ROOT/'vercel.json').read_text())['headers'][0]['headers']
+    headers = json.loads((ROOT/'vercel.json').read_text(encoding='utf-8'))['headers'][0]['headers']
 
     class Handler(SimpleHTTPRequestHandler):
         def log_message(self, *_args):
@@ -44,7 +44,10 @@ def create_profile(page, name='Estudiante', goal='school'):
     page.get_by_label('¿Cómo quieres que te llame?').fill(name)
     page.get_by_label('¿Qué quieres hacer?').select_option(goal)
     page.get_by_role('button', name='Crear mi perfil', exact=True).click()
-    page.get_by_role('heading', name=f'Hola, {name}', exact=True).wait_for()
+    page.locator('h1', has_text=f'Hola, {name}').wait_for()
+    if page.locator('meta[name="allen-runtime"]').count():
+        # The APK build starts a guided tour after the first profile; its dialog repeats the greeting.
+        page.get_by_role('button', name='Saltar recorrido', exact=True).click()
 
 
 def answer(page, value, last=False):
@@ -161,7 +164,7 @@ def test_backup_recovery_profile_isolation_and_safe_import(mobile_url, tmp_path)
         page.get_by_role('heading', name='Elegir perfil').wait_for()
         assert page.get_by_role('button', name='Abrir', exact=True).count()==3
         # Payload is rendered as text; no markup or instructions from the file execute.
-        payload=json.loads(backup.read_text());payload['state']['profile']['name']='<svg onload=alert(1)>'
+        payload=json.loads(backup.read_text(encoding='utf-8'));payload['state']['profile']['name']='<svg onload=alert(1)>'
         payload['state']['entitlements']={'premium':True}
         with page.expect_file_chooser() as chooser:
             page.get_by_role('button',name='Importar una copia local').click()
@@ -200,7 +203,7 @@ def test_stale_tab_and_failed_write_do_not_overwrite_saved_progress(mobile_url):
 
 
 def test_new_courses_and_optional_tutor_keep_progress_offline(mobile_url):
-    catalogue = json.loads((ROOT/'public/mobile/catalogue.json').read_text())
+    catalogue = json.loads((ROOT/'public/mobile/catalogue.json').read_text(encoding='utf-8'))
     with sync_playwright() as p:
         browser = p.chromium.launch()
         context = browser.new_context(viewport={'width':390,'height':844})

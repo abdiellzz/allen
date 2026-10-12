@@ -17,7 +17,8 @@ def compute_mastery(attempts=0,correct=0,incorrect=0,hints=0,practice_count=0,qu
     recent_bonus=0
     if last_seen:
         try:
-            seen=datetime.fromisoformat(str(last_seen).replace("Z","+00:00")).date()
+            # Stored in UTC; compare calendar days in the local timezone (date-only values are already local).
+            seen=datetime.fromisoformat(str(last_seen).replace("Z","+00:00")).astimezone().date() if "T" in str(last_seen) else datetime.fromisoformat(str(last_seen)[:10]).date()
             age=(local_day()-seen).days
             recent_bonus=6 if age<=1 else 3 if age<=7 else 0
         except Exception:

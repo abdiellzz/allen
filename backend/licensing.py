@@ -173,19 +173,26 @@ class LicenseManager:
         except (OSError, json.JSONDecodeError):
             return {}
 
+    def _last_seen(self) -> date | None:
+        try:
+            return date.fromisoformat(str(self._read_state().get("last_seen")))
+        except ValueError:
+            return None
+
     def _write_state(self, payload: dict, today: date) -> None:
         current=self._read_state()
+        last_seen=max(filter(None,(self._last_seen(),today)))
         if (
             current.get("license_id")==payload["license_id"]
             and current.get("machine_id")==payload["machine_id"]
-            and current.get("last_seen")==today.isoformat()
+            and current.get("last_seen")==last_seen.isoformat()
         ):
             return
         self.license_dir.mkdir(parents=True, exist_ok=True)
         state = {
             "license_id": payload["license_id"],
             "machine_id": payload["machine_id"],
-            "last_seen": today.isoformat(),
+            "last_seen": last_seen.isoformat(),
         }
         temp = self.state_path.with_suffix(".tmp")
         temp.write_text(json.dumps(state, separators=(",", ":")), encoding="utf-8")
@@ -248,23 +255,14 @@ class LicenseManager:
                 "message": f"La licencia expiró el {end.isoformat()}. Importa una renovación.",
             }
 
-        state = self._read_state()
-        if (
-            state.get("license_id") == payload["license_id"]
-            and state.get("machine_id") == payload["machine_id"]
-            and isinstance(state.get("last_seen"), str)
-        ):
-            try:
-                last_seen = date.fromisoformat(state["last_seen"])
-                if today < last_seen:
-                    return {
-                        **base,
-                        **public,
-                        "state": "clock_rollback",
-                        "message": "La fecha del sistema retrocedió. Corrige la fecha de Windows para continuar.",
-                    }
-            except ValueError:
-                pass
+        last_seen = self._last_seen()
+        if last_seen and today < last_seen:
+            return {
+                **base,
+                **public,
+                "state": "clock_rollback",
+                "message": "La fecha del sistema retrocedió. Corrige la fecha de Windows para continuar.",
+            }
 
         self._write_state(payload, today)
         days_remaining = (end - today).days + 1
@@ -294,18 +292,24 @@ class LicenseManager:
             raise LicenseError(f"Esta licencia todavía no está activa. Comienza el {start.isoformat()}.")
         if today > end:
             raise LicenseError(f"Esta licencia expiró el {end.isoformat()}.")
+        last_seen = self._last_seen()
+        if last_seen and today < last_seen:
+            raise LicenseError("La fecha del sistema retrocedió. Corrige la fecha de Windows antes de activar la licencia.")
 
+        current_payload = None
         if self.license_path.exists():
             try:
                 current_payload, _ = self._decode(self.license_path.read_text(encoding="utf-8"))
                 _, current_end = self._dates(current_payload)
-                if (
-                    current_payload.get("license_id") == payload["license_id"]
-                    and end < current_end
-                ):
-                    raise LicenseError("La renovación no puede reducir la fecha de vencimiento actual.")
-            except OSError:
-                pass
+            except (OSError, LicenseError):
+                # A damaged or foreign license file must not prevent installing a valid one.
+                current_payload = None
+        if (
+            current_payload
+            and current_payload.get("license_id") == payload["license_id"]
+            and end < current_end
+        ):
+            raise LicenseError("La renovación no puede reducir la fecha de vencimiento actual.")
 
         normalized = {
             "payload": payload,

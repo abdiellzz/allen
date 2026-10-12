@@ -1,4 +1,4 @@
-import {newState, RULES_VERSION} from './engine.mjs';
+import {newState, RULES_VERSION, SUMMARY_FIELDS} from './engine.mjs';
 import {course, courses, allTopics, getCourse, topicById, questionById} from './course.mjs';
 const NAME='allen-mobile-v1';
 const requestResult = request => new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
@@ -50,7 +50,8 @@ export function validateState(s){
   if(!Array.isArray(s.events)||s.events.length>5000)fail();
   const eventIds=new Set();
   for(const e of s.events){
-    if(!e||!uuid(e.id)||eventIds.has(e.id)||!topicById(e.topicId)||!timestamp(e.at)||!['answer','hint','help','practice_complete','check_complete','review_scheduled','card_review'].includes(e.type))fail();eventIds.add(e.id);
+    if(!e||!uuid(e.id)||eventIds.has(e.id)||!topicById(e.topicId)||!timestamp(e.at)||!['answer','hint','help','practice_complete','check_complete','review_scheduled','card_review','summary'].includes(e.type))fail();eventIds.add(e.id);
+    if(e.type==='summary'&&(SUMMARY_FIELDS.some(k=>!Number.isSafeInteger(e[k])||e[k]<0)||e.correct+e.incorrect!==e.attempts))fail();
     if(['answer','hint'].includes(e.type)){const q=questionById(e.questionId);if(!q||q.topicId!==e.topicId||!uuid(e.sessionId))fail();if(e.type==='answer'&&(!q.options.includes(e.answer)||typeof e.correct!=='boolean'||e.correct!==(e.answer===q.answer)))fail();}
     if(e.type==='review_scheduled'&&!day(e.due))fail();
     if(e.type==='card_review'&&typeof e.remembered!=='boolean')fail();
@@ -82,7 +83,7 @@ export function parseBackup(text){
   validateState(value.state);
   // Only copy known properties. Never accept executable courses, privileges or AI settings.
   const s=value.state;
-  return structuredClone({version:s.version,rulesVersion:s.rulesVersion,courseId:s.courseId,...(s.preferences?{preferences:{textSize:s.preferences.textSize}}:{}),...(s.activeCourse?{activeCourse:s.activeCourse}:{}),...(s.diagnosticCourses?{diagnosticCourses:s.diagnosticCourses}:{}),profile:{id:s.profile.id,name:s.profile.name,goal:s.profile.goal,level:s.profile.level,minutes:s.profile.minutes},diagnosticComplete:s.diagnosticComplete,events:s.events.map(e=>Object.fromEntries(Object.entries(e).filter(([k])=>['id','type','topicId','at','questionId','answer','correct','sessionId','action','due','remembered'].includes(k)))),completed:s.completed,session:s.session?{id:s.session.id,...(s.session.courseId?{courseId:s.session.courseId}:{}),kind:s.session.kind,topicId:s.session.topicId,index:s.session.index,phase:s.session.phase,questionIds:s.session.questionIds,answers:s.session.answers.map(a=>({questionId:a.questionId,answer:a.answer,correct:a.correct})),hints:s.session.hints}:null,cards:Object.fromEntries(Object.entries(s.cards).map(([k,c])=>[k,{due:c.due,remembered:c.remembered,at:c.at}])),revision:s.revision});
+  return structuredClone({version:s.version,rulesVersion:s.rulesVersion,courseId:s.courseId,...(s.preferences?{preferences:{textSize:s.preferences.textSize}}:{}),...(s.activeCourse?{activeCourse:s.activeCourse}:{}),...(s.diagnosticCourses?{diagnosticCourses:s.diagnosticCourses}:{}),profile:{id:s.profile.id,name:s.profile.name,goal:s.profile.goal,level:s.profile.level,minutes:s.profile.minutes},diagnosticComplete:s.diagnosticComplete,events:s.events.map(e=>Object.fromEntries(Object.entries(e).filter(([k])=>['id','type','topicId','at','questionId','answer','correct','sessionId','action','due','remembered',...SUMMARY_FIELDS].includes(k)))),completed:s.completed,session:s.session?{id:s.session.id,...(s.session.courseId?{courseId:s.session.courseId}:{}),kind:s.session.kind,topicId:s.session.topicId,index:s.session.index,phase:s.session.phase,questionIds:s.session.questionIds,answers:s.session.answers.map(a=>({questionId:a.questionId,answer:a.answer,correct:a.correct})),hints:s.session.hints}:null,cards:Object.fromEntries(Object.entries(s.cards).map(([k,c])=>[k,{due:c.due,remembered:c.remembered,at:c.at}])),revision:s.revision});
 }
 export function prepareRecovery(text){const s=parseBackup(text);const suffix=' · recuperado';s.profile.id=crypto.randomUUID();s.profile.name=s.profile.name.slice(0,40-suffix.length)+suffix;s.revision=0;validateState(s);return s;}
 export async function restoreBackup(db,text){return saveProfile(db,prepareRecovery(text),{creating:true});}

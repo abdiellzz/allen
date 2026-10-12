@@ -9,7 +9,8 @@ import {continuityPanel,recommendationPanel,masteryPanel,reviewPanel,detectExamI
 import {teacherStudioPage,bindTeacherStudio,coursesPage,bindCourses} from './components/course-studio.js';
 import {allenGuide} from './components/allen-guide.js';
 
-if(localStorage.getItem('allen-fair-lock')==='true')location.replace('/fair');
+// Fair mode was retired: a lock saved by older versions used to bounce /teacher to /fair → /mobile forever.
+try{localStorage.removeItem('allen-fair-lock');}catch{}
 
 const $=s=>document.querySelector(s), content=$('#content');
 const levels=['Primaria','Premedia','Media','Universidad / Técnico'];

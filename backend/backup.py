@@ -1,6 +1,10 @@
 from __future__ import annotations
 import json
+from .time_utils import utc_now_iso
 FORMAT="allen-backup"; VERSION=1
+# One limit for export, encryption and restore, measured the same way everywhere (compact UTF-8 JSON),
+# so every backup ALLEN can export can also be restored.
+MAX_BACKUP_BYTES=30_000_000
 TABLES=("users","progress","quiz_results","flashcards","learning_sessions","library_packs","student_memory","saved_answers","conversations","conversation_states","study_plans","study_sessions","study_session_events","adventure_sessions","adventure_events","simulation_results","topic_mastery","learning_events","profile_current_activity","teacher_documents","courses","course_enrollments","course_exam_results","course_exam_sessions","curriculum_edges","question_bank","course_quality_reviews","diagnostic_results","course_versions")
 TABLE_SET=frozenset(TABLES)
 
@@ -20,13 +24,15 @@ def export_backup(db):
     except Exception:data["settings"]={}
     return data
 
+def backup_size(payload):
+    return len(json.dumps(payload,ensure_ascii=False,separators=(",",":")).encode("utf-8"))
+
 def validate_backup(payload):
     if not isinstance(payload,dict) or payload.get("format")!=FORMAT: raise ValueError("Este archivo no es un respaldo de ALLEN.")
     if payload.get("version")!=VERSION: raise ValueError("Versión de respaldo no compatible.")
     tables=payload.get("tables")
     if not isinstance(tables,dict): raise ValueError("Respaldo incompleto.")
-    size=len(json.dumps(payload,ensure_ascii=False))
-    if size>5_000_000: raise ValueError("El respaldo es demasiado grande.")
+    if backup_size(payload)>MAX_BACKUP_BYTES: raise ValueError("El respaldo es demasiado grande.")
     return {"profiles":len(tables.get("users",[])),"flashcards":len(tables.get("flashcards",[])),"plans":len(tables.get("study_plans",[])),"adventures":len(tables.get("adventure_sessions",[])),"simulations":len(tables.get("simulation_results",[])),"courses":len(tables.get("courses",[])),"questions":len(tables.get("question_bank",[])),"diagnostics":len(tables.get("diagnostic_results",[]))}
 
 def restore_backup(db,payload):
@@ -86,8 +92,8 @@ def restore_backup(db,payload):
                 if course["status"] in ("reviewed","published"):
                     db.execute("UPDATE question_bank SET status='approved' WHERE course_id=?",(course["id"],))
                 report=evaluate_course(structure)
-                db.execute("INSERT INTO course_quality_reviews(course_id,score,blocking_issues,report_json,created_at) VALUES(?,?,?,?,datetime('now'))",
-                           (course["id"],report["score"],report["blocking_issues"],json.dumps(report,ensure_ascii=False)))
+                db.execute("INSERT INTO course_quality_reviews(course_id,score,blocking_issues,report_json,created_at) VALUES(?,?,?,?,?)",
+                           (course["id"],report["score"],report["blocking_issues"],json.dumps(report,ensure_ascii=False),utc_now_iso()))
             except Exception:
                 continue
     if "course_versions" not in tables:

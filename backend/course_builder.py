@@ -181,14 +181,18 @@ def build_course(title:str,subject:str,level:str,pages:list[dict],source_text:st
             })
         units.append({"title":heading,"topics":topics})
     flat_topics=[t for u in units for t in u["topics"]]
+    statements=[t.get("source_excerpt","")[:220] for t in flat_topics]
     final_exam=[]
     for idx,topic in enumerate(flat_topics[:10]):
-        correct=topic.get("source_excerpt","")[:220]
-        distractors=[
+        correct=statements[idx]
+        others=statements[idx+1:]+statements[:idx]
+        distractors=statement_distractors(correct,others,3,prefer="predicate")
+        # Template wording only when the material has too few statements (it makes the key guessable).
+        distractors+=[
             f"Según el material, {topic['title']} no guarda relación con el concepto descrito.",
             f"El texto indica que {topic['title']} funciona de manera opuesta a la afirmación correcta.",
             f"La fuente no atribuye a {topic['title']} la propiedad descrita en esta opción.",
-        ]
+        ][:3-len(distractors)]
         options=[correct]+distractors[:3]
         # Rotate deterministically so the correct answer is not always first.
         shift=idx%len(options)
@@ -221,6 +225,36 @@ def build_course(title:str,subject:str,level:str,pages:list[dict],source_text:st
         "coverage":coverage,
         "method":"Allen: Descubre → Recupera → Explica → Mezcla → Representa → Revisa",
     }
+
+LEADING_WORDS={"un","una","unos","unas","el","la","los","las","este","esta","estos","estas","lo","su","sus","the","a","an"}
+
+def _split_statement(text:str):
+    words=text.strip().split()
+    if len(words)<3:
+        return None
+    size=2 if words[0].lower() in LEADING_WORDS and len(words)>3 else 1
+    return " ".join(words[:size])," ".join(words[size:])
+
+def statement_distractors(correct:str,others:list[str],count:int,prefer:str="predicate"):
+    """False statements in the same style as the correct one, built from other sentences of the material.
+
+    "CIDR describe prefijos de red" + "DNS traduce nombres" → "CIDR traduce nombres" (predicate swap)
+    or "DNS describe prefijos de red" (subject swap). Never equal to the correct statement.
+    """
+    base=_split_statement(correct)
+    if not base:
+        return []
+    subject,predicate=base
+    parts=[p for p in (_split_statement(o) for o in others if o) if p]
+    by_predicate=[f"{subject} {p}" for s,p in parts if p.lower()!=predicate.lower()]
+    by_subject=[f"{s} {predicate}" for s,p in parts if s.lower()!=subject.lower()]
+    out=[]
+    for candidate in (by_predicate+by_subject if prefer=="predicate" else by_subject+by_predicate):
+        if candidate.lower()!=correct.strip().lower() and candidate.lower() not in {x.lower() for x in out}:
+            out.append(candidate)
+        if len(out)==count:
+            break
+    return out
 
 def course_pack(course:dict,document:dict):
     return {
@@ -275,7 +309,14 @@ def validate_course_structure(structure:dict):
                 value=topic.get(key,[])
                 if value is not None and (not isinstance(value,list) or len(value)>limit):
                     raise ValueError(f"{key} excede el límite permitido.")
+                if value and any(not isinstance(item,dict) for item in value):
+                    raise ValueError(f"{key} contiene elementos no válidos.")
     exam=structure.get("final_exam",[])
     if exam is not None and (not isinstance(exam,list) or len(exam)>100):
         raise ValueError("El examen final excede el límite permitido.")
+    for question in exam or []:
+        options=question.get("options") if isinstance(question,dict) else None
+        if (not isinstance(question,dict) or not isinstance(question.get("prompt"),str) or not isinstance(question.get("correct"),str)
+                or not isinstance(options,list) or not 2<=len(options)<=10 or any(not isinstance(o,str) for o in options)):
+            raise ValueError("El examen final contiene preguntas incompletas.")
     return True

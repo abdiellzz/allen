@@ -48,6 +48,27 @@ def _rotate(db_path,preserve=None):
             try: old.unlink()
             except OSError: pass
 
+def purge_user(db_path,user_id):
+    """Remove a deleted profile from every recovery snapshot (children's data must not linger in copies)."""
+    purged=0
+    for snapshot in recovery_dir(db_path).glob("*.sqlite3"):
+        con=None
+        try:
+            con=sqlite3.connect(snapshot)
+            con.execute("PRAGMA foreign_keys=ON")
+            con.execute("PRAGMA secure_delete=ON")
+            with con:
+                deleted=con.execute("DELETE FROM users WHERE id=?",(user_id,)).rowcount
+            if deleted:
+                con.execute("VACUUM")
+                purged+=1
+        except sqlite3.DatabaseError:
+            continue
+        finally:
+            if con is not None:
+                con.close()
+    return purged
+
 def list_snapshots(db_path):
     out=[]
     for p in sorted(recovery_dir(db_path).glob("*.sqlite3"),key=lambda x:x.stat().st_mtime,reverse=True):

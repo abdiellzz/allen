@@ -15,7 +15,7 @@ export function computeMastery({attempts=0,correct=0,incorrect=0,hints=0,practic
   const accuracy=correct/Math.max(1,attempts), evidence=Math.min(1,(attempts+practice_count+quiz_count)/12);
   const bonus={'Fácil':0,'Normal':4,'Difícil':8}[difficulty]??2;
   let recent=0;
-  if(last_seen){const day=new Date(`${localDay(now)}T00:00:00Z`),seen=new Date(`${String(last_seen).slice(0,10)}T00:00:00Z`); const age=(day-seen)/86400000;recent=Number.isFinite(age)?age<=1?6:age<=7?3:0:0;}
+  if(last_seen){const seenDay=String(last_seen).includes('T')?localDay(new Date(last_seen)):String(last_seen).slice(0,10);const day=new Date(`${localDay(now)}T00:00:00Z`),seen=new Date(`${seenDay}T00:00:00Z`); const age=(day-seen)/86400000;recent=Number.isFinite(age)?age<=1?6:age<=7?3:0:0;}
   const score=roundEven(Math.max(0,Math.min(100,accuracy*72+evidence*16+bonus+recent-Math.min(18,hints*3))));
   const confidence=roundEven(evidence*100);
   const status=score>=85&&confidence>=55?'mastered':incorrect>=3&&score<45?'needs_reinforcement':next_review&&next_review<=localDay(now)?'reviewing':score>=55?'practicing':'learning';
@@ -27,9 +27,13 @@ export function recommendForState({mastery_score:score=0,topic='este tema',statu
   if(score<80) return {action:'interleave',reason:`Ya tienes base en ${topic}; mezclar ejercicios comprobará si eliges bien la estrategia.`,priority:.72};
   return {action:'challenge',reason:`Tu dominio de ${topic} es alto; conviene un reto y dejar una revisión futura.`,priority:.62};
 }
+// Old events are folded into one 'summary' per topic (see compactEvents); their counters still count as evidence.
+export const SUMMARY_FIELDS=['attempts','correct','incorrect','hints','explanations','practice','checks'];
+const EVENT_LIMIT=5000, KEEP_RECENT=2500;
 export function evidence(state,topicId,now=new Date()) {
   const events=state.events.filter(e=>e.topicId===topicId), answers=events.filter(e=>e.type==='answer');
-  const row={attempts:answers.length,correct:answers.filter(e=>e.correct).length,incorrect:answers.filter(e=>!e.correct).length,hints:events.filter(e=>e.type==='hint').length,explanations:events.filter(e=>e.type==='help').length,practice_count:events.filter(e=>e.type==='practice_complete').length,quiz_count:events.filter(e=>e.type==='check_complete').length,last_seen:events.at(-1)?.at??null,difficulty:state.profile.level==='bases'?'Fácil':'Normal'};
+  const summaries=events.filter(e=>e.type==='summary'), sum=key=>summaries.reduce((n,e)=>n+e[key],0);
+  const row={attempts:answers.length+sum('attempts'),correct:answers.filter(e=>e.correct).length+sum('correct'),incorrect:answers.filter(e=>!e.correct).length+sum('incorrect'),hints:events.filter(e=>e.type==='hint').length+sum('hints'),explanations:events.filter(e=>e.type==='help').length+sum('explanations'),practice_count:events.filter(e=>e.type==='practice_complete').length+sum('practice'),quiz_count:events.filter(e=>e.type==='check_complete').length+sum('checks'),last_seen:events.at(-1)?.at??null,difficulty:state.profile.level==='bases'?'Fácil':'Normal'};
   const last=events.findLast(e=>e.type==='review_scheduled');
   const result=computeMastery({...row,next_review:last?.due??null},now);
   return {...row,...result,next_review:last?.due??null};
@@ -66,7 +70,24 @@ export function startSession(state,kind='learn',topicId=null) {
   state.activeCourse=selected.id;
   state.session={id:crypto.randomUUID(),courseId:selected.id,kind,topicId,index:0,phase:kind==='diagnostic'?'practice':'lesson',questionIds:ids,answers:[],hints:[]};
 }
-function event(state,type,topicId,values={},now=new Date()) {if(state.events.length>=5000)throw Error('Exporta tu progreso y crea otro perfil: alcanzaste el límite local de evidencias.');state.events.push({id:crypto.randomUUID(),type,topicId,at:now.toISOString(),...values});}
+// Keeps long-term profiles usable: the oldest events become per-topic summaries with the same counters,
+// so mastery is unchanged. The latest review_scheduled of each topic and the newest events stay as they are.
+export function compactEvents(state) {
+  const lastReview=new Map();state.events.forEach((e,i)=>{if(e.type==='review_scheduled')lastReview.set(e.topicId,i);});
+  const keepFrom=state.events.length-KEEP_RECENT, totals=new Map(), kept=[];
+  state.events.forEach((e,i)=>{
+    if(e.type!=='summary'&&(i>=keepFrom||lastReview.get(e.topicId)===i)){kept.push(e);return;}
+    const t=totals.get(e.topicId)??{id:crypto.randomUUID(),type:'summary',topicId:e.topicId,at:e.at,...Object.fromEntries(SUMMARY_FIELDS.map(k=>[k,0]))};
+    if(e.type==='summary')SUMMARY_FIELDS.forEach(k=>{t[k]+=e[k];});
+    else if(e.type==='answer'){t.attempts++;if(e.correct)t.correct++;else t.incorrect++;}
+    else if(e.type==='hint')t.hints++;else if(e.type==='help')t.explanations++;
+    else if(e.type==='practice_complete')t.practice++;else if(e.type==='check_complete')t.checks++;
+    if(e.at>t.at)t.at=e.at;
+    totals.set(e.topicId,t);
+  });
+  state.events=[...totals.values(),...kept];
+}
+function event(state,type,topicId,values={},now=new Date()) {if(state.events.length>=EVENT_LIMIT)compactEvents(state);state.events.push({id:crypto.randomUUID(),type,topicId,at:now.toISOString(),...values});}
 export function requestHelp(state,action,now=new Date()) {
   const s=state.session;const q=s&&questionById(s.questionIds[s.index]); const topic=topicById(s?.topicId??q?.topicId);
   if(!topic) throw Error('Abre una lección para recibir ayuda contextual.');

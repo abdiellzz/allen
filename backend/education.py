@@ -1,5 +1,6 @@
 """Deterministic correction and locally generated exercises. Never eval code."""
 import random
+import re
 from fractions import Fraction
 from .security import normalized
 
@@ -227,11 +228,16 @@ def generate(config):
         questions.append(dict(prompt=prompt,answer=answer,options=options,explanation=explanation,topic=config.topic))
     return questions
 
+# Plain integers, decimals or a/b fractions only: Fraction('1e10000000') would take seconds of CPU.
+NUMBER=re.compile(r'\s*[+-]?\d{1,12}(?:[.,]\d{1,12})?(?:\s*/\s*[+-]?\d{1,12})?\s*')
+
 def equivalent(given, expected):
-    try:
-        return Fraction(given.replace(',','.')) == Fraction(expected)
-    except (ValueError, ZeroDivisionError):
-        return normalized(given.strip().rstrip('.'))==normalized(expected.strip().rstrip('.'))
+    if NUMBER.fullmatch(given) and NUMBER.fullmatch(expected):
+        try:
+            return Fraction(given.replace(',','.').replace(' ','')) == Fraction(expected.replace(' ',''))
+        except (ValueError, ZeroDivisionError):
+            pass
+    return normalized(given.strip().rstrip('.'))==normalized(expected.strip().rstrip('.'))
 
 def grade(questions, answers):
     if len(questions)!=len(answers):

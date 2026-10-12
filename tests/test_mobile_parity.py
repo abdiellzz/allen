@@ -22,7 +22,7 @@ def test_browser_learning_rules_match_existing_python_engine():
                           last_seen=local_day_iso(), next_review=local_day_iso()))
     out = subprocess.run(['node', str(ROOT/'tests/fixtures/mobile-parity.mjs')],
                          input=json.dumps(dict(cases=cases, now=local_day_iso()+'T12:00:00')),
-                         capture_output=True, text=True, check=True)
+                         capture_output=True, text=True, encoding='utf-8', check=True)
     actual = json.loads(out.stdout)
     for c, row in zip(cases, actual):
         expected = compute_mastery(**c)

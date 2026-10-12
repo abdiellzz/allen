@@ -116,6 +116,7 @@ def run_gui() -> int:
 
     server_holder = {"server": None}
     stop_event = threading.Event()
+    other_instance = threading.Event()
 
     root = tk.Tk()
     root.title(f"ALLEN {ALLEN_VERSION}")
@@ -136,9 +137,13 @@ def run_gui() -> int:
     buttons.pack(fill="x")
 
     def open_allen():
+        # Our launch token only works on our own server; never send it to another process on 8787.
+        if other_instance.is_set():
+            return
         webbrowser.open("http://127.0.0.1:8787/?access="+app.state.issue_launch_token())
 
-    ttk.Button(buttons, text="Abrir ALLEN", command=open_allen).pack(side="left")
+    open_button = ttk.Button(buttons, text="Abrir ALLEN", command=open_allen)
+    open_button.pack(side="left")
 
     def close_allen():
         stop_event.set()
@@ -161,6 +166,12 @@ def run_gui() -> int:
         if health_ready(expected_instance=app.state.instance_id):
             root.after(0, lambda: status.set("ALLEN ya está activo."))
             return
+        if health_ready():
+            # Another ALLEN window already serves 8787; a second server could not bind the port.
+            other_instance.set()
+            root.after(0, lambda: status.set("ALLEN ya está abierto en otra ventana. Usa esa ventana o ciérrala antes de abrir otra."))
+            root.after(0, lambda: open_button.state(["disabled"]))
+            return
         config = uvicorn.Config(app, host="127.0.0.1", port=8787, access_log=False, log_level="warning")
         server = uvicorn.Server(config)
         server_holder["server"] = server
@@ -171,7 +182,7 @@ def run_gui() -> int:
 
     def readiness_worker():
         for _ in range(80):
-            if stop_event.is_set():
+            if stop_event.is_set() or other_instance.is_set():
                 return
             if health_ready(expected_instance=app.state.instance_id):
                 root.after(0, lambda: status.set("ALLEN está listo."))

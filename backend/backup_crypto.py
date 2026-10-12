@@ -8,6 +8,8 @@ from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
+from .backup import MAX_BACKUP_BYTES
+
 AAD=b"ALLEN-BACKUP-V1"
 FORMAT="allen-backup-encrypted"
 VERSION=1
@@ -25,7 +27,7 @@ def _key(password: str, salt: bytes) -> bytes:
 
 def encrypt_backup(payload: dict, password: str) -> dict:
     raw=json.dumps(payload,ensure_ascii=False,separators=(",",":")).encode("utf-8")
-    if len(raw)>5_500_000:
+    if len(raw)>MAX_BACKUP_BYTES:
         raise ValueError("El respaldo es demasiado grande para cifrarlo.")
     salt=os.urandom(16)
     nonce=os.urandom(12)
@@ -52,7 +54,7 @@ def decrypt_backup(envelope: dict, password: str) -> dict:
         ciphertext=base64.b64decode(envelope["ciphertext"],validate=True)
     except (KeyError,ValueError,TypeError) as exc:
         raise ValueError("El respaldo cifrado está dañado.") from exc
-    if len(salt)!=16 or len(nonce)!=12 or len(ciphertext)>7_500_000:
+    if len(salt)!=16 or len(nonce)!=12 or len(ciphertext)>MAX_BACKUP_BYTES+16:
         raise ValueError("El respaldo cifrado no tiene un formato válido.")
     try:
         raw=AESGCM(_key(password,salt)).decrypt(nonce,ciphertext,AAD)

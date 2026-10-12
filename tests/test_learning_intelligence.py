@@ -6,7 +6,8 @@ from fastapi.testclient import TestClient
 from backend.app import create_app
 from backend.course_quality import evaluate_course
 from backend.curriculum_graph import build_graph
-from backend.learning_intelligence import score_diagnostic
+from backend.learning_intelligence import diagnostic_questions, score_diagnostic
+from backend.time_utils import local_day_iso
 
 
 def client_for(path):
@@ -72,7 +73,7 @@ def test_diagnostic_moves_student_to_first_weak_topic():
         diagnostic=c.get(f"/api/courses/{cid}/diagnostic?profile_id=1").json()
         assert 5<=len(diagnostic["questions"])<=10
         # Deliberately choose non-correct options when possible.
-        correct=[q["correct"] for q in structure["final_exam"]][:len(diagnostic["questions"])]
+        correct=[q["correct"] for q in diagnostic_questions(structure,7)]
         answers=[]
         for q,answer in zip(diagnostic["questions"],correct):
             answers.append(next((o for o in q["options"] if o!=answer),q["options"][0]))
@@ -102,7 +103,7 @@ def test_mastery_evidence_and_due_reviews_are_explainable():
         assert evidence.status_code==200
         assert "evidence" in evidence.json()
         assert evidence.json()["evidence"]["attempts"]>=1
-        c.app.state.db.execute("UPDATE topic_mastery SET next_review=date('now') WHERE user_id=1")
+        c.app.state.db.execute("UPDATE topic_mastery SET next_review=? WHERE user_id=1",(local_day_iso(),))
         due=c.get('/api/reviews/due?profile_id=1').json()
         assert due
         continuity=c.get('/api/continuity?profile_id=1').json()
@@ -127,7 +128,7 @@ def test_strong_diagnostic_topic_is_exposed_for_route_skipping():
         cid,structure=create_course(c)
         c.post(f"/api/courses/{cid}/enroll",json={"profile_id":1})
         diagnostic=c.get(f"/api/courses/{cid}/diagnostic?profile_id=1").json()
-        correct=[q["correct"] for q in structure["final_exam"]][:len(diagnostic["questions"])]
+        correct=[q["correct"] for q in diagnostic_questions(structure,7)]
         if len(correct)<len(diagnostic["questions"]):
             correct=(correct*10)[:len(diagnostic["questions"])]
         result=c.post(f"/api/courses/{cid}/diagnostic/submit",json={"profile_id":1,"answers":correct})
@@ -161,7 +162,7 @@ def test_learning_intelligence_tables_survive_backup_roundtrip():
         c.post(f"/api/courses/{cid}/enroll",json={"profile_id":1})
         diagnostic=c.get(f"/api/courses/{cid}/diagnostic?profile_id=1").json()
         course=c.get(f"/api/teacher/courses/{cid}?profile_id=1").json()["structure"]
-        correct=[q["correct"] for q in course["final_exam"]][:len(diagnostic["questions"])]
+        correct=[q["correct"] for q in diagnostic_questions(course,7)]
         c.post(f"/api/courses/{cid}/diagnostic/submit",json={"profile_id":1,"answers":correct})
         backup=c.get("/api/backup/export?profile_id=1").json()
         assert backup["tables"]["curriculum_edges"]

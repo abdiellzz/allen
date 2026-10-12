@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json
 from .time_utils import local_day_iso
+from .course_builder import statement_distractors
 
 def mastery_evidence(db,user_id,subject,topic):
     row=db.one("SELECT * FROM topic_mastery WHERE user_id=? AND subject=? AND topic=?",(user_id,subject,topic))
@@ -29,9 +30,24 @@ def due_reviews(db,user_id,limit=10):
       ORDER BY next_review ASC,mastery_score ASC LIMIT ?""",(user_id,local_day_iso(),limit))
 
 def diagnostic_questions(structure,count=7):
+    """Placement items built from the topics, never from the final exam.
+
+    Options swap the subject of the statement (the exam swaps the predicate), so the
+    diagnostic neither repeats nor previews the final exam questions.
+    """
+    topics=[t for u in structure.get("units",[]) or [] if isinstance(u,dict)
+              for t in u.get("topics",[]) or [] if isinstance(t,dict) and t.get("source_excerpt")]
+    statements=[str(t["source_excerpt"])[:220] for t in topics]
     pool=[]
-    for q in structure.get("final_exam",[]) or []:
-        pool.append({"topic":q.get("topic",""),"prompt":q.get("prompt",""),"options":q.get("options",[]),"correct":q.get("correct",""),"source":q.get("source",{})})
+    for idx,topic in enumerate(topics):
+        correct=statements[idx]
+        distractors=statement_distractors(correct,statements[idx+1:]+statements[:idx],2,prefer="subject")
+        if len(distractors)<2:
+            continue
+        options=[correct]+distractors
+        shift=(idx+1)%len(options)
+        pool.append({"topic":topic.get("title",""),"prompt":f"Antes de empezar: ¿qué afirmación sobre «{topic.get('title','')}» es correcta según el material?",
+                     "options":options[shift:]+options[:shift],"correct":correct,"source":topic.get("source",{})})
     return pool[:max(5,min(10,count))]
 
 def score_diagnostic(questions,answers):

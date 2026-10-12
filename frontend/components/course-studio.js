@@ -104,7 +104,7 @@ export function bindTeacherStudio(root,{api,profileId,toast}){
   if(e.target.id!=='approve-course'||!current)return;
   review.querySelectorAll('[data-objective]').forEach(input=>{const [u,t]=input.dataset.objective.split(':').map(Number);current.structure.units[u].topics[t].objective=input.value.trim();});
   review.querySelectorAll('[data-question]').forEach(input=>{const [u,t,q]=input.dataset.question.split(':').map(Number);current.structure.units[u].topics[t].questions[q].prompt=input.value.trim();});
-  try{const result=await api('/teacher/courses/'+current.id+'/review','PUT',{profile_id:profileId,structure:current.structure});toast('Revisión guardada. Calidad: '+result.quality.score+'/100.');review.innerHTML='';await refresh();await openReview(current.id);}catch(err){toast(err.message);}
+  try{const result=await api('/teacher/courses/'+current.id+'/review','PUT',{profile_id:profileId,structure:current.structure});toast(result.published?'Cambios publicados como versión '+result.version+'. Calidad: '+result.quality.score+'/100.':'Revisión guardada. Calidad: '+result.quality.score+'/100.');review.innerHTML='';await refresh();await openReview(current.id);}catch(err){toast(err.message);}
  };
  const packInput=root.querySelector('#course-pack-file'),packButton=root.querySelector('#course-pack-import');
  if(packButton)packButton.onclick=async()=>{try{const file=packInput.files[0];if(!file)throw new Error('Selecciona un archivo .allenpack.');if(file.size>3_000_000)throw new Error('El Course Pack es demasiado grande.');const pack=JSON.parse(await file.text());const result=await api('/teacher/packs/import','POST',{profile_id:profileId,pack});toast('Course Pack importado como borrador. Revísalo antes de publicar.');await refresh();await openReview(result.course_id);}catch(err){toast(err.message);}};
@@ -173,7 +173,7 @@ export function bindCourses(root,{api,profileId,toast,go}){
    await refresh();
   }catch(err){toast(err.message);}};
  }
- list.onclick=async e=>{const b=e.target.closest('[data-course-id]');if(!b)return;const id=Number(b.dataset.courseId);try{if(b.dataset.courseAction==='enroll'){await api('/courses/'+id+'/enroll','POST',{profile_id:profileId});await openDiagnostic(id);}else await open(id);await refresh();}catch(err){toast(err.message);}};
+ list.onclick=async e=>{const b=e.target.closest('[data-course-id]');if(!b)return;const id=Number(b.dataset.courseId);try{if(b.dataset.courseAction==='enroll'){await api('/courses/'+id+'/enroll','POST',{profile_id:profileId});try{await openDiagnostic(id);}catch(err){await open(id);toast(err.message);}}else await open(id);await refresh();}catch(err){toast(err.message);}};
  route.onclick=async e=>{
   const shell=e.target.closest('[data-course-id]');if(!shell)return;const cid=Number(shell.dataset.courseId),u=Number(shell.dataset.unit),t=Number(shell.dataset.topic),st=Number(shell.dataset.step);
   const data=await api('/courses/'+cid+'/route?profile_id='+profileId),unit=data.course.structure.units[u],topic=unit.topics[t],steps=topic.route||[];
